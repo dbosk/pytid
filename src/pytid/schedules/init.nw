@@ -90,7 +90,7 @@ if parameters:
   path += f"?{parameters}"
 @
 
-\subsection{Representing events}
+\section{Representing events}
 
 We will introduce an [[Event]] class to represent the events.
 <<classes>>=
@@ -101,7 +101,7 @@ class Event:
     """
     <<process JSON data, initialize attributes>>
 
-  <<Event getters>>
+  <<Event properties>>
   <<special methods>>
 @
 
@@ -112,7 +112,7 @@ for event_json in results["entries"]:
 @
 
 According to the documentation we have the following attributes.
-<<Event getters>>=
+<<Event properties>>=
 @property
 def url(self):
   return self.__url
@@ -219,6 +219,40 @@ for location in locations or []:
   self.__locations.append(Location(location))
 @
 
+\subsection{Additional data}
+
+We also get two more attributes of an event (not documented):
+\begin{description}
+\item[info] provides additional information, \eg comments added by the teacher 
+(through the scheduling department).
+\item[group] provides a list of groups that should attend.
+\end{description}
+
+We add these in the constructor above.
+<<process JSON data, initialize attributes>>=
+try:
+  self.__info = json_data.pop("info")
+except AttributeError:
+  pass
+
+try:
+  self.__group = json_data.pop("group")
+except AttributeError:
+  pass
+@
+
+And set the corresponding properties.
+<<Event properties>>=
+@property
+def info(self):
+  return self.__info
+
+@property
+def group(self):
+  return self.__group
+@
+
+
 \subsection{Easy representation of event}
 
 We want to let the [[Event]] object to easily represent itself when converting 
@@ -227,6 +261,7 @@ to a string.
 def __str__(self):
   return f"{self.type_name('en')} " \
     f"at {self.start} " \
-    f"in {[location.name for location in self.locations]}"
+    f"in {[location.name for location in self.locations]}, " \
+    f"groups: {self.group}, info: {self.info}"
 @
 

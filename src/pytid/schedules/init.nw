@@ -1,0 +1,232 @@
+\chapter{Working with schedules}
+
+In this chapter we describe the modules that we provide for working with 
+TimeEdit.
+We want to be able to use the course schedule and the personal schedules 
+provided by TimeEdit.
+
+\section{Outline}
+
+We provide the file [[__init__.py]].
+<<init.py>>=
+<<constants>>
+<<imports>>
+<<classes>>
+<<functions>>
+@
+
+
+\section{The KTH Schedule API}
+
+We will not use TimeEdit directly (in this version).
+KTH has an API for the schedules that fetches the data from TimeEdit:
+\begin{center}
+\url{https://www.kth.se/social/api/schema/v2/apidoc.html}.
+\end{center}
+
+\subsection{Making requests}
+
+We're interested in fetching the schedule for a course.
+<<constants>>=
+SCHEDULE_API_URL = "https://www.kth.se/social/api/schema/v2"
+@
+
+We will use the [[requests]] package to make queries.
+<<imports>>=
+import requests
+@
+
+We will use the following function to pass GET requests to the API.
+<<functions>>=
+def course_query(course_code, /, **kwargs):
+  """
+  Input:
+  course_code is the LADOK course code, e.g. DD1301;
+  keyword arguments:
+  start_term is the LADOK start term, e.g. 2022HT or 2023VT;
+  course_round is the LADOK course round code, e.g. 50855;
+  start_time and end_time are the dates, e.g. 2022-06-08;
+  type specifies which type of entry to fetch, e.g. TEN or all.
+
+  Output:
+  """
+  <<form the request path>>
+  print(f"{SCHEDULE_API_URL}/course/{path}")
+  response = requests.get(f"{SCHEDULE_API_URL}/course/{path}")
+  if response.status_code == 200:
+    results = response.json()
+  else:
+    raise Exception(response.text)
+
+  events = []
+  <<convert results to list of Event objects in events>>
+  return events
+@
+
+According to the API documentation, we form the request path like this:
+<<form the request path>>=
+path = course_code
+
+parameter_map = {
+  "start_term": "startterm",
+  "course_round": "courseroundcode",
+  "start_time": "startTime",
+  "end_time": "endTime",
+  "type": "type"
+}
+
+parameters = ""
+
+for kw, param in parameter_map.items():
+  try:
+    if not parameters:
+      parameters += f"{param}={kwargs[kw]}"
+    else:
+      parameters += f"&{param}={kwargs[kw]}"
+  except KeyError:
+    pass
+
+if parameters:
+  path += f"?{parameters}"
+@
+
+\subsection{Representing events}
+
+We will introduce an [[Event]] class to represent the events.
+<<classes>>=
+class Event:
+  def __init__(self, json_data):
+    """
+    Input: json_data is the data returned from the API
+    """
+    <<process JSON data, initialize attributes>>
+
+  <<Event getters>>
+  <<special methods>>
+@
+
+This means that we can do the necessary conversion of the results above.
+<<convert results to list of Event objects in events>>=
+for event_json in results["entries"]:
+  events.append(Event(event_json))
+@
+
+According to the documentation we have the following attributes.
+<<Event getters>>=
+@property
+def url(self):
+  return self.__url
+
+@property
+def start(self):
+  return self.__start
+
+@property
+def end(self):
+  return self.__end
+
+@property
+def title(self):
+  return self.__title
+
+@property
+def type(self):
+  return self.__type
+
+def type_name(self, lang):
+  """
+  Input: lang is a string, either "sv" or "en"
+  Output: a string containing the type name in that language
+  """
+  try:
+    return self.__type_name[lang]
+  except AttributeError as err:
+    raise ValueError(f"lang = {lang}: {err}")
+
+@property
+def locations(self):
+  return self.__locations.copy()
+
+@property
+def json(self):
+  """Whatever is left after popping the other attributes"""
+  return self.__json
+@
+
+Now we can just pop the different attributes from the JSON data, except for 
+locations, which we will deal with separately.
+After having popped the attributes, the remaining data will be stored in the 
+[[json]] attribute.
+<<process JSON data, initialize attributes>>=
+attributes = [
+  "url",
+  "start", "end",
+  "title",
+  "type", "type_name"
+]
+
+priv_attr_prefix = f"_{type(self).__name__}__"
+
+for attribute in attributes:
+  value = json_data.pop(attribute)
+  if value:
+    self.__dict__[f"{priv_attr_prefix}{attribute}"] = value
+
+<<pop and set the locations attribute>>
+
+self.__json = json_data
+@
+
+\subsection{Representing locations}
+
+We can see in the documentation that the location has a name and a URL to more 
+information.
+<<classes>>=
+class Location:
+  def __init__(self, json_data):
+    """
+    Input: json_data is the data returned from the API
+    """
+    self.__name = json_data.pop("name")
+
+    try:
+      self.__url = json_data.pop("url")
+    except KeyError:
+      pass
+
+    self.__json = json_data
+
+  @property
+  def url(self):
+    return self.__url
+
+  @property
+  def name(self):
+    return self.__name
+
+  def __str__(self):
+    return self.name
+@
+
+Thus, in the constructor of [[Event]], we want to create [[Location]] objects 
+from the locations.
+<<pop and set the locations attribute>>=
+self.__locations = []
+
+locations = json_data.pop("locations")
+
+for location in locations or []:
+  self.__locations.append(Location(location))
+@
+
+\subsection{Easy representation of event}
+
+We want to let the [[Event]] object to easily represent itself when converting 
+to a string.
+<<special methods>>=
+def __str__(self):
+  return f"{self.type_name('en')} " \
+    f"at {self.start} " \
+    f"in {[location.name for location in self.locations]}"
+@
+

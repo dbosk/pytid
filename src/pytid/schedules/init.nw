@@ -145,6 +145,9 @@ def type_name(self, lang):
 
 @property
 def locations(self):
+  """
+  Returns a list of Location objects.
+  """
   return self.__locations.copy()
 
 @property

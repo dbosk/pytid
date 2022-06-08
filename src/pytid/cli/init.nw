@@ -1,0 +1,6 @@
+\chapter{A command-line interface}
+
+In this chapter we document the command-line interface, \ie the command 
+[[pytid]].
+
+The command has a subcommand-based design, similar to commands like [[git]].

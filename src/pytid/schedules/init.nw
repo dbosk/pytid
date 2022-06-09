@@ -130,7 +130,7 @@ if parameters:
 @
 
 
-\section{Creating [[ics.event.Event]]s from KTH data}
+\subsection{Creating [[ics.event.Event]]s from KTH data}
 
 We will introduce an [[EventFromKTH]] class that inherits from the standard 
 [[Event]] class.

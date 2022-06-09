@@ -253,3 +253,23 @@ def json_to_ics(json_data):
 
   return items
 @
+
+
+\section{Handling calendars from URLs}
+
+We sometimes would like to provide a URL to an ICS-formatted file.
+Here we provide a function that takes a URL to an ICS-formatted file and 
+returns a calendar, in the same format as the course schedule above.
+This will allow us to easily compare to \eg see which sessions someone can 
+attend.
+<<functions>>=
+def read_calendar(url):
+  """
+  Input: url is a string containing the URL to the ICS-formatted calendar.
+  Output: an [[ics.icalendar.Calendar]] object.
+  """
+  response = requests.get(url)
+  if response.status_code == 200:
+    return ics.icalendar.Calendar(imports=response.text)
+  raise Exception(response.text)
+@

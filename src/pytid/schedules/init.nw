@@ -16,6 +16,21 @@ We provide the file [[__init__.py]].
 @
 
 
+\section{Representing events}
+
+We will use the ICS calendar format to represent events.
+For this we will use the [[ics]] package.
+We will use the [[arrow]] package instead of [[datetime]], as this is suggested 
+by the [[ics]] package.
+<<imports>>=
+import arrow.arrow as arrow
+import ics.event
+import ics.icalendar
+@ Using the [[ics]] package allows us to work with calendar related things in a 
+standard way, so that we later can just import calendars through [[.ics]] 
+files.
+
+
 \section{The KTH Schedule API}
 
 We will not use TimeEdit directly (in this version).
@@ -58,12 +73,15 @@ def course_query(course_code, /, **kwargs):
   else:
     raise Exception(response.text)
 
-  events = []
-  <<convert results to list of Event objects in events>>
-  return events
+  events = set()
+  <<convert results to set of ics.event.Event objects in events>>
+  return ics.icalendar.Calendar(events=events)
 @
 
-According to the API documentation, we form the request path like this:
+According to the API documentation, some parameters are supposed to be part of 
+the path.
+However, that seems to be wrong, that didn't work.
+Everything should be a GET parameter, so we form the request path like this:
 <<form the request path>>=
 path = course_code
 
@@ -90,181 +108,127 @@ if parameters:
   path += f"?{parameters}"
 @
 
-\section{Representing events}
 
-We will introduce an [[Event]] class to represent the events.
+\section{Creating [[ics.event.Event]]s from KTH data}
+
+We will introduce an [[EventFromKTH]] class that inherits from the standard 
+[[Event]] class.
+This is just to make constructing the objects easier.
 <<classes>>=
-class Event:
+class EventFromKTH(ics.event.Event):
   def __init__(self, json_data):
     """
-    Input: json_data is the data returned from the API
+    Input: json_data is the data returned from the KTH API
     """
     <<process JSON data, initialize attributes>>
-
-  <<Event properties>>
-  <<special methods>>
 @
 
 This means that we can do the necessary conversion of the results above.
-<<convert results to list of Event objects in events>>=
+<<convert results to set of ics.event.Event objects in events>>=
 for event_json in results["entries"]:
-  events.append(Event(event_json))
-@
-
-According to the documentation we have the following attributes.
-<<Event properties>>=
-@property
-def url(self):
-  return self.__url
-
-@property
-def start(self):
-  return self.__start
-
-@property
-def end(self):
-  return self.__end
-
-@property
-def title(self):
-  return self.__title
-
-@property
-def type(self):
-  return self.__type
-
-def type_name(self, lang):
-  """
-  Input: lang is a string, either "sv" or "en"
-  Output: a string containing the type name in that language
-  """
-  try:
-    return self.__type_name[lang]
-  except AttributeError as err:
-    raise ValueError(f"lang = {lang}: {err}")
-
-@property
-def locations(self):
-  """
-  Returns a list of Location objects.
-  """
-  return self.__locations.copy()
-
-@property
-def json(self):
-  """Whatever is left after popping the other attributes"""
-  return self.__json
+  events.add(EventFromKTH(event_json))
 @
 
 Now we can just pop the different attributes from the JSON data, except for 
 locations, which we will deal with separately.
+Then pass those attributes to the parent class constructor.
 After having popped the attributes, the remaining data will be stored in the 
-[[json]] attribute.
-<<process JSON data, initialize attributes>>=
-attributes = [
-  "url",
-  "start", "end",
-  "title",
-  "type", "type_name"
-]
-
-priv_attr_prefix = f"_{type(self).__name__}__"
-
-for attribute in attributes:
-  value = json_data.pop(attribute)
-  if value:
-    self.__dict__[f"{priv_attr_prefix}{attribute}"] = value
-
-<<pop and set the locations attribute>>
-
-self.__json = json_data
-@
-
-\subsection{Representing locations}
-
-We can see in the documentation that the location has a name and a URL to more 
-information.
-<<classes>>=
-class Location:
-  def __init__(self, json_data):
-    """
-    Input: json_data is the data returned from the API
-    """
-    self.__name = json_data.pop("name")
-
-    try:
-      self.__url = json_data.pop("url")
-    except KeyError:
-      pass
-
-    self.__json = json_data
-
-  @property
-  def url(self):
-    return self.__url
-
-  @property
-  def name(self):
-    return self.__name
-
-  def __str__(self):
-    return self.name
-@
-
-Thus, in the constructor of [[Event]], we want to create [[Location]] objects 
-from the locations.
-<<pop and set the locations attribute>>=
-self.__locations = []
-
-locations = json_data.pop("locations")
-
-for location in locations or []:
-  self.__locations.append(Location(location))
-@
-
-\subsection{Additional data}
-
-We also get two more attributes of an event (not documented):
+[[.extra]] attribute, as per [[ics]] package way.
+We also get two undocumented attributes of an event:
 \begin{description}
 \item[info] provides additional information, \eg comments added by the teacher 
 (through the scheduling department).
 \item[group] provides a list of groups that should attend.
 \end{description}
 
-We add these in the constructor above.
+We will use the locale to determine which language to use for the 
+[[type_name]].
+We will let each group be represented by an [[ics.attendee.Attendee]] object.
+(The groups are undocumented, and they seem to not work for now.)
+<<imports>>=
+import ics.attendee
+import locale
+@
 <<process JSON data, initialize attributes>>=
+attribute_map = {
+  "url": "url",
+  "start": "begin",
+  "end": "end",
+  "type_name": "name",
+  "info": "description",
+  "group": "attendees",
+  "locations": "location"
+}
+
+kwargs = dict()
+
+for attribute, kw in attribute_map.items():
+  try:
+    value = json_data.pop(attribute)
+
+    if attribute == "type_name":
+      <<get type name best suited for current locale>>
+    elif attribute == "locations":
+      <<extract the location for value>>
+
+    kwargs[kw] = value
+  except AttributeError:
+    pass
+
+<<add remaining data to extra>>
+
+super().__init__(**kwargs)
+@
+
+<<get type name best suited for current locale>>=
 try:
-  self.__info = json_data.pop("info")
+  value = value[locale.getlocale()[0][:2]]
 except AttributeError:
-  pass
-
-try:
-  self.__group = json_data.pop("group")
-except AttributeError:
-  pass
+  value = value["sv"]
 @
 
-And set the corresponding properties.
-<<Event properties>>=
-@property
-def info(self):
-  return self.__info
+We can see in the documentation that the location has a name and a URL to more 
+information.
+However, we cannot preserve this data in the ICS format.
+So we merge the location names into one value.
+<<extract the location for value>>=
+locations = value
+value = ""
 
-@property
-def group(self):
-  return self.__group
+for location in locations:
+  if value:
+    value += f", {location['name']}"
+  else:
+    value += location["name"]
 @
 
-
-\subsection{Easy representation of event}
-
-We want to let the [[Event]] object to easily represent itself when converting 
-to a string.
-<<special methods>>=
-def __str__(self):
-  return f"{self.type_name('en')} " \
-    f"at {self.start} " \
-    f"in {[location.name for location in self.locations]}, " \
-    f"groups: {self.group}, info: {self.info}"
+Now, any remaining data in [[json_data]] should be added to the [[extra]] 
+attribute.
+<<add remaining data to extra>>=
+self.extra = json_to_ics(json_data)
 @
 
+The function [[json_to_ics]] will recurse down [[json_data]] and convert the 
+dictionaries to [[ics.parse.Container]]s and [[ics.parse.ContentLine]]s.
+<<imports>>=
+import ics.parse
+@
+<<functions>>=
+def json_to_ics(json_data):
+  """
+  Input:
+  json_data being output from json.loads, a directory with lists and values.
+
+  Output:
+  List of ics.parse.Container or ics.parse.ContentLine
+  """
+  items = []
+
+  for kw, value in json_data.items():
+    if isinstance(value, dict):
+      items.append(ics.parse.Container(kw, json_to_ics(value)))
+    else:
+      items.append(ics.parse.ContentLine(name=kw, value=value))
+
+  return items
+@

@@ -10,7 +10,11 @@ We'll use the [[ics]] package to handle events and schedules (calendars).
 This means that we can use the ICS exports from TimeEdit, Google Calendar etc.
 
 We provide the following short example to demonstrate how to get the schedule 
-for a course at KTH.
+for the course DD1310 at KTH.
+There are four instances of this course given each year, we want the one with 
+the round code 51580 (also known as admission ID or round code in LADOK).
+To make it short, we only want the events for the day 2022-09-05.
+The second [[course_query]] merges the events of DD1317 into the same calendar.
 \begin{minted}{python}
 import pytid.schedules
 
@@ -21,7 +25,20 @@ calendar = pytid.schedules.course_query("DD1310",
 calendar.events |= pytid.schedules.course_query("DD1317",
     start_time="2022-09-05", end_time="2022-09-06").events
 
-for event in calendar.events:
+for event in calendar.timeline:
+  print(f"{event.name} {event.begin} in {event.location}"
+    f"\nDescription: {event.description}")
+\end{minted}
+
+We can also get the schedule directly from TimeEdit by providing the URL to the 
+ICS file.
+\begin{minted}{python}
+import pytid.schedules
+
+calendar = pytid.schedules.read_calendar(
+  "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=360174.3&e=220609&enol=t&ku=29&k=AFC54A7C7A441C7B6EBD92008BF91F9F0")
+
+for event in calendar.timeline:
   print(f"{event.name} {event.begin} in {event.location}"
     f"\nDescription: {event.description}")
 \end{minted}

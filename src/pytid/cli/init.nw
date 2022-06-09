@@ -4,3 +4,6 @@ In this chapter we document the command-line interface, \ie the command
 [[pytid]].
 
 The command has a subcommand-based design, similar to commands like [[git]].
+In this chapter we cover how we handle the subcommands and give the [[config]] 
+subcommand as an example.
+Other subcommands are given their own chapters.

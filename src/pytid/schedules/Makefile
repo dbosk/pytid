@@ -9,7 +9,7 @@ __init__.py: init.py
 
 .PHONY: clean
 clean:
-	${RM} init.py __init__.py
+	${RM} init.py __init__.py init.tex
 
 
 INCLUDE_MAKEFILES=../../../makefiles

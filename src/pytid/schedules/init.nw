@@ -88,7 +88,6 @@ def course_query(course_code, /, **kwargs):
   Output:
   """
   <<form the request path>>
-  print(f"{SCHEDULE_API_URL}/course/{path}")
   response = requests.get(f"{SCHEDULE_API_URL}/course/{path}")
   if response.status_code == 200:
     results = response.json()

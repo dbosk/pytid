@@ -1,0 +1,111 @@
+\chapter{Utilities}
+
+In this chapter we cover various utilities.
+The outline of the module is as follows:
+<<utils.py>>=
+import csv
+import pytid.schedules
+
+<<functions>>
+
+def main():
+  <<usage examples>>
+
+if __name__ == "__main__":
+    main()
+@
+
+
+\section{Generate sign up sheet for TAs}
+
+We want to generate a sign-up sheet that TAs can use to sign up for teaching 
+sessions, \eg lab or tutorial sessions.
+It takes the course title (used for file name) and a URL to TimeEdit for the 
+course schedule.
+It outputs a CSV that can be imported to Google Sheets that the TAs can fill.
+<<functions>>=
+def needed_TAs(event):
+  """
+  Takes an event and returns the number of TAs needed
+  """
+  <<compute the number of needed TAs>>
+  
+def generate_signup_sheet(course, url, needed_TAs=needed_TAs):
+  """
+  Input:
+  - course is a string containing the file name used for output.
+  - url is the URL to the ICS-formatted calendar.
+  - needed_TAs is a function computing the number of needed TAs based on the 
+    event. The default is the needed_TAs function in this module.
+
+  Output:
+  Returns nothing. Writes output to {course}.csv.
+  """
+  with open(f"{course}.csv", "w") as out:
+    csvout = csv.writer(out, delimiter="\t")
+    calendar = pytid.schedules.read_calendar(url)
+
+    max_num_TAs = 0
+    # we want to adapt header to max_num_TAs
+    header = [
+      "Event", "Start", "End", "#Rooms",
+      "#Needed TAs"
+    ]
+    rows = []
+
+    for event in calendar.timeline:
+      if "Övning" in event.name or \
+          "laboration" in event.name:
+        num_TAs = needed_TAs(event)
+        if num_TAs > max_num_TAs:
+          max_num_TAs = num_TAs
+
+        rows.append([
+          event.name,
+          event.begin.to("local").format("YYYY-MM-DD HH:mm"),
+          event.end.to("local").format("YYYY-MM-DD HH:mm"),
+          len(event.location.split(",")),
+          num_TAs
+        ])
+
+    csvout.writerow(header +
+      [f"TA {n+1}" for n in range(max_num_TAs)] +
+        ["Reserv"])
+
+    csvout.writerows(rows)
+@
+
+<<usage examples>>=
+COURSES = {
+  "DD1310": 
+  "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=453080.10&e=220609&enol=t&ku=29&k=1B9F3AD696BCA5C434C68950EFD376DD",
+  "DD1317": 
+  "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=455995.10&e=220609&enol=t&ku=29&k=BA4400E3C003685549BC65AD9EAD3DC58E"
+}
+
+for course, url in COURSES.items():
+  generate_signup_sheet(course, url)
+@
+
+
+\section{Computing the number of necessary TAs}
+
+We need to compute the number of TAs that we need for various sessions.
+We compute this number from the parameter [[event]], which is an 
+[[ics.event.Event]] object from the schedule.
+The base algorithm counts on one TA per group.
+If there are no groups, we use one TA per room.
+<<compute the number of needed TAs>>=
+num_groups = event.description.split().count("grupp")
+if num_groups == 0:
+  num_groups = event.description.split().count("group")
+
+num_rooms = len(event.location.split(","))
+
+num_TAs = max(num_rooms, num_groups)
+
+if "laboration" in event.name or "Laboration" in event.name:
+  num_TAs = round(num_TAs * 1.5)
+
+return num_TAs
+@

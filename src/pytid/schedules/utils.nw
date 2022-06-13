@@ -3,9 +3,13 @@
 In this chapter we cover various utilities.
 The outline of the module is as follows:
 <<utils.py>>=
+import arrow
 import csv
 import pytid.schedules
+import re
+import requests
 
+<<constants>>
 <<functions>>
 
 def main():
@@ -118,4 +122,154 @@ if "laboration" in event.name or "Laboration" in event.name:
   num_TAs = round(num_TAs * 1.5)
 
 return num_TAs
+@
+
+
+\section{Reading the sign-up sheet}
+
+We want to read the sign-up sheet to later parse it to extract interesting 
+data.
+We provide two ways:
+\begin{itemize}
+\item read from a file.
+\item read from a URL.
+\end{itemize}
+In both cases we want to return the rows of the CSV.
+
+\subsection{Reading from a file}
+
+We simply read the rows from the file.
+<<functions>>=
+def read_signup_sheet_from_file(filename):
+  """
+  Input: filename is a string containing the file name of the CSV file of the 
+  sign-up sheet.
+
+  Output: All the rows of the CSV as a Python list.
+  """
+  with open(filename, "r") as f:
+    csvfile = csv.reader(f)
+    return list(csvfile)
+@
+
+\subsection{Reading from a URL}
+
+We simply download the CSV file and read the rows from the file.
+<<functions>>=
+def read_signup_sheet_from_url(url):
+  """
+  Input: url is a string containing the URL of the CSV file of the sign-up 
+  sheet.
+
+  Output: All the rows of the CSV as a Python list.
+  """
+  response = requests.get(url)
+  if response.status_code != 200:
+    raise ValueError(response.text)
+
+  csvdata = response.text.splitlines()
+  return list(csv.reader(csvdata))
+@
+
+We also provide a function that takes the sharing URL of a publicly visible 
+sheet on Google Sheets and changes it into a URL that exports the sheet to CSV.
+<<functions>>=
+def google_sheet_to_csv_url(share_url):
+  """
+  Input: The share URL of a Google Sheets sheet.
+
+  Output: A URL that downloads (exports) the sheet in CSV format.
+  """
+  match = re.search("/edit.*$", share_url)
+  if not match:
+    raise ValueError(f"{share_url} doesn't seem like a Google Sheets URL.")
+
+  url = share_url[:match.start()]
+  return url + "/export?format=csv"
+@
+
+
+\section{Extracting data from sign-up sheet}
+
+We would also like to parse the sign-up sheet.
+Considering the design, we can read out many things.
+We are interested in the following:
+\begin{itemize}
+\item Which TAs are signed up for a particular session? (To organize teaching 
+better, \eg automatically generate presentation events in Canvas' calendar for 
+the students.)
+\item How many hours are spent on TAs on a course? (To keep budget.)
+\item How many hours a particular TA spent during a particular period? (To 
+generate timesheets.)
+\end{itemize}
+
+\subsection{Which TAs signed up for a particular event?}
+
+For this, we just need to take the event (a row of CSV) as input, then cut only 
+the list of TAs.
+<<functions>>=
+def get_TAs_from_csv(csv_row):
+  """
+  Input: takes a CSV data row as from a csv.reader.
+
+  Output: returns the list of signed TAs.
+  """
+  return csv_row[len(SIGNUP_SHEET_HEADER):]
+@
+
+\subsection{How many hours are spent on the course?}
+
+For this, we just want to go through all the events and multiply the time for 
+the event with the number of TAs.
+We also multiply by the standard preparation time that the TAs are paid.
+<<functions>>=
+def hours_per_TA(csv_rows):
+  """
+  Input: Rows of CSV data as from csv.reader.
+
+  Output: a dictionary mapping a TA to the number of hours they signed up for 
+  in the sign-up sheet, {TA: hours}
+  """
+  TA_hours = {}
+
+  for row in csv_rows:
+    start_index = SIGNUP_SHEET_HEADER.index("Start")
+    end_index = SIGNUP_SHEET_HEADER.index("End")
+    event_index = SIGNUP_SHEET_HEADER.index("Event")
+
+    time = (arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
+      arrow.get(row[start_index], "YYYY-MM-DD HH:mm")).total_seconds()
+    time = round(time / 60 / 60)
+
+    event_type = row[event_index]
+    if "laboration" in event_type or "Laboration" in event_type:
+      time *= 1.33
+    elif "Övning" in event_type:
+      time *= 2
+
+    for assistant in get_TAs_from_csv(row):
+      if assistant in TA_hours:
+        TA_hours[assistant] += time
+      else:
+        TA_hours[assistant] = time
+
+  return TA_hours
+@
+
+Now, from this data we can easily compute the total number of hours.
+<<functions>>=
+def total_hours(csv_rows):
+  """
+  Input: Rows of CSV data as from csv.reader.
+
+  Output: Total number of hours spent on the course.
+  """
+  total = 0.0
+  TA_hours = hours_per_TA(csv_rows)
+  TA_hours[""] = 0
+
+  for _, hours in TA_hours.items():
+    total += float(hours)
+
+  return total
 @

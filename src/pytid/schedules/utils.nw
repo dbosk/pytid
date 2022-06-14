@@ -5,6 +5,7 @@ The outline of the module is as follows:
 <<utils.py>>=
 import arrow
 import csv
+import datetime
 import pytid.schedules
 import re
 import requests
@@ -149,7 +150,7 @@ def read_signup_sheet_from_file(filename):
   """
   with open(filename, "r") as f:
     csvfile = csv.reader(f)
-    return list(csvfile)
+    return list(csvfile)[1:]
 @
 
 \subsection{Reading from a URL}
@@ -169,7 +170,7 @@ def read_signup_sheet_from_url(url):
 
   response.encoding = response.apparent_encoding
   csvdata = response.text.splitlines()
-  return list(csv.reader(csvdata))
+  return list(csv.reader(csvdata))[1:]
 @
 
 We also provide a function that takes the sharing URL of a publicly visible 
@@ -233,20 +234,16 @@ def hours_per_TA(csv_rows):
   """
   TA_hours = {}
 
+  start_index = SIGNUP_SHEET_HEADER.index("Start")
+  end_index = SIGNUP_SHEET_HEADER.index("End")
+  event_index = SIGNUP_SHEET_HEADER.index("Event")
+
   for row in csv_rows:
-    start_index = SIGNUP_SHEET_HEADER.index("Start")
-    end_index = SIGNUP_SHEET_HEADER.index("End")
-    event_index = SIGNUP_SHEET_HEADER.index("Event")
-
     time = (arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
-      arrow.get(row[start_index], "YYYY-MM-DD HH:mm")).total_seconds()
-    time = round(time / 60 / 60)
+      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
 
-    event_type = row[event_index]
-    if "laboration" in event_type or "Laboration" in event_type:
-      time *= 1.33
-    elif "Övning" in event_type:
-      time *= 2
+    time = round_time(time)
+    time = add_prep_time(time, row[event_index])
 
     for assistant in get_TAs_from_csv(row):
       if assistant in TA_hours:
@@ -274,3 +271,76 @@ def total_hours(csv_rows):
 
   return total
 @
+
+We also want to compute the maximum number of hours.
+<<functions>>=
+def max_hours(csv_rows):
+  """
+  Input: takes the rows of CSV as output from csv.reader.
+
+  Output: returns the maximum number of hours (using maximum TAs needed).
+  """
+  start_index = SIGNUP_SHEET_HEADER.index("Start")
+  end_index = SIGNUP_SHEET_HEADER.index("End")
+  event_index = SIGNUP_SHEET_HEADER.index("Event")
+  needed_TAs_index = SIGNUP_SHEET_HEADER.index("#Needed TAs")
+
+  max_hours = datetime.timedelta()
+
+  for row in csv_rows:
+    time = (arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
+      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
+
+    time = round_time(time)
+    time = add_prep_time(time, row[event_index])
+
+    max_num_TAs = int(row[needed_TAs_index])
+
+    max_hours += time * max_num_TAs
+
+  return max_hours
+@
+
+
+\subsection{Rounding time and adding prep time correctly}
+
+<<functions>>=
+def round_time(time):
+  """
+  Input: a datetime.timedelta object time.
+
+  Output: the time object rounded according to KTH rules.
+  """
+  HOUR = 60*60
+  QUARTER = 15*60
+
+  total_seconds = time.total_seconds()
+  full_hours = (total_seconds // HOUR) * HOUR
+  part_hour = total_seconds % HOUR
+
+  if part_hour >= 3*QUARTER:
+    return datetime.timedelta(seconds=full_hours+HOUR)
+  elif part_hour > 2*QUARTER:
+    return datetime.timedelta(seconds=full_hours+2*QUARTER)
+  elif part_hour >= QUARTER:
+    return datetime.timedelta(seconds=full_hours+2*QUARTER)
+
+  return datetime.timedelta(seconds=full_hours)
+@
+
+<<functions>>=
+def add_prep_time(time, event_type):
+  """
+  Input: a datetime.timedelta object time,
+    a string containing the title of the event.
+
+  Output: the time object rounded according to KTH rules.
+  """
+  if "laboration" in event_type or "Laboration" in event_type:
+    time *= 1.33
+  elif "Övning" in event_type:
+    time *= 2
+
+  return time
+@
+

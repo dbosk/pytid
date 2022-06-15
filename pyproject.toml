@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pytid"
+name = "nytid"
 version = "0.1"
 description = "Library to manage teaching schedules"
 authors = ["Daniel Bosk <daniel@bosk.se>"]

@@ -1,6 +1,6 @@
 \chapter{Working with schedules}
 
-In this chapter we describe the module [[pytid.schedules]] that we provide for 
+In this chapter we describe the module [[nytid.schedules]] that we provide for 
 working with schedules, indirectly TimeEdit.
 We want to be able to use the course schedule and the personal schedules 
 provided by TimeEdit.
@@ -16,13 +16,13 @@ the round code 51580 (also known as admission ID or round code in LADOK).
 To make it short, we only want the events for the day 2022-09-05.
 The second [[course_query]] merges the events of DD1317 into the same calendar.
 \begin{minted}{python}
-import pytid.schedules
+import nytid.schedules
 
-calendar = pytid.schedules.course_query("DD1310",
+calendar = nytid.schedules.course_query("DD1310",
   start_time="2022-09-05", end_time="2022-09-06",
   course_round="51580"
 )
-calendar.events |= pytid.schedules.course_query("DD1317",
+calendar.events |= nytid.schedules.course_query("DD1317",
     start_time="2022-09-05", end_time="2022-09-06").events
 
 for event in calendar.timeline:
@@ -33,9 +33,9 @@ for event in calendar.timeline:
 We can also get the schedule directly from TimeEdit by providing the URL to the 
 ICS file.
 \begin{minted}{python}
-import pytid.schedules
+import nytid.schedules
 
-calendar = pytid.schedules.read_calendar(
+calendar = nytid.schedules.read_calendar(
   "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=360174.3&e=220609&enol=t&ku=29&k=AFC54A7C7A441C7B6EBD92008BF91F9F0")
 
 for event in calendar.timeline:

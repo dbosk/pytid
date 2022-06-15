@@ -6,7 +6,7 @@ The outline of the module is as follows:
 import arrow
 import csv
 import datetime
-import pytid.schedules
+import nytid.schedules
 import re
 import requests
 
@@ -48,7 +48,7 @@ def generate_signup_sheet(course, url, needed_TAs=needed_TAs):
   """
   with open(f"{course}.csv", "w") as out:
     csvout = csv.writer(out, delimiter="\t")
-    calendar = pytid.schedules.read_calendar(url)
+    calendar = nytid.schedules.read_calendar(url)
 
     max_num_TAs = 0
     rows = []

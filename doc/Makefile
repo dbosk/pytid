@@ -1,14 +1,14 @@
 .PHONY: all
-all: pytid.pdf
+all: nytid.pdf
 
 LATEXFLAGS+=	-shell-escape
 TEX_PYTHONTEX=	yes
 
-pytid.pdf: ../src/pytid/schedules/init.tex
-pytid.pdf: ../src/pytid/schedules/utils.tex
-pytid.pdf: ../src/pytid/cli/init.tex
+nytid.pdf: ../src/nytid/schedules/init.tex
+nytid.pdf: ../src/nytid/schedules/utils.tex
+nytid.pdf: ../src/nytid/cli/init.tex
 
-pytid.pdf: preamble.tex abstract.tex ../LICENSE
+nytid.pdf: preamble.tex abstract.tex ../LICENSE
 
 ../%::
 	${MAKE} -C $(dir $@) $(notdir $@)
@@ -16,15 +16,15 @@ pytid.pdf: preamble.tex abstract.tex ../LICENSE
 
 .PHONY: clean
 clean:
-	${RM} pytid.pdf
-	${MAKE} -C ../src/pytid/cli clean
-	${MAKE} -C ../src/pytid/schedules clean
+	${RM} nytid.pdf
+	${MAKE} -C ../src/nytid/cli clean
+	${MAKE} -C ../src/nytid/schedules clean
 
 .PHONY: distclean
 distclean:
 	${RM} -Rf __pycache__
-	${MAKE} -C ../src/pytid/cli distclean
-	${MAKE} -C ../src/pytid/schedules distclean
+	${MAKE} -C ../src/nytid/cli distclean
+	${MAKE} -C ../src/nytid/schedules distclean
 
 
 

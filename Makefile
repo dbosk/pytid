@@ -1,6 +1,7 @@
-SUBDIR_GOALS=all
+SUBDIR_GOALS=all clean distclean
 
-SUBDIR+=	src/pytid/schedules
+SUBDIR+=	src/nytid/schedules
+SUBDIR+=	doc
 
 .PHONY: all publish
 

@@ -346,8 +346,8 @@ def add_prep_time(time, event_type):
 @
 
 
-\subsection{Compute amanuensis employment data\footnote{Based on an idea from 
-Mazen Mardini.}}
+\subsection{Compute amanuensis employment data\protect\footnote{Based on an 
+idea from Mazen Mardini.}}
 
 We want to compute the data needed to start an amanuensis employment.
 We want to compute the following:

@@ -6,7 +6,7 @@ TEX_PYTHONTEX=	yes
 
 nytid.pdf: ../src/nytid/schedules/init.tex
 nytid.pdf: ../src/nytid/schedules/utils.tex
-nytid.pdf: ../src/nytid/cli/init.tex
+#nytid.pdf: ../src/nytid/cli/init.tex
 
 nytid.pdf: preamble.tex abstract.tex ../LICENSE
 
@@ -17,13 +17,13 @@ nytid.pdf: preamble.tex abstract.tex ../LICENSE
 .PHONY: clean
 clean:
 	${RM} nytid.pdf
-	${MAKE} -C ../src/nytid/cli clean
+	#${MAKE} -C ../src/nytid/cli clean
 	${MAKE} -C ../src/nytid/schedules clean
 
 .PHONY: distclean
 distclean:
 	${RM} -Rf __pycache__
-	${MAKE} -C ../src/nytid/cli distclean
+	#${MAKE} -C ../src/nytid/cli distclean
 	${MAKE} -C ../src/nytid/schedules distclean
 
 

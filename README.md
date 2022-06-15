@@ -1,11 +1,11 @@
-# pytid
+# nytid
 
 Handle TA bookings for lab sessions, tutorials etc.
 
 We want to turn the TimeEdit schedule into a sign-up sheet in Google Sheets 
 that our TAs can use to sign up for teaching slots.
 ```python
-import pytid.schedules.utils as utils
+import nytid.schedules.utils as utils
 
 COURSES = {
   "DD1310": 
@@ -21,7 +21,7 @@ Now we have two CSV files, `DD1310.csv` and `DD1317.csv`, in the current
 working directory that we can upload to Google Sheets. Once uploaded, we can 
 use the share URL with the following functions.
 ```python
-import pytid.schedules.utils as utils
+import nytid.schedules.utils as utils
 
 dd1317 = utils.read_signup_sheet_from_url(utils.google_sheet_to_csv_url("https://docs.google.com/spreadsheets/d/the-share-url"))
 

@@ -377,9 +377,11 @@ percentage closer to the minimum 10 percent.
 
 This gives us the following function:
 <<functions>>=
-def compute_amanuensis_data(csv_rows):
+def compute_amanuensis_data(csv_rows, low_percentage=0.1):
   """
-  Input: the CSV rows as output from csv.reader.
+  Input:
+    - csv_rows, the CSV rows as output from csv.reader.
+    - low_percentage, the lowest acceptable percentage of employment.
 
   Output: a dictionary {TA: (start, end, hours)} mapping the TA username to a 
   tuple (start, end, hours) with the start and end time and the total number of 
@@ -430,10 +432,10 @@ latest_month = arrow.get(
   f"{latest_date.year}-{latest_date.month:02d}-01",
   "YYYY-MM-DD").shift(months=1, seconds=-1)
 
-if compute_percentage(earliest_month, latest_month, hours) >= 0.1:
+if compute_percentage(earliest_month, latest_month, hours) >= low_percentage:
   earliest_date = earliest_month
   latest_date = latest_month
-elif compute_percentage(earliest_date, latest_month, hours) >= 0.1:
+elif compute_percentage(earliest_date, latest_month, hours) >= low_percentage:
   latest_date = latest_month
 @
 

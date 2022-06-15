@@ -224,6 +224,7 @@ def get_TAs_from_csv(csv_row):
 For this, we just want to go through all the events and multiply the time for 
 the event with the number of TAs.
 We also multiply by the standard preparation time that the TAs are paid.
+\label{HoursPerTA}
 <<functions>>=
 def hours_per_TA(csv_rows):
   """
@@ -344,3 +345,108 @@ def add_prep_time(time, event_type):
   return time
 @
 
+
+\subsection{Compute amanuensis employment data\footnote{Based on an idea from 
+Mazen Mardini.}}
+
+We want to compute the data needed to start an amanuensis employment.
+We want to compute the following:
+\begin{itemize}
+\item the total number of hours for the employment period,
+\item the employment period and percentage for the employment.
+\end{itemize}
+
+The total number of hours for the TA is already solved above 
+(\cref{HoursPerTA}).
+The key is to compute the employment period and the percentage.
+We want to compute the period and percentage most beneficial for the TA.
+We will take the following appraoch:
+\begin{enumerate}
+\item Check which slots are signed up for.
+\item Round to the month.
+  If the first slot is at 29th August, we start the position at 1st August.
+\item Compute the percentage.
+  If the percentage is too low, \ie lower than 10 percent, we shrink the period 
+  to the actual first-slot date.
+\end{enumerate}
+This algorithm gives the following benefit.
+The students can have a maximum employment of 50 percent.
+If we stretch it, the students can do more hours in total during the period.
+If the percentage gets too low, we can use the exact dates to get the 
+percentage closer to the minimum 10 percent.
+
+This gives us the following function:
+<<functions>>=
+def compute_amanuensis_data(csv_rows):
+  """
+  Input: the CSV rows as output from csv.reader.
+
+  Output: a dictionary {TA: (start, end, hours)} mapping the TA username to a 
+  tuple (start, end, hours) with the start and end time and the total number of 
+  hours.
+  """
+  start_index = SIGNUP_SHEET_HEADER.index("Start")
+  end_index = SIGNUP_SHEET_HEADER.index("End")
+  event_index = SIGNUP_SHEET_HEADER.index("Event")
+  needed_TAs_index = SIGNUP_SHEET_HEADER.index("#Needed TAs")
+
+  ta_hours = hours_per_TA(csv_rows)
+  ta_data = {}
+
+  <<compute the earliest and latest dates for each TA>>
+
+  return ta_data
+@
+
+We start by finding all start and end dates for every TA.
+<<compute the earliest and latest dates for each TA>>=
+for ta in ta_hours.keys():
+  earliest_date = arrow.get(csv_rows[0][start_index], "YYYY-MM-DD")
+  latest_date = arrow.get(csv_rows[0][end_index], "YYYY-MM-DD")
+
+  for row in csv_rows:
+    start_date = arrow.get(row[start_index], "YYYY-MM-DD")
+    end_date = arrow.get(row[end_index], "YYYY-MM-DD")
+
+    if start_date < earliest_date:
+      earliest_date = start_date
+    if end_date > latest_date:
+      latest_date = end_date
+
+  hours = ta_hours[ta].total_seconds()/60/60
+
+  <<expand earliest and latest dates if beneficial>>
+
+  ta_data[ta] = (earliest_date, latest_date, hours)
+@
+
+Now we want to try to expand the start and end dates to the start and end of 
+the month, respectively.
+<<expand earliest and latest dates if beneficial>>=
+earliest_month = arrow.get(
+  f"{earliest_date.year}-{earliest_date.month:02d}-01",
+  "YYYY-MM-DD")
+latest_month = arrow.get(
+  f"{latest_date.year}-{latest_date.month:02d}-01",
+  "YYYY-MM-DD").shift(months=1, seconds=-1)
+
+if compute_percentage(earliest_month, latest_month, hours) >= 0.1:
+  earliest_date = earliest_month
+  latest_date = latest_month
+elif compute_percentage(earliest_date, latest_month, hours) >= 0.1:
+  latest_date = latest_month
+@
+
+The [[compute_percentage]] function simply computes the average working time.
+<<functions>>=
+def compute_percentage(start, end, hours):
+  """
+  Input: start and end as arrow.arrow.Arrow or datetime.date objects,
+    hours as a float.
+
+  Output: a float in the interval [0, 1], which is the percentage of full time.
+  """
+  days = (end - start).total_seconds()/60/60/24
+  full_time = 40 * days / 7
+  return hours / full_time
+@

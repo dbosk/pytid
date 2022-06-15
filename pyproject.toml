@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pytid"
 version = "0.1"
-description = ""
+description = "Library to manage teaching schedules"
 authors = ["Daniel Bosk <daniel@bosk.se>"]
 
 [tool.poetry.scripts]

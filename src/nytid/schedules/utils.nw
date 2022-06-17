@@ -231,7 +231,7 @@ def hours_per_TA(csv_rows):
   Input: Rows of CSV data as from csv.reader.
 
   Output: a dictionary mapping a TA to the number of hours they signed up for 
-  in the sign-up sheet, {TA: hours}
+  in the sign-up sheet, {TA: hours}. The hours as datetime.timedelta objects.
   """
   TA_hours = {}
 
@@ -261,14 +261,15 @@ def total_hours(csv_rows):
   """
   Input: Rows of CSV data as from csv.reader.
 
-  Output: Total number of hours spent on the course.
+  Output: Total number of hours spent on the course, as a datetime.timedelta 
+  object.
   """
   total = 0.0
   TA_hours = hours_per_TA(csv_rows)
   TA_hours[""] = 0
 
   for _, hours in TA_hours.items():
-    total += float(hours)
+    total += hours
 
   return total
 @
@@ -279,7 +280,8 @@ def max_hours(csv_rows):
   """
   Input: takes the rows of CSV as output from csv.reader.
 
-  Output: returns the maximum number of hours (using maximum TAs needed).
+  Output: returns the maximum number of hours (using maximum TAs needed), as a 
+  detetime.timedelta object.
   """
   start_index = SIGNUP_SHEET_HEADER.index("Start")
   end_index = SIGNUP_SHEET_HEADER.index("End")

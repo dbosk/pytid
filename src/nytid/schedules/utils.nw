@@ -47,7 +47,7 @@ def generate_signup_sheet(course, url, needed_TAs=needed_TAs):
   Returns nothing. Writes output to {course}.csv.
   """
   with open(f"{course}.csv", "w") as out:
-    csvout = csv.writer(out, delimiter="\t")
+    csvout = csv.writer(out)
     calendar = nytid.schedules.read_calendar(url)
 
     max_num_TAs = 0
@@ -264,9 +264,9 @@ def total_hours(csv_rows):
   Output: Total number of hours spent on the course, as a datetime.timedelta 
   object.
   """
-  total = 0.0
+  total = datetime.timedelta(0)
   TA_hours = hours_per_TA(csv_rows)
-  TA_hours[""] = 0
+  TA_hours[""] = datetime.timedelta(0)
 
   for _, hours in TA_hours.items():
     total += hours

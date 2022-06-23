@@ -307,6 +307,8 @@ def max_hours(csv_rows):
 
 \subsection{Rounding time and adding prep time correctly}
 
+KTH uses some rounding procedure for worked time.
+We should round to half hours.
 <<functions>>=
 def round_time(time):
   """
@@ -331,6 +333,10 @@ def round_time(time):
   return datetime.timedelta(seconds=full_hours)
 @
 
+We also should add some fixed preparation time that depends on the type of 
+event.
+Lab session time should increase by a third, tutorial session time should 
+double.
 <<functions>>=
 def add_prep_time(time, event_type):
   """
@@ -426,6 +432,8 @@ for ta in ta_hours.keys():
 
 Now we want to try to expand the start and end dates to the start and end of 
 the month, respectively.
+If we can't get above the [[low_percentage]] threshold, we continue to the next 
+TA.
 <<expand earliest and latest dates if beneficial>>=
 earliest_month = arrow.get(
   f"{earliest_date.year}-{earliest_date.month:02d}-01",
@@ -439,6 +447,8 @@ if compute_percentage(earliest_month, latest_month, hours) >= low_percentage:
   latest_date = latest_month
 elif compute_percentage(earliest_date, latest_month, hours) >= low_percentage:
   latest_date = latest_month
+else:
+  continue
 @
 
 The [[compute_percentage]] function simply computes the average working time.

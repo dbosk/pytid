@@ -385,14 +385,22 @@ The students can have a maximum employment of 50 percent.
 If we stretch it, the students can do more hours in total during the period.
 If the percentage gets too low, we can use the exact dates to get the 
 percentage closer to the minimum 10 percent.
+However, if the period is shorter than a month (25 days), we don't offer an 
+amanuensis contract.
+The rationale for this is that we only trade one time report for a signing the 
+amanuensis contract (which is more work), so it's a more temporary position 
+when it's that short period of time.
 
 This gives us the following function:
 <<functions>>=
-def compute_amanuensis_data(csv_rows, low_percentage=0.1):
+def compute_amanuensis_data(csv_rows, low_percentage=0.1, min_days=25):
   """
   Input:
     - csv_rows, the CSV rows as output from csv.reader.
-    - low_percentage, the lowest acceptable percentage of employment.
+    - low_percentage, the lowest acceptable percentage of an amanuensis 
+      contract.
+    - min_days is the minimum number of days we accept for an amanuensis 
+      contract.
 
   Output: a dictionary {TA: (start, end, hours)} mapping the TA username to a 
   tuple (start, end, hours) with the start and end time and the total number of 
@@ -429,6 +437,9 @@ for ta in ta_hours.keys():
   hours = ta_hours[ta].total_seconds()/60/60
 
   <<expand earliest and latest dates if beneficial>>
+
+  if  latest_date - earliest_date < datetime.timedelta(days=min_days):
+    continue
 
   ta_data[ta] = (earliest_date, latest_date, hours)
 @

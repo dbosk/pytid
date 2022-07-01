@@ -4,6 +4,7 @@ version = "0.6"
 description = "Library to manage teaching schedules"
 authors = ["Daniel Bosk <daniel@bosk.se>"]
 exclude = ["*.csv"]
+include = ["src/**/*.py"]
 
 [tool.poetry.dependencies]
 python = "^3.10"

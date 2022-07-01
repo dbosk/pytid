@@ -354,8 +354,11 @@ def add_prep_time(time, event_type):
 @
 
 
-\subsection{Compute amanuensis employment data\protect\footnote{Based on an 
-idea from Mazen Mardini.}}
+\subsection{Compute amanuensis employment data\protect\footnote{%
+  Based on the idea from Mazen Mardini to automatically compute the 
+  percentage.
+  However, we expand on the idea a bit here.
+}}
 
 We want to compute the data needed to start an amanuensis employment.
 We want to compute the following:

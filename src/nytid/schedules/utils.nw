@@ -224,6 +224,38 @@ def get_TAs_from_csv(csv_row):
 For this, we just want to go through all the events and multiply the time for 
 the event with the number of TAs.
 We also multiply by the standard preparation time that the TAs are paid.
+
+We start with a function to compute the number of hours spent per student.
+<<functions>>=
+def hours_per_student(csv_rows):
+  """
+  Input: The schedule as rows of CSV data as from csv.reader.
+
+  Output: A dictionary mapping event type to the total number of hours per 
+  student.
+  """
+
+  start_index = SIGNUP_SHEET_HEADER.index("Start")
+  end_index = SIGNUP_SHEET_HEADER.index("End")
+  event_index = SIGNUP_SHEET_HEADER.index("Event")
+
+  event_hours = dict()
+
+  for row in csv_rows:
+    time = round_time(arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
+      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
+    event_type = row[event_index]
+
+    if event_type not in event_hours:
+      event_hours[event_type] = time
+    else:
+      event_hours[event_type] += time
+
+  return event_hours
+@
+
+Now we can compute the hours per TA.
+This is similar to the computation above, except that it adds prep time.
 \label{HoursPerTA}
 <<functions>>=
 def hours_per_TA(csv_rows):

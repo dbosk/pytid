@@ -579,6 +579,5 @@ def compute_percentage(start, end, hours):
   Output: a float in the interval [0, 1], which is the percentage of full time.
   """
   days = (end - start).total_seconds()/60/60/24
-  full_time = 40 * days / 7
-  return hours / full_time
+  return (hours / 1600) * (365 / days)
 @

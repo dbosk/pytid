@@ -150,7 +150,7 @@ def read_signup_sheet_from_file(filename):
   """
   with open(filename, "r") as f:
     csvfile = csv.reader(f)
-    return list(csvfile)[1:]
+    return list(filter(any, list(csvfile)[1:]))
 @
 
 \subsection{Reading from a URL}
@@ -170,7 +170,7 @@ def read_signup_sheet_from_url(url):
 
   response.encoding = response.apparent_encoding
   csvdata = response.text.splitlines()
-  return list(csv.reader(csvdata))[1:]
+  return list(filter(any, list(csv.reader(csvdata))[1:]))
 @
 
 We also provide a function that takes the sharing URL of a publicly visible 

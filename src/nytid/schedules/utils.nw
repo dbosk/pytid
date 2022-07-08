@@ -478,8 +478,13 @@ We want to compute the period and percentage most beneficial for the TA.
 We will take the following appraoch:
 \begin{enumerate}
 \item Check which slots are signed up for.
+\item Round to the semester.
+\item Compute the percentage.
+  If the percentage is above the threshold, \ie 10 percent, use these dates.
+  Otherwise continue.
 \item Round to the month.
-  If the first slot is at 29th August, we start the position at 1st August.
+  If the first slot is on 29th August, we start the position at 1st August.
+  If the last slot is on 2nd December, use 31st December.
 \item Compute the percentage.
   If the percentage is too low, \ie lower than 10 percent, we shrink the period 
   to the actual first-slot date.

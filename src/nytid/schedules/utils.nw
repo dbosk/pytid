@@ -548,19 +548,39 @@ for ta in ta_hours.keys():
   ta_data[ta] = (earliest_date, latest_date, hours)
 @
 
-Now we want to try to expand the start and end dates to the start and end of 
-the month, respectively.
+Now we want to try to use different start and end dates to optimize the period 
+for the student.
+We first try with the start and end dates expanded to the semester, then the 
+first and last of the months, finally the exact dates.
 If we can't get above the [[low_percentage]] threshold, we continue to the next 
 TA.
 <<expand earliest and latest dates if beneficial>>=
-earliest_month = arrow.get(
-  f"{earliest_date.year}-{earliest_date.month:02d}-01",
-  "YYYY-MM-DD")
-latest_month = arrow.get(
-  f"{latest_date.year}-{latest_date.month:02d}-01",
-  "YYYY-MM-DD").shift(months=1, seconds=-1)
+july = arrow.get(earliest_date.year, 7, 1)
 
-if compute_percentage(earliest_month, latest_month, hours) >= low_percentage:
+if earliest_date < july:
+  semester_start = arrow.get(earliest_date.year, 1, 1)
+  semester_end = arrow.get(earliest_date.year, 6, 30)
+else:
+  semester_start = arrow.get(earliest_date.year, 8, 1)
+  semester_end = arrow.get(earliest_date.year+1, 1, 31)
+
+earliest_month = arrow.get(earliest_date.year, earliest_date.month, 1)
+latest_month = arrow.get(
+  latest_date.year, latest_date.month, 1).shift(months=1, seconds=-1)
+
+if latest_date > semester_end:
+  semester_end = latest_month
+
+if compute_percentage(semester_start, semester_end, hours) >= low_percentage:
+  earliest_date = semester_start
+  latest_date = semester_end
+elif compute_percentage(semester_start, latest_month, hours) >= low_percentage:
+  earliest_date = earliest_month
+  latest_date = latest_month
+elif compute_percentage(earliest_month, semester_end, hours) >= low_percentage:
+  earliest_date = earliest_month
+  latest_date = latest_month
+elif compute_percentage(earliest_month, latest_month, hours) >= low_percentage:
   earliest_date = earliest_month
   latest_date = latest_month
 elif compute_percentage(earliest_date, latest_month, hours) >= low_percentage:

@@ -12,6 +12,7 @@ all:
 publish: all
 	poetry build
 	poetry publish
+	git push
 	gh release create -t v${version} v${version} doc/nytid.pdf
 
 

@@ -291,6 +291,48 @@ def get_TAs_from_csv(csv_row):
   return csv_row[len(SIGNUP_SHEET_HEADER):]
 @
 
+\subsection{Filter events in CSV by TA, or, which events did a TA sign up for?}
+
+Now, let's continue by asking the opposite question: which events did a TA sign 
+up for?
+We want to answer this question when we contract a TA for an amanuensis 
+position.
+We need this for, for instance, if they sign up for more, we want to calculate 
+the difference in hours.
+
+We simply look at the list of TAs for each row.
+If the TA's identifier is there, we include the row in the output.
+<<functions>>=
+def filter_events_by_TA(ta_id, csv_rows):
+  """
+  Input: ta_id is the string to (exactly) match the TAs' identifiers against;
+  csv_rows is a list of CSV rows, as from csv.reader.
+
+  Output: a list of CSV rows containing only the rows containing ta_id.
+  """
+  return list(filter(
+    lambda x: ta_id in get_TAs_from_csv(x),
+    csv_rows))
+@
+
+\subsection{Filtering events in CSV by title}
+
+We also might be interested in filtering the events by type (or title).
+We simply filter by substring on the index of the event title of each row.
+<<functions>>=
+def filter_events_by_title(event_title, csv_rows):
+  """
+  Input: event_title is the substring to match the event title against;
+  csv_rows is a list of CSV rows, as from csv.reader.
+
+  Output: a list of CSV rows containing only the rows with an event title 
+  having event_title as substring.
+  """
+  return list(filter(
+    lambda x: event_title in x[SIGNUP_SHEET_HEADER.index("Event")],
+    csv_rows))
+@
+
 \subsection{How many hours are spent on the course?}
 
 For this, we just want to go through all the events and multiply the time for 

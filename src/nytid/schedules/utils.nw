@@ -547,7 +547,7 @@ for ta in ta_hours.keys():
 
   <<expand earliest and latest dates if beneficial>>
 
-  if  latest_date - earliest_date < datetime.timedelta(days=min_days):
+  if latest_date - earliest_date < datetime.timedelta(days=min_days):
     continue
 
   ta_data[ta] = (earliest_date, latest_date, hours)

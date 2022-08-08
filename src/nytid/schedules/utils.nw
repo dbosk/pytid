@@ -450,6 +450,37 @@ def max_hours(csv_rows):
   return max_hours
 @
 
+Finally, we are also interested in computing the number of hours spent on the 
+different types of events.
+This computation is similar to how computed the hours per TA above, it's just a 
+different column in the CSV.
+<<functions>>=
+def hours_per_event(csv_rows):
+  """
+  Input: Rows of CSV data as from csv.reader.
+
+  Output: a dictionary mapping an event type to the number of hours assigned to 
+  that type of event in the sign-up sheet, {event: hours}. The hours as 
+  datetime.timedelta objects.
+  """
+  event_hours = {}
+
+  start_index = SIGNUP_SHEET_HEADER.index("Start")
+  end_index = SIGNUP_SHEET_HEADER.index("End")
+  event_index = SIGNUP_SHEET_HEADER.index("Event")
+
+  for row in csv_rows:
+    time = round_time(arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
+      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
+
+    if row[event_index] in event_hours:
+      event_hours[row[event_index]] += time
+    else:
+      event_hours[row[event_index]] = time
+
+  return event_hours
+@
+
 
 \subsection{Rounding time and adding prep time correctly}
 

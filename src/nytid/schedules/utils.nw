@@ -223,7 +223,7 @@ attribute_map = {
   SIGNUP_SHEET_HEADER.index("#Rooms"): "description",
   SIGNUP_SHEET_HEADER.index("#Needed TAs"): "description"
 }
-for idx in range(max(attribute_map.keys()), len(csv_row)):
+for idx in range(len(SIGNUP_SHEET_HEADER), len(csv_row)):
   attribute_map[idx] = "attendees"
 
 kwargs = dict()
@@ -233,10 +233,8 @@ for column, attribute in attribute_map.items():
     value = csv_row[column]
 
     if attribute == "description":
-      if attribute not in kwargs:
-        kwargs[attribute] = value
-      else:
-        kwargs[attribute] += "\n" + value
+      if attribute in kwargs:
+        value = kwargs[attribute] + "\n" + value
     elif attribute == "attendees":
       <<add value as an ics.attendee.Attendee object>>
     elif attribute in ["begin", "end"]:
@@ -254,8 +252,16 @@ The attendee object requires an email, so we can easily form that from the
 username.
 Then we append the attendee object if there is a list, otherwise we create the 
 list.
+
+Two things to note:
+First, we might have an empty value, due to empty columns in the CSV.
+Second, we must append the list of attendees if there is a list already.
 <<add value as an ics.attendee.Attendee object>>=
+if not value:
+  continue
+
 value = ics.attendee.Attendee(f"{value}@kth.se")
+
 if attribute not in kwargs:
   value = [value]
 else:

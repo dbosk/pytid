@@ -294,7 +294,26 @@ def get_TAs_from_csv(csv_row):
 
   Output: returns the list of signed TAs.
   """
-  return csv_row[len(SIGNUP_SHEET_HEADER):]
+  return list(filter(lambda x: x.strip(),
+    csv_row[len(SIGNUP_SHEET_HEADER):]))
+@
+
+We also want to apply the queue.
+Since we have the number of needed TAs, we know how many are needed.
+So we want to return those who are booked and those who are reserves for a 
+slot.
+<<functions>>=
+def get_booked_TAs_from_csv(csv_row):
+  """
+  Input: takes a CSV data row as from a csv.reader.
+
+  Output: returns the list of signed TAs, the first N, where N is the number of 
+  needed TAs specified in the CSV data.
+  """
+  TAs = get_TAs_from_csv(csv_row)
+  num_needed_TAs = int(csv_row[SIGNUP_SHEET_HEADER.index("#Needed TAs")])
+
+  return TAs[:num_needed_TAs], TAs[num_needed_TAs:]
 @
 
 \subsection{Filter events in CSV by TA, or, which events did a TA sign up for?}
@@ -376,6 +395,8 @@ def hours_per_student(csv_rows):
 
 Now we can compute the hours per TA.
 This is similar to the computation above, except that it adds prep time.
+When we do this calculation, it's important to count booked slots, not slots 
+where the TA is booked as a reserve.
 \label{HoursPerTA}
 <<functions>>=
 def hours_per_TA(csv_rows):
@@ -383,7 +404,8 @@ def hours_per_TA(csv_rows):
   Input: Rows of CSV data as from csv.reader.
 
   Output: a dictionary mapping a TA to the number of hours they signed up for 
-  in the sign-up sheet, {TA: hours}. The hours as datetime.timedelta objects.
+  (not counting slots where they're in reserve position) in the sign-up sheet, 
+  {TA: hours}. The hours as datetime.timedelta objects.
   """
   TA_hours = {}
 
@@ -398,7 +420,9 @@ def hours_per_TA(csv_rows):
     time = round_time(time)
     time = add_prep_time(time, row[event_index])
 
-    for assistant in get_TAs_from_csv(row):
+    booked, _ = get_booked_TAs_from_csv(row)
+
+    for assistant in booked:
       if assistant in TA_hours:
         TA_hours[assistant] += time
       else:
@@ -418,7 +442,6 @@ def total_hours(csv_rows):
   """
   total = datetime.timedelta(0)
   TA_hours = hours_per_TA(csv_rows)
-  TA_hours[""] = datetime.timedelta(0)
 
   for _, hours in TA_hours.items():
     total += hours

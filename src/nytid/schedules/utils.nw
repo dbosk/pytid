@@ -37,14 +37,24 @@ def needed_TAs(event):
   Takes an event and returns the number of TAs needed
   """
   <<compute the number of needed TAs>>
+
+def event_filter(events):
+  """
+  Takes a list of events, returns a filtered list of events (generator).
+  The events to include are the teaching events.
+  """
+  <<filter the list of events>>
   
-def generate_signup_sheet(course, url, needed_TAs=needed_TAs):
+def generate_signup_sheet(course, url,
+  needed_TAs=needed_TAs, event_filter=event_filter):
   """
   Input:
   - course is a string containing the file name used for output.
   - url is the URL to the ICS-formatted calendar.
   - needed_TAs is a function computing the number of needed TAs based on the 
-    event. The default is the needed_TAs function in this module.
+    event. The default is the needed_TAs function in this module,
+  - event_filter is a function that filters events, takes a list of events as 
+    argument and returns a filtered list.
 
   Output:
   Returns nothing. Writes output to {course}.csv.
@@ -79,7 +89,7 @@ We want TAs to sign up for any event in the calendar.
 If we don't want any TAs, we can simply filter out those events from the 
 TimeEdit ICS export.
 <<generate rows of sign-up sheet>>=
-for event in calendar.timeline:
+for event in event_filter(calendar.timeline):
   num_TAs = needed_TAs(event)
 
   if num_TAs > max_num_TAs:
@@ -94,6 +104,8 @@ for event in calendar.timeline:
   ])
 @
 
+
+Finally, we can use the function as follows.
 <<usage examples>>=
 COURSES = {
   "DD1310": 
@@ -107,7 +119,7 @@ for course, url in COURSES.items():
 @
 
 
-\section{Computing the number of necessary TAs}
+\subsection{Computing the number of necessary TAs}
 
 We need to compute the number of TAs that we need for various sessions.
 We compute this number from the parameter [[event]], which is an 
@@ -129,6 +141,20 @@ if "laboration" in event.name or "Laboration" in event.name:
 return num_TAs
 @
 
+
+\subsection{Filtering events to include in sign-up sheet}
+
+To filter the list of events, we do the following.
+<<filter the list of events>>=
+events_whitelist = ["Datorlaboration", "Laboration", "Föreläsning", "Övning"]
+
+for event in events:
+  for event_type in events_whitelist:
+    if event_type in event.name:
+      yield event
+      break
+@
+ 
 
 \section{Reading the sign-up sheet}
 

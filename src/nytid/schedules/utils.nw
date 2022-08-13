@@ -75,22 +75,23 @@ SIGNUP_SHEET_HEADER = [
 
 To generate the rows of the sheet, we simply go through the calendar in 
 chronological order.
-We only want the TAs to sign up for tutorials (övningar) and labs (laboration).
+We want TAs to sign up for any event in the calendar.
+If we don't want any TAs, we can simply filter out those events from the 
+TimeEdit ICS export.
 <<generate rows of sign-up sheet>>=
 for event in calendar.timeline:
-  if "Övning" in event.name or \
-      "laboration" in event.name or "Laboration" in event.name:
-    num_TAs = needed_TAs(event)
-    if num_TAs > max_num_TAs:
-      max_num_TAs = num_TAs
+  num_TAs = needed_TAs(event)
 
-    rows.append([
-      event.name,
-      event.begin.to("local").format("YYYY-MM-DD HH:mm"),
-      event.end.to("local").format("YYYY-MM-DD HH:mm"),
-      len(event.location.split(",")),
-      num_TAs
-    ])
+  if num_TAs > max_num_TAs:
+    max_num_TAs = num_TAs
+
+  rows.append([
+    event.name,
+    event.begin.to("local").format("YYYY-MM-DD HH:mm"),
+    event.end.to("local").format("YYYY-MM-DD HH:mm"),
+    len(event.location.split(",")),
+    num_TAs
+  ])
 @
 
 <<usage examples>>=

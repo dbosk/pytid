@@ -686,6 +686,7 @@ Now we want to try to use different start and end dates to optimize the period
 for the student.
 We first try with the start and end dates expanded to the semester, then the 
 first and last of the months, finally the exact dates.
+For the start date, we also take today's date into consideration.
 If we can't get above the [[low_percentage]] threshold, we continue to the next 
 TA.
 <<expand earliest and latest dates if beneficial>>=
@@ -702,8 +703,12 @@ earliest_month = arrow.get(earliest_date.year, earliest_date.month, 1)
 latest_month = arrow.get(
   latest_date.year, latest_date.month, 1).shift(months=1, seconds=-1)
 
+now = arrow.now()
+
 if latest_date > semester_end:
   semester_end = latest_month
+elif semester_start < now:
+  semester_start = arrow.get(now.year, now.month, now.day).shift(days=1)
 
 if compute_percentage(semester_start, semester_end, hours) >= low_percentage:
   earliest_date = semester_start

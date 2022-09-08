@@ -145,8 +145,15 @@ return num_TAs
 \subsection{Filtering events to include in sign-up sheet}
 
 To filter the list of events, we do the following.
+We want to filter events using a whitelist, this is because otherwise we'll end 
+up with holidays in our sign-up sheet.
 <<filter the list of events>>=
-events_whitelist = ["Datorlaboration", "Laboration", "Föreläsning", "Övning"]
+events_whitelist = [
+  "Datorlaboration", "Laboration",
+  "Övning",
+  "Seminarium", "Redovisning", "Examination",
+  "Föreläsning"
+]
 
 for event in events:
   for event_type in events_whitelist:

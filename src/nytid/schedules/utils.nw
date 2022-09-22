@@ -457,6 +457,7 @@ def hours_per_TA(csv_rows):
     booked, _ = get_booked_TAs_from_csv(row)
 
     for assistant in booked:
+      assistant = assistant.casefold()
       if assistant in TA_hours:
         TA_hours[assistant] += time
       else:

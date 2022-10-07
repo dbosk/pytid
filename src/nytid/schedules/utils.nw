@@ -448,11 +448,11 @@ def hours_per_TA(csv_rows):
   event_index = SIGNUP_SHEET_HEADER.index("Event")
 
   for row in csv_rows:
-    time = (arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
-      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
+    start_date = arrow.get(row[start_index], "YYYY-MM-DD HH:mm")
+    time = arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - start_date
 
     time = round_time(time)
-    time = add_prep_time(time, row[event_index])
+    time = add_prep_time(time, row[event_index], start_date)
 
     booked, _ = get_booked_TAs_from_csv(row)
 
@@ -501,11 +501,11 @@ def max_hours(csv_rows):
   max_hours = datetime.timedelta()
 
   for row in csv_rows:
-    time = (arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - \
-      arrow.get(row[start_index], "YYYY-MM-DD HH:mm"))
+    start_date = arrow.get(row[start_index], "YYYY-MM-DD HH:mm")
+    time = arrow.get(row[end_index], "YYYY-MM-DD HH:mm") - start_date
 
     time = round_time(time)
-    time = add_prep_time(time, row[event_index])
+    time = add_prep_time(time, row[event_index], start_date)
 
     max_num_TAs = int(row[needed_TAs_index])
 
@@ -548,6 +548,26 @@ def hours_per_event(csv_rows):
 
 \subsection{Rounding time and adding prep time correctly}
 
+The KTH policy on prep time for different kinds of events depends on what kind 
+of event it is, but also when the event was.
+The policy for prep time changed on 2022-10-01.
+It's also different depending on the TA being an amanuensis or not.
+
+We provide a function that computes the time for an event according to the 
+policy:
+<<functions>>=
+def time_for_event(event, amanuensis=False):
+  """
+  Input: an event of type ics.event.Event and an optional bool amanuensis 
+  specifying whether the computation is for an amanuensis or not.
+
+  Output: Returns a datetime.timedelta corresponding to the time including prep 
+  time for the event.
+  """
+  return add_prep_time(
+    round_time(event.end-event.begin), event.name, event.begin, amanuensis)
+@
+
 KTH uses some rounding procedure for worked time.
 We should round to half hours.
 <<functions>>=
@@ -579,17 +599,30 @@ event.
 Lab session time should increase by a third, tutorial session time should 
 double.
 <<functions>>=
-def add_prep_time(time, event_type):
+def add_prep_time(time, event_type,
+  date=datetime.date.today(), amanuensis=False):
   """
-  Input: a datetime.timedelta object time,
-    a string containing the title of the event.
+  Input:
+  - a datetime.timedelta object time,
+  - a string containing the title of the event,
+  - an optional date (datetime or arrow object) indicating the date of the 
+    event. If no date is given, today's date is assumed, meaning the latest 
+    prep-time policy will be used.
+  - an optional bool indicating amanuensis employment or hourly.
 
   Output: the time object rounded according to KTH rules.
   """
-  if "laboration" in event_type or "Laboration" in event_type:
-    time *= 1.33
-  elif "Övning" in event_type:
-    time *= 2
+  if date > arrow.Arrow(2023, 1, 1) or \
+    (date > arrow.Arrow(2022, 10, 1) and not amanuensis):
+    if "laboration" in event_type or "Laboration" in event_type:
+      time *= 1.5
+    elif "Övning" in event_type:
+      time *= 2
+  else:
+    if "laboration" in event_type or "Laboration" in event_type:
+      time *= 1.33
+    elif "Övning" in event_type:
+      time *= 2
 
   return time
 @

@@ -650,20 +650,25 @@ We will take the following appraoch:
 \item Check which slots are signed up for.
 \item Round to the semester.
 \item Compute the percentage.
-  If the percentage is above the threshold, \ie 10 percent, use these dates.
+SUBDIR+=	  If the percentage is above the threshold, use these dates.
   Otherwise continue.
 \item Round to the month.
   If the first slot is on 29th August, we start the position at 1st August.
   If the last slot is on 2nd December, use 31st December.
 \item Compute the percentage.
-  If the percentage is too low, \ie lower than 10 percent, we shrink the period 
+  If the percentage is too low, lower than the threshold, we shrink the period 
   to the actual first-slot date.
 \end{enumerate}
 This algorithm gives the following benefit.
-The students can have a maximum employment of 50 percent.
+The students can have a maximum employment of 50 percent\footnote{%
+  This is regulated in the Higher Education Ordinance (Högskoleförordningen).
+}.
+They can work a minimum 5 percent\footnote{%
+  This is a policy set by EECS at KTH, not KTH as a whole.
+}.
 If we stretch it, the students can do more hours in total during the period.
 If the percentage gets too low, we can use the exact dates to get the 
-percentage closer to the minimum 10 percent.
+percentage closer to the minimum.
 However, if the period is shorter than a month (25 days), we don't offer an 
 amanuensis contract.
 The rationale for this is that we only trade one time report for a signing the 
@@ -672,7 +677,7 @@ when it's that short period of time.
 
 This gives us the following function:
 <<functions>>=
-def compute_amanuensis_data(csv_rows, low_percentage=0.1, min_days=25):
+def compute_amanuensis_data(csv_rows, low_percentage=0.05, min_days=25):
   """
   Input:
     - csv_rows, the CSV rows as output from csv.reader.

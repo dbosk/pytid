@@ -614,17 +614,32 @@ def add_prep_time(time, event_type,
   """
   if date > arrow.Arrow(2023, 1, 1) or \
     (date > arrow.Arrow(2022, 10, 1) and not amanuensis):
-    if "laboration" in event_type or "Laboration" in event_type:
+    if check_substrings(
+          ["laboration", "seminarium", "redovisning"],
+          event_type.casefold()):
       time *= 1.5
-    elif "Övning" in event_type:
+    elif "övning" in event_type.casefold():
       time *= 2
   else:
-    if "laboration" in event_type or "Laboration" in event_type:
+    if check_substrings(
+          ["laboration", "seminarium", "redovisning"],
+          event_type.casefold()):
       time *= 1.33
-    elif "Övning" in event_type:
+    elif "övning" in event_type.casefold():
       time *= 2
 
   return time
+
+def check_substrings(substrings, string):
+  """
+  Check if any of the substrings (list) is a substring of string.
+  Return bool.
+  """
+  for substring in substrings:
+    if substring in string:
+      return True
+
+  return False
 @
 
 

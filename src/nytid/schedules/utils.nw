@@ -695,6 +695,8 @@ The students can have a maximum employment of 50 percent\footnote{%
 }.
 They can work a minimum 5 percent\footnote{%
   This is a policy set by EECS at KTH, not KTH as a whole.
+  However, we will use 4 percent, because the TAs usually to more time and we 
+  want to catch those borderline cases.
 }.
 If we stretch it, the students can do more hours in total during the period.
 If the percentage gets too low, we can use the exact dates to get the 
@@ -707,7 +709,7 @@ when it's that short period of time.
 
 This gives us the following function:
 <<functions>>=
-def compute_amanuensis_data(csv_rows, low_percentage=0.05, min_days=25,
+def compute_amanuensis_data(csv_rows, low_percentage=0.04, min_days=25,
     add_prep_time=add_prep_time, round_time=round_time):
   """
   Input:

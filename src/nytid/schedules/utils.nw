@@ -710,7 +710,7 @@ when it's that short period of time.
 This gives us the following function:
 <<functions>>=
 def compute_amanuensis_data(csv_rows, low_percentage=0.04, min_days=25,
-    add_prep_time=add_prep_time, round_time=round_time):
+    add_prep_time=add_prep_time, round_time=round_time, begin_date=None):
   """
   Input:
   - csv_rows, the CSV rows as output from csv.reader.
@@ -721,6 +721,8 @@ def compute_amanuensis_data(csv_rows, low_percentage=0.04, min_days=25,
   - add_prep_time allows using a different function for adding prep time than 
     the default.
   - round_time allows using a different function for rounding that the default.
+  - begin_date means that we will force this date as a start date, None means 
+    we will compute the start date.
 
   Output: a dictionary {TA: (start, end, hours)} mapping the TA username to a 
   tuple (start, end, hours) with the start and end time and the total number of 
@@ -768,6 +770,9 @@ Now we want to try to use different start and end dates to optimize the period
 for the student.
 We first try with the start and end dates expanded to the semester, then the 
 first and last of the months, finally the exact dates.
+For the start date, we also take today's date into consideration.
+If we're far into the semester we don't take the start of the semester into 
+account, then we use the actual start month instead.
 If we can't get above the [[low_percentage]] threshold, we continue to the next 
 TA.
 <<expand earliest and latest dates if beneficial>>=
@@ -783,6 +788,9 @@ else:
 earliest_month = arrow.get(earliest_date.year, earliest_date.month, 1)
 latest_month = arrow.get(
   latest_date.year, latest_date.month, 1).shift(months=1, seconds=-1)
+
+if begin_date:
+  semester_start = earliest_date = earliest_month = begin_date
 
 if latest_date > semester_end:
   semester_end = latest_month

@@ -809,8 +809,10 @@ elif compute_percentage(earliest_month, latest_month, hours) >= low_percentage:
   latest_date = latest_month
 elif compute_percentage(earliest_date, latest_month, hours) >= low_percentage:
   latest_date = latest_month
+elif compute_percentage(earliest_date, latest_date, hours) >= low_percentage:
+  pass
 else:
-  continue
+  continue # skip to next TA
 @
 
 The [[compute_percentage]] function simply computes the average working time.

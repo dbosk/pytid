@@ -767,6 +767,8 @@ for the student.
 We first try with the start and end dates expanded to the semester, then the 
 first and last of the months, finally the exact dates.
 For the start date, we also take today's date into consideration.
+If we're far into the semester we don't take the start of the semester into 
+account, then we use the actual start month instead.
 If we can't get above the [[low_percentage]] threshold, we continue to the next 
 TA.
 <<expand earliest and latest dates if beneficial>>=
@@ -785,10 +787,12 @@ latest_month = arrow.get(
 
 now = arrow.now()
 
+if semester_start < now:
+  semester_start = min(earliest_month,
+    arrow.get(now.year, now.month, now.day).shift(days=1))
+
 if latest_date > semester_end:
   semester_end = latest_month
-elif semester_start < now:
-  semester_start = arrow.get(now.year, now.month, now.day).shift(days=1)
 
 if compute_percentage(semester_start, semester_end, hours) >= low_percentage:
   earliest_date = semester_start

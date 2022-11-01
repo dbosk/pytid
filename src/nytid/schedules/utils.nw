@@ -326,10 +326,13 @@ def get_TAs_from_csv(csv_row):
   """
   Input: takes a CSV data row as from a csv.reader.
 
-  Output: returns the list of signed TAs.
+  Output: returns the list of signed TAs. Ensures casefold for TA IDs.
   """
-  return list(filter(lambda x: x.strip(),
-    csv_row[len(SIGNUP_SHEET_HEADER):]))
+  return list(
+    map(lambda x: x.casefold(),
+      filter(lambda x: x.strip(),
+        csv_row[len(SIGNUP_SHEET_HEADER):]))
+    )
 @
 
 We also want to apply the queue.
@@ -370,8 +373,8 @@ def filter_events_by_TA(ta_id, csv_rows):
   Output: a list of CSV rows containing only the rows containing ta_id.
   """
   return list(
-    filter(lambda x: ta_id.casefold() in map(lambda x: x.casefold(),
-      get_TAs_from_csv(x)), csv_rows))
+    filter(lambda x: ta_id.casefold() in get_TAs_from_csv(x),
+      csv_rows))
 @
 
 \subsection{Filtering events in CSV by title}
@@ -559,7 +562,6 @@ def hours_per_TA(csv_rows, add_prep_time=add_prep_time, round_time=round_time):
     booked, _ = get_booked_TAs_from_csv(row)
 
     for assistant in booked:
-      assistant = assistant.casefold()
       if assistant in TA_hours:
         TA_hours[assistant] += time
       else:

@@ -680,7 +680,7 @@ We will take the following appraoch:
 \item Check which slots are signed up for.
 \item Round to the semester.
 \item Compute the percentage.
-SUBDIR+=	  If the percentage is above the threshold, use these dates.
+  If the percentage is above the threshold, use these dates.
   Otherwise continue.
 \item Round to the month.
   If the first slot is on 29th August, we start the position at 1st August.

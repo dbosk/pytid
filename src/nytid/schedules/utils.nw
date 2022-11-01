@@ -369,9 +369,9 @@ def filter_events_by_TA(ta_id, csv_rows):
 
   Output: a list of CSV rows containing only the rows containing ta_id.
   """
-  return list(filter(
-    lambda x: ta_id in get_TAs_from_csv(x),
-    csv_rows))
+  return list(
+    filter(lambda x: ta_id.casefold() in map(lambda x: x.casefold(),
+      get_TAs_from_csv(x)), csv_rows))
 @
 
 \subsection{Filtering events in CSV by title}

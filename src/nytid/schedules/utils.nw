@@ -464,8 +464,13 @@ def add_prep_time(time, event_type,
 
   Output: the time object rounded according to KTH rules.
   """
-  if date > arrow.Arrow(2023, 1, 1) or \
-    (date > arrow.Arrow(2022, 10, 1) and not amanuensis):
+  if isinstance(date, arrow.Arrow):
+    date = date.datetime
+  if isinstance(date, datetime.datetime):
+    date = date.date()
+
+  if date > datetime.date(2023, 1, 1) or \
+    (date > datetime.date(2022, 10, 1) and not amanuensis):
     if check_substrings(
           ["laboration", "seminarium", "redovisning"],
           event_type.casefold()):

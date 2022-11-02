@@ -422,9 +422,10 @@ We should round to half hours.
 <<functions>>=
 def round_time(time):
   """
-  Input: a datetime.timedelta object time.
+  Input: A datetime.timedelta object time.
 
-  Output: the time object rounded according to KTH rules.
+  Output: The time object rounded according to KTH rules. Currently round up to 
+  nearest quarter of an hour.
   """
   HOUR = 60*60
   QUARTER = 15*60
@@ -433,12 +434,14 @@ def round_time(time):
   full_hours = (total_seconds // HOUR) * HOUR
   part_hour = total_seconds % HOUR
 
-  if part_hour >= 3*QUARTER:
+  if part_hour > 3*QUARTER:
     return datetime.timedelta(seconds=full_hours+HOUR)
   elif part_hour > 2*QUARTER:
+    return datetime.timedelta(seconds=full_hours+3*QUARTER)
+  elif part_hour > QUARTER:
     return datetime.timedelta(seconds=full_hours+2*QUARTER)
-  elif part_hour >= QUARTER:
-    return datetime.timedelta(seconds=full_hours+2*QUARTER)
+  elif part_hour > 0:
+    return datetime.timedelta(seconds=full_hours+QUARTER)
 
   return datetime.timedelta(seconds=full_hours)
 @

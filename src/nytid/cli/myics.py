@@ -2,8 +2,7 @@ import arrow
 from config import COURSES, SIGNUP
 import functools
 import ics.icalendar
-import nytid.schedules as sched
-import nytid.schedules.utils as utils
+from nytid.signup import sheets
 import os
 import sys
 
@@ -13,7 +12,7 @@ def add_reserve_to_title(ta, event):
     Ouput: the same CSV data, but with title prepended "RESERVE: " if TA is 
     among the reserves.
     """
-    _, reserves = utils.get_booked_TAs_from_csv(event)
+    _, reserves = sheets.get_booked_TAs_from_csv(event)
     if ta in reserves:
         event[0] = "RESERVE: " + event[0]
 
@@ -26,19 +25,19 @@ def generate_schedule():
     schedule_csv = []
 
     for course, url in SIGNUP.items():
-        schedule_csv += utils.read_signup_sheet_from_url(url)
+        schedule_csv += sheets.read_signup_sheet_from_url(url)
 
     if len(sys.argv) < 2:
         user = os.environ["USER"]
     else:
         user = sys.argv[1]
 
-    schedule_csv = utils.filter_events_by_TA(user, schedule_csv)
+    schedule_csv = sheets.filter_events_by_TA(user, schedule_csv)
     schedule_csv = map(functools.partial(add_reserve_to_title, user), 
             schedule_csv)
 
     schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(utils.EventFromCSV, schedule_csv))
+    schedule.events |= set(map(sheets.EventFromCSV, schedule_csv))
 
     return schedule
 

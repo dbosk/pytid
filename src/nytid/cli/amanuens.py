@@ -1,7 +1,7 @@
 from config import COURSES, SIGNUP
 import csv
-import nytid.schedules as sched
-import nytid.schedules.utils as utils
+from nytid.signup import hr
+from nytid.signup import sheets
 import operator
 import sys
 
@@ -18,20 +18,20 @@ else:
 booked = []
 
 for course, url in SIGNUP.items():
-    booked += utils.read_signup_sheet_from_url(url)
+    booked += sheets.read_signup_sheet_from_url(url)
 
-amanuensis = utils.compute_amanuensis_data(booked)
+amanuensis = hr.compute_amanuensis_data(booked)
 data = amanuensis[user]
 
-print(f"{user}: {data[2]:.2f} h, {100*utils.compute_percentage(*data):.1f}%: "
+print(f"{user}: {data[2]:.2f} h, {100*hr.compute_percentage(*data):.1f}%: "
       f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
 
-events = utils.filter_events_by_TA(user, booked)
-events = filter(lambda x: user in utils.get_booked_TAs_from_csv(x)[0], booked)
-events = list(map(lambda x: x[0:len(utils.SIGNUP_SHEET_HEADER)] + [user], 
-    events))
+events = sheets.filter_events_by_TA(user, booked)
+events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
+events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
+                  events))
 
-for event, hours in utils.hours_per_event(events).items():
+for event, hours in hr.hours_per_event(events).items():
     print(f"{event}: {to_hours(hours)}")
 
 print()

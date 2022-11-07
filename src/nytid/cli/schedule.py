@@ -1,8 +1,8 @@
 import arrow
 from config import COURSES, SIGNUP
 import ics.icalendar
+from nytid.signup import sheets
 import nytid.schedules as sched
-import nytid.schedules.utils as utils
 import sys
 
 def generate_schedule():
@@ -12,8 +12,8 @@ def generate_schedule():
     schedule = ics.icalendar.Calendar()
 
     for course, url in SIGNUP.items():
-        schedule.events |= set(map(utils.EventFromCSV,
-            utils.read_signup_sheet_from_url(url)))
+        schedule.events |= set(map(sheets.EventFromCSV,
+            sheets.read_signup_sheet_from_url(url)))
 
     return schedule
 

@@ -1,8 +1,8 @@
 import arrow
 from config import COURSES, SIGNUP
 import ics.icalendar
+from nytid.signup import sheets
 import nytid.schedules as sched
-import nytid.schedules.utils as utils
 import sys
 
 def events_missing_TAs(csv_rows, missing_factor=0.5):
@@ -12,10 +12,10 @@ def events_missing_TAs(csv_rows, missing_factor=0.5):
     Output: a list of CSV data, only those rows where there are fewer TAs 
     booked than the number of needed TAs.
     """
-    needed_TAs_index = utils.SIGNUP_SHEET_HEADER.index("#Needed TAs")
+    needed_TAs_index = sheets.SIGNUP_SHEET_HEADER.index("#Needed TAs")
 
     for row in csv_rows:
-        num_TAs = len(utils.get_TAs_from_csv(row))
+        num_TAs = len(sheets.get_TAs_from_csv(row))
         needed_TAs = int(row[needed_TAs_index])
 
         if num_TAs < missing_factor * needed_TAs:
@@ -28,7 +28,7 @@ def generate_schedule(csv_rows):
     returns an ics.icalendar.Calendar object.
     """
     schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(utils.EventFromCSV, csv_rows))
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
 
     return schedule
 
@@ -45,7 +45,7 @@ def main():
     """Main program"""
     booking_data = []
     for _, url in SIGNUP.items():
-        booking_data += utils.read_signup_sheet_from_url(url)
+        booking_data += sheets.read_signup_sheet_from_url(url)
 
     schedule = generate_schedule(events_missing_TAs(booking_data))
     now = arrow.get(2022, 8, 29)
@@ -63,13 +63,6 @@ def main():
 
     first = True
     for event in schedule.timeline:
-        if first:
-            first = False
-            current_week = event.begin.isocalendar()[1]
-        elif event.begin.isocalendar()[1] != current_week:
-            current_week = event.begin.isocalendar()[1]
-            print(end="\n\n")
-
         try:
             if event.begin < now:
                 continue
@@ -77,6 +70,13 @@ def main():
                 break
         except NameError:
             pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
 
         print(format_event(event))
 

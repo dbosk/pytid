@@ -1,12 +1,12 @@
 from config import COURSES, SIGNUP
-import nytid.schedules.utils as utils
+from nytid.signup import sheets
+from nytid.signup import hr
 
 booked = []
 
 for course, url in SIGNUP.items():
-    booked += utils.read_signup_sheet_from_url(url)
+    booked += sheets.read_signup_sheet_from_url(url)
 
-for user in utils.hours_per_TA(booked):
+for user in hr.hours_per_TA(booked):
     print(user)
-
 

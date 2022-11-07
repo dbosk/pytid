@@ -1,8 +1,8 @@
 import arrow
 from config import COURSES, SIGNUP
 import ics.icalendar
+from nytid.signup import sheets
 import nytid.schedules as sched
-import nytid.schedules.utils as utils
 import sys
 
 def events_booked_TAs(csv_rows):
@@ -13,8 +13,8 @@ def events_booked_TAs(csv_rows):
     reserves.
     """
     for row in csv_rows:
-        booked, _ = utils.get_booked_TAs_from_csv(row)
-        yield row[:len(utils.SIGNUP_SHEET_HEADER)] + booked
+        booked, _ = sheets.get_booked_TAs_from_csv(row)
+        yield row[:len(sheets.SIGNUP_SHEET_HEADER)] + booked
 
 
 def generate_schedule(csv_rows):
@@ -23,7 +23,7 @@ def generate_schedule(csv_rows):
     returns an ics.icalendar.Calendar object.
     """
     schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(utils.EventFromCSV, csv_rows))
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
 
     return schedule
 
@@ -40,7 +40,7 @@ def main():
     """Main program"""
     booking_data = []
     for _, url in SIGNUP.items():
-        booking_data += utils.read_signup_sheet_from_url(url)
+        booking_data += sheets.read_signup_sheet_from_url(url)
 
     schedule = generate_schedule(events_booked_TAs(booking_data))
     now = arrow.get(2022, 8, 29)
@@ -58,13 +58,6 @@ def main():
 
     first = True
     for event in schedule.timeline:
-        if first:
-            first = False
-            current_week = event.begin.isocalendar()[1]
-        elif event.begin.isocalendar()[1] != current_week:
-            current_week = event.begin.isocalendar()[1]
-            print(end="\n\n")
-
         try:
             if event.begin < now:
                 continue
@@ -72,6 +65,13 @@ def main():
                 break
         except NameError:
             pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
 
         print(format_event(event))
 

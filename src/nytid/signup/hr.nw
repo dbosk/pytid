@@ -5,6 +5,8 @@ The module is constructed as follows.
 <<hr.py>>=
 import arrow
 import datetime
+from nytid.signup import sheets
+from nytid.signup.sheets import SIGNUP_SHEET_HEADER
 
 <<functions>>
 @
@@ -181,7 +183,7 @@ def hours_per_TA(csv_rows, add_prep_time=add_prep_time, round_time=round_time):
     time = round_time(time)
     time = add_prep_time(time, row[event_index], start_date)
 
-    booked, _ = get_booked_TAs_from_csv(row)
+    booked, _ = sheets.get_booked_TAs_from_csv(row)
 
     for assistant in booked:
       if assistant in TA_hours:

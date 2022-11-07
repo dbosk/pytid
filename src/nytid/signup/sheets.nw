@@ -29,7 +29,7 @@ It outputs a CSV that can be imported to Google Sheets that the TAs can fill.
 <<functions>>=
 def generate_signup_sheet(course, url,
                           needed_TAs=nytid.signup.utils.needed_TAs, 
-                          event_filter=nytid.signup.utils.event_filter):
+                          event_filter=nytid.schedules.event_filter):
   """
   Input:
   - course is a string containing the file name used for output.

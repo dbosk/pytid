@@ -48,8 +48,12 @@ csvout = csv.writer(sys.stdout)
 csvout.writerow(["Tidrapport"])
 csvout.writerow([])
 
-for user in hr.hours_per_TA(course_events):
-    summarize_user(user, course_events)
+if len(sys.argv) > 1:
+    for user in sys.argv[1:]:
+        summarize_user(user, course_events)
+else:
+    for user in hr.hours_per_TA(course_events):
+        summarize_user(user, course_events)
 
 csvout.writerow([])
 csvout.writerow(["Kontering:"])

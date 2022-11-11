@@ -1,19 +1,25 @@
+import canvasapi
+import canvaslms.cli
 import csv
 import config
 from nytid.signup import hr
 from nytid.signup import sheets
+import ladok3.kth
 import operator
+import os
 import sys
 
 def to_hours(td):
     return td.total_seconds()/60/60
 
 def summarize_user(user, course_events):
-    csvout = csv.writer(sys.stdout)
-
     hours = to_hours(hr.hours_per_TA(course_events)[user])
 
-    csvout.writerow([f"{user}@kth.se", "Total (inkl förberedelsetid): ",
+    student = ls.get_student(get_ladok_id(f"{user}@kth.se"))
+
+    csvout.writerow([student.personnummer, student.last_name, 
+                     student.first_name, f"{user}@kth.se"])
+    csvout.writerow(["", "Total (inkl förberedelsetid): ",
                      f"{round(hours, 2)} h", f"{round(hours*150)} kr"])
 
     start_idx = sheets.SIGNUP_SHEET_HEADER.index("Start")
@@ -38,13 +44,23 @@ def summarize_user(user, course_events):
     csvout.writerow([])
     csvout.writerow([])
 
+def get_ladok_id(user):
+    for student in students:
+        if student.login_id == user:
+            return student.integration_id
+
+cs = canvasapi.Canvas(os.environ["CANVAS_SERVER"], os.environ["CANVAS_TOKEN"])
+course = next(canvaslms.cli.courses.filter_courses(cs, "datintro22"))
+students = list(course.get_users())
+
+ls = ladok3.kth.LadokSession(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
 
 course_events = []
 
 for course, url in config.SIGNUP.items():
     course_events += sheets.read_signup_sheet_from_url(url)
 
-csvout = csv.writer(sys.stdout)
+csvout = csv.writer(sys.stdout, delimiter="\t")
 csvout.writerow(["Tidrapport"])
 csvout.writerow([])
 

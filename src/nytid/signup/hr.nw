@@ -101,7 +101,7 @@ def add_prep_time(time, event_type,
     elif "övning" in event_type.casefold():
       time *= 2
 
-  return time
+  return round_time(time)
 
 def check_substrings(substrings, string):
   """

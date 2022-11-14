@@ -1,3 +1,4 @@
+import arrow
 import canvasapi
 import canvaslms.cli
 import csv
@@ -19,8 +20,7 @@ def summarize_user(user, course_events):
 
     csvout.writerow([student.personnummer, student.last_name, 
                      student.first_name, f"{user}@kth.se"])
-    csvout.writerow(["", "Total (inkl förberedelsetid): ",
-                     f"{round(hours, 2)} h", f"{round(hours*150)} kr"])
+    csvout.writerow([])
 
     start_idx = sheets.SIGNUP_SHEET_HEADER.index("Start")
     end_idx = sheets.SIGNUP_SHEET_HEADER.index("End")
@@ -33,14 +33,24 @@ def summarize_user(user, course_events):
     events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
                       events))
 
-    for event, hours in hr.hours_per_event(events).items():
-        csvout.writerow(["", event, f"{round(to_hours(hours), 2)} h"])
+    for event in events:
+        end = arrow.get(event[end_idx])
+        start = arrow.get(event[start_idx])
+        time = hr.round_time(
+                    hr.add_prep_time(end-start, event[type_idx],
+                                     date=start.date()))
+
+        csvout.writerow(["",
+                         event[start_idx].split()[0], event[type_idx],
+                         f"{to_hours(time)} h",
+                         f"{to_hours(time)*150} kr"
+                        ])
 
     csvout.writerow([])
-
-    for event in events:
-        csvout.writerow(["", event[start_idx].split()[0], event[type_idx]])
-
+    csvout.writerow(["", "Total", "", "",
+                     f"{round(hours, 2)} h", f"{round(hours*150)} kr"])
+    csvout.writerow([])
+    csvout.writerow([])
     csvout.writerow([])
     csvout.writerow([])
 

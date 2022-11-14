@@ -10,6 +10,8 @@ include = ["src/**/*.py"]
 python = "^3.9"
 requests = "^2.27.1"
 ics = "=0.7"
+canvaslms = "^1.19"
+ladok3 = "^1.21"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

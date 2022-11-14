@@ -60,7 +60,7 @@ def get_ladok_id(user):
             return student.integration_id
 
 cs = canvasapi.Canvas(os.environ["CANVAS_SERVER"], os.environ["CANVAS_TOKEN"])
-course = next(canvaslms.cli.courses.filter_courses(cs, "datintro22"))
+course = next(canvaslms.cli.courses.filter_courses(cs, "dasak22"))
 students = list(course.get_users())
 
 ls = ladok3.kth.LadokSession(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])

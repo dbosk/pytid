@@ -3,7 +3,6 @@ SUBDIR_GOALS=	all clean distclean
 SUBDIR+=	signup
 
 MODULES+=	schedules.py
-MODULES+=	utils.py
 
 .PHONY: all
 all: ${MODULES}

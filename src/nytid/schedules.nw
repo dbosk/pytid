@@ -14,9 +14,7 @@ This means that we can use the ICS exports from TimeEdit, Google Calendar etc.
 
 The module consists only of the file [[schedules.py]].
 <<schedules.py>>=
-<<constants>>
 <<imports>>
-<<classes>>
 <<functions>>
 @
 

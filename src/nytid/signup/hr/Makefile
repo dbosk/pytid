@@ -1,10 +1,13 @@
-SUBDIR+=	hr
+SUBDIR+=	timesheet
 
-MODULES+=	sheets.py
-MODULES+=	utils.py
+MODULES+=	__init__.py
 
 .PHONY: all
 all: ${MODULES}
+
+.INTERMEDIATE: hr.py
+__init__.py: hr.py
+	${MV} $^ $@
 
 
 .PHONY: clean
@@ -13,6 +16,6 @@ clean:
 	${RM} *.tex
 
 
-INCLUDE_MAKEFILES=../../../makefiles
+INCLUDE_MAKEFILES=../../../../makefiles
 include ${INCLUDE_MAKEFILES}/noweb.mk
 include ${INCLUDE_MAKEFILES}/subdir.mk

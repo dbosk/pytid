@@ -19,14 +19,14 @@ test = ["coverage", "flake8", "pexpect", "wheel"]
 
 [[package]]
 name = "arrow"
-version = "1.2.3"
+version = "0.14.7"
 description = "Better dates & times for Python"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.dependencies]
-python-dateutil = ">=2.7.0"
+python-dateutil = "*"
 
 [[package]]
 name = "atomicwrites"
@@ -40,7 +40,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 name = "attrs"
 version = "22.1.0"
 description = "Classes Without Boilerplate"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
 
@@ -145,16 +145,23 @@ ssh = ["bcrypt (>=3.1.5)"]
 test = ["pytest (>=6.2.0)", "pytest-benchmark", "pytest-cov", "pytest-subtests", "pytest-xdist", "pretend", "iso8601", "pytz", "hypothesis (>=1.11.4,!=3.79.2)"]
 
 [[package]]
+name = "et-xmlfile"
+version = "1.1.0"
+description = "An implementation of lxml.xmlfile for the standard library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "ics"
-version = "0.7.2"
+version = "0.7"
 description = "Python icalendar (rfc5545) parser"
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-arrow = ">=0.11"
-attrs = ">=19.1.0"
+arrow = ">=0.11,<0.15"
 python-dateutil = "*"
 six = ">1.5"
 tatsu = ">4.2"
@@ -253,6 +260,17 @@ description = "More routines for operating on iterables, beyond itertools"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "openpyxl"
+version = "3.0.10"
+description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+et-xmlfile = "*"
 
 [[package]]
 name = "packaging"
@@ -445,7 +463,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "flake8 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "36a98665e8604f2e2355fb3289bce1897070b76747f3220177b789fe5f502b2d"
+content-hash = "c6e99dc35b3547ec448365a99ef6ccc253936684cf523d9334422e3d1ee9d584"
 
 [metadata.files]
 appdirs = [
@@ -456,7 +474,10 @@ argcomplete = [
     {file = "argcomplete-2.0.0-py2.py3-none-any.whl", hash = "sha256:cffa11ea77999bb0dd27bb25ff6dc142a6796142f68d45b1a26b11f58724561e"},
     {file = "argcomplete-2.0.0.tar.gz", hash = "sha256:6372ad78c89d662035101418ae253668445b391755cfe94ea52f1b9d22425b20"},
 ]
-arrow = []
+arrow = [
+    {file = "arrow-0.14.7-py2.py3-none-any.whl", hash = "sha256:4bfacea734ead51495dc47df00421ecfd4ca1f2c0fbe58b9a26eaeddedc31caf"},
+    {file = "arrow-0.14.7.tar.gz", hash = "sha256:67f8be7c0cf420424bc62d8d7dc40b44e4bb2f7b515f9cc2954fb36e35797656"},
+]
 atomicwrites = []
 attrs = []
 cachetools = [
@@ -470,7 +491,12 @@ cffi = []
 charset-normalizer = []
 colorama = []
 cryptography = []
-ics = []
+et-xmlfile = []
+ics = [
+    {file = "ics-0.7-py2.py3-none-any.whl", hash = "sha256:bf5fbdef6e1e073afdadf1b996f0271186dd114a148e38e795919a1ae644d6ac"},
+    {file = "ics-0.7-py3.7.egg", hash = "sha256:3b606205b9582ad27dff77f9b227a30d02fdac532731927fe39df1f1ddf8673f"},
+    {file = "ics-0.7.tar.gz", hash = "sha256:81113a2bb3166c1afcd71cd450c968d40efc385601e9d8344733e00ad8f53429"},
+]
 idna = []
 importlib-metadata = []
 "jaraco.classes" = []
@@ -481,6 +507,7 @@ jeepney = [
 keyring = []
 ladok3 = []
 more-itertools = []
+openpyxl = []
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},

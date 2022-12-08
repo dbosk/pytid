@@ -59,6 +59,14 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
+name = "et-xmlfile"
+version = "1.1.0"
+description = "An implementation of lxml.xmlfile for the standard library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "ics"
 version = "0.7"
 description = "Python icalendar (rfc5545) parser"
@@ -87,6 +95,17 @@ description = "More routines for operating on iterables, beyond itertools"
 category = "dev"
 optional = false
 python-versions = ">=3.5"
+
+[[package]]
+name = "openpyxl"
+version = "3.0.10"
+description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+et-xmlfile = "*"
 
 [[package]]
 name = "packaging"
@@ -223,7 +242,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "08d35604dc0bda449374227ac094f2cd8eefe9c7233a94a8a6a827e241738adc"
+content-hash = "76c0fb3ded30b8c14d3019e9806c99b10723b8658c48e9f6b2983fccbd002835"
 
 [metadata.files]
 arrow = [
@@ -241,6 +260,7 @@ colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
 ]
+et-xmlfile = []
 ics = [
     {file = "ics-0.7-py2.py3-none-any.whl", hash = "sha256:bf5fbdef6e1e073afdadf1b996f0271186dd114a148e38e795919a1ae644d6ac"},
     {file = "ics-0.7-py3.7.egg", hash = "sha256:3b606205b9582ad27dff77f9b227a30d02fdac532731927fe39df1f1ddf8673f"},
@@ -251,6 +271,7 @@ idna = [
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
 ]
 more-itertools = []
+openpyxl = []
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},

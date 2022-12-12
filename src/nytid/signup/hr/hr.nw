@@ -64,8 +64,8 @@ def round_time(time):
 
 We also should add some fixed preparation time that depends on the type of 
 event.
-Lab session time should increase by a third, tutorial session time should 
-double.
+We provide two functions, one to give the factor and one to compute the time 
+including prep time.
 <<functions>>=
 def add_prep_time(time, event_type,
   date=datetime.date.today(), amanuensis=False):
@@ -80,28 +80,37 @@ def add_prep_time(time, event_type,
 
   Output: the time object rounded according to KTH rules.
   """
+  time *= prep_factor(event_type, date=date, amanuensis=amanuensis)
+  return round_time(time)
+@
+
+Now we compute the prep time factor.
+This function must be adapted to current policy.
+Currently, lab session time should increase by 1.5, tutorial session time 
+should double.
+<<functions>>=
+def prep_factor(event_type, date, amanuensis):
   if isinstance(date, arrow.Arrow):
     date = date.datetime
   if isinstance(date, datetime.datetime):
     date = date.date()
 
-  if date > datetime.date(2023, 1, 1) or \
-    (date > datetime.date(2022, 10, 1) and not amanuensis):
+  if "övning" in event_type.casefold():
+    return 2
+
+  if date < datetime.date(2023, 1, 1) or \
+    (date < datetime.date(2022, 10, 1) and not amanuensis):
     if check_substrings(
           ["laboration", "seminarium", "redovisning"],
           event_type.casefold()):
-      time *= 1.5
-    elif "övning" in event_type.casefold():
-      time *= 2
+      return 1.33
   else:
     if check_substrings(
           ["laboration", "seminarium", "redovisning"],
           event_type.casefold()):
-      time *= 1.33
-    elif "övning" in event_type.casefold():
-      time *= 2
+      return 1.5
 
-  return round_time(time)
+  return 1
 
 def check_substrings(substrings, string):
   """

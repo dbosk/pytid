@@ -3,6 +3,8 @@
 import datetime
 import io
 import pkgutil
+import os.path
+import PIL.Image
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.styles import PatternFill
@@ -50,23 +52,41 @@ def test():
                   'omr_tid':2*1.33,
                   'belopp':hourly_salary*2*1.33})
 
-    make_excel(name,      
-               email,     
-               events,
-               course_leader,
-               HoD,
-               course_leader_signature="signature.png"
-               )
+    make_xlsx(name,      
+              email,     
+              events,
+              course_leader,
+              HoD,
+              course_leader_signature="signature.png")
 
+def fit_image(img, height=None, width=None):
+    """
+    Rescales `img` to fit either `height` or `width` pixels --- not both, we 
+    keep aspect ratio.
 
-def make_excel(name, email, events,
-               course_leader, HoD,
-               org = "JH", project = "1102",
-               hourly_salary = 150,
-               output = None,
-               course_leader_signature = None,
-               HoD_signature = None,
-               logo = "kth.png"):
+    `img` can be a string (path to file) or an image (PIL.Image).
+    """
+    img = Image(img)
+
+    if height:
+        scale = height/img.height
+    elif width:
+        scale = width/img.width
+    else:
+        raise KeyError("fit_image: neither height, nor width given.")
+
+    img.height *= scale
+    img.width *= scale
+    return img
+
+def make_xlsx(name, email, events,
+              course_leader, HoD,
+              org = "JH", project = "1102",
+              hourly_salary = 150,
+              output = None,
+              course_leader_signature = None,
+              HoD_signature = None,
+              logo = "kth.png"):
     """
     Generates a time report for a TA:
     - `name` and `email` are name and email for the TA.
@@ -100,14 +120,17 @@ def make_excel(name, email, events,
     #############################################################
     # Logo
     ark.title = login + " " + datetime.date.today().strftime("%Y-%b")
+    if isinstance(logo, str):
+        logo = os.path.expanduser(logo)
     try:
-        logo = Image(logo)
-        scale = 80/logo.height
-        logo.height *= scale
-        logo.width *= scale
+        logo = fit_image(logo, height=80)
+    except FileNotFoundError:
+        img_data = PIL.Image.open(
+                io.BytesIO(pkgutil.get_data(__name__, "kth.png")))
+        logo = fit_image(img_data, height=80)
         ark.add_image(logo, "A1")
-    except:
-        pass
+    else:
+        ark.add_image(logo, "A1")
 
     #############################################################
     # kolumnstorlekar
@@ -173,27 +196,27 @@ def make_excel(name, email, events,
     # Matris med timredovisningen
     for i, kol in enumerate(events):
         ark['A'+rad].value = f"{kol['datum']} {kol['tid']:>5}"
-        ark['B'+rad] = kol['typ']      
-        ark['C'+rad] = kol['timmar']
-        ark['D'+rad] = kol['koeff']    
-        ark['E'+rad].value = round(kol['omr_tid'], 1)
-        ark['F'+rad].value = hourly_salary
-        ark['G'+rad].value = round(kol['belopp'], 1)
+        ark['B'+rad] = kol['typ']
+        ark['C'+rad] = float(kol['timmar'])
+        ark['D'+rad] = float(kol['koeff'])
+        ark['E'+rad].value = float(kol['omr_tid'])
+        ark['F'+rad].value = float(hourly_salary)
+        ark['G'+rad].value = float(kol['belopp'])
 
         if i % 2 == 0:
             for kol in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
                 ark[kol+rad].fill = PatternFill(start_color="00E0E0E0", end_color="00E0E0E0", fill_type="solid")
         
         if i == 0:
-            tidsumma = "=ROUNDUP(SUM(E"+rad 
-            ark['G'+sist].value = '=G'+rad 
+            tidsumma = "=SUM(E"+rad
+            ark['G'+sist].value = '=G'+rad
         else:
             tidsumma += ',E'+rad 
             ark['G'+sist].value += '+G'+rad
 
         rad = incr(rad)
 
-    ark['E'+sist].value = tidsumma + '),1)'
+    ark['E'+sist].value = tidsumma + ')'
 
             
     #############################################################
@@ -218,18 +241,18 @@ def make_excel(name, email, events,
     ark['A'+rad].value = "_______________________________________"
     ark['E'+rad].value = "_______________________________________"
 
+    if isinstance(HoD_signature, str):
+        HoD_signature = os.path.expanduser(HoD_signature)
+
     if HoD_signature:
-        HoD_signature = Image(HoD_signature)
-        scale = 60/HoD_signature.height
-        HoD_signature.width *= scale
-        HoD_signature.height *= scale
+        HoD_signature = fit_image(HoD_signature, height=60)
         ark.add_image(HoD_signature, "A"+incr(rad, -2))
 
+    if isinstance(course_leader_signature, str):
+        course_leader_signature = os.path.expanduser(course_leader_signature)
+
     if course_leader_signature:
-        course_leader_signature = Image(course_leader_signature)
-        scale = 60/course_leader_signature.height
-        course_leader_signature.width *= scale
-        course_leader_signature.height *= scale
+        course_leader_signature = fit_image(course_leader_signature, height=60)
         ark.add_image(course_leader_signature, "E"+incr(rad, -2))
 
     rad = incr(rad)

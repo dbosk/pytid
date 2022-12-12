@@ -5,3 +5,5 @@ __init__.py
 utils.py
 *.csv
 *.tsv
+schedules.py
+schedules.tex

@@ -4,13 +4,15 @@ from nytid.signup import hr
 from nytid.signup import sheets
 
 COURSES = {
-        "DD239x": "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=456042.10%2C453233%2C456962%2C455873%2C203484.9%2C203496%2C203508%2C203509&e=220908&enol=t&ku=29&k=8FED001D5E316E7DE6C3652DAC6009A375"
+        "DD1301":
+        "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=453078.10%2C203482.9%2C203489&e=220813&enol=t&ku=29&k=525C9D88748D006E2E700F1600C9BE1D9B3"
         }
 
 SIGNUP = {
-        "DD239x": sheets.google_sheet_to_csv_url(
-            "https://docs.google.com/spreadsheets/d/1mowxUgXRONuJ6SLpbn2n_paaPhknt4M2I5Y0e57roK4/edit?usp=sharing"),
+        "DD1301": sheets.google_sheet_to_csv_url(
+            "https://docs.google.com/spreadsheets/d/1ac9xNFfUNsf0rXeWcgiHumNZb-7t9Ktcy_pOqCBLH3E/edit#gid=0")
         }
+
 
 def add_prep_time(time, event_type,
   date=datetime.date.today(), amanuensis=False):

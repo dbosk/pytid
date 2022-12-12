@@ -134,12 +134,12 @@ def make_xlsx(name, email, events,
 
     #############################################################
     # kolumnstorlekar
-    ark.column_dimensions['A'].width = 16  # 'Schemalagd tid'
+    ark.column_dimensions['A'].width = 15  # 'Schemalagd tid'
     ark.column_dimensions['B'].width = 9   # 'Typ'           
     ark.column_dimensions['C'].width = 7   # 'timmar'      
-    ark.column_dimensions['D'].width = 8   # 'koeff'         
-    ark.column_dimensions['E'].width = 15  # 'omräknad tid'        
-    ark.column_dimensions['F'].width = 7   # 'Timlön'     
+    ark.column_dimensions['D'].width = 6   # 'koeff'         
+    ark.column_dimensions['E'].width = 12  # 'omräknad tid'        
+    ark.column_dimensions['F'].width = 6   # 'Timlön'     
     ark.column_dimensions['G'].width = 9   # 'Belopp'        
     ark.column_dimensions['H'].width = 9
 
@@ -238,8 +238,8 @@ def make_xlsx(name, email, events,
     # Underskrift
     rad = incr(rad, 4)
 
-    ark['A'+rad].value = "_______________________________________"
-    ark['E'+rad].value = "_______________________________________"
+    ark['A'+rad].value = "__________________________________"
+    ark['E'+rad].value = "__________________________________"
 
     if isinstance(HoD_signature, str):
         HoD_signature = os.path.expanduser(HoD_signature)

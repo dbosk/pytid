@@ -79,7 +79,7 @@ def fit_image(img, height=None, width=None):
     img.width *= scale
     return img
 
-def make_xlsx(name, email, events,
+def make_xlsx(personnummer, name, email, events,
               course_leader, HoD,
               org = "JH", project = "1102",
               hourly_salary = 150,
@@ -146,15 +146,27 @@ def make_xlsx(name, email, events,
     #############################################################
     # Börja på rad 6
     rad = "6"
-    ark['A' + rad] = "Timredovisning"
-    ark['D' + rad] = "Namn"
-    ark['E' + rad] = name
-    ark['E' + rad].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+    ark['A' + rad] = "Redovisning av arbetade timmar, time sheet"
+
+    rad = incr(rad, 2)
+    ark['A' + rad] = "Namn"
+    ark['B' + rad] = name
+    ark['B' + rad].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+    ark['C' + rad].fill = PatternFill(start_color="00EEECE1", 
+                                      end_color="00EEECE1", fill_type="solid")
+
+    ark['E' + rad] = 'Personnr'
+    ark['F' + rad] = personnummer
+    ark['F' + rad].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+    ark['G' + rad].fill = PatternFill(start_color="00EEECE1", 
+                                      end_color="00EEECE1", fill_type="solid")
 
     rad = incr(rad)
-    ark['D' + rad] = 'epost'
-    ark['E' + rad] = email
-    ark['E' + rad].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+    ark['A' + rad] = 'E-post'
+    ark['B' + rad] = email
+    ark['B' + rad].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+    ark['C' + rad].fill = PatternFill(start_color="00EEECE1", 
+                                      end_color="00EEECE1", fill_type="solid")
 
     rad = incr(rad, 2)
     ark['A' + rad] = 'Kurskod'
@@ -164,24 +176,28 @@ def make_xlsx(name, email, events,
         if 'kurskod' in kol and kol['kurskod'] not in kurskoder:
             ark['B' + rad].value += kol['kurskod'] + " "
             kurskoder.append( kol['kurskod'] )
-    
-    rad = incr(rad)
-    ark['A' + rad] = 'Timmar ska anges inklusive förberedelsetid enligt schablon'
-    rad = incr(rad)
-    ark['A' + rad] = 'Ange typ av undervisning övning, handledning'
+    ark['B' + rad].fill = PatternFill(start_color="00EEECE1", 
+                                      end_color="00EEECE1", fill_type="solid")
+    ark['C' + rad].fill = PatternFill(start_color="00EEECE1", 
+                                      end_color="00EEECE1", fill_type="solid")
 
     rad = incr(rad, 2)
-    ark['A' + rad] = 'Schemalagd tid'
-    ark['B' + rad] = 'Typ'           
-    ark['C' + rad] = 'Timmar'        
-    ark['D' + rad] = 'koeff'         
-    ark['E' + rad] = 'Omräknad tid'
-    ark['F' + rad] = 'Timlön'        
+    ark['A' + rad] = 'Timmar ska anges inklusive förberedelsetid enligt schablon'
+    rad = incr(rad)
+    ark['A' + rad] = 'Ange typ av undervisning övning, handledning, möte, etc'
+
+    rad = incr(rad, 2)
+    ark['A' + rad] = 'Datum'
+    ark['B' + rad] = 'Typ'
+    ark['C' + rad] = 'Klocktimmar'
+    ark['D' + rad] = 'koeff'
+    ark['E' + rad] = 'Lönetimmar'
+    ark['F' + rad] = 'Timlön'
     ark['G' + rad] = 'Belopp'
-    
+
     for kol in ['C', 'D', 'E', 'F', 'G']:
         ark[kol+rad].alignment = Alignment(horizontal="right")
-    
+
 
     #############################################################
     # Summering på sista raden 
@@ -195,7 +211,7 @@ def make_xlsx(name, email, events,
     #############################################################
     # Matris med timredovisningen
     for i, kol in enumerate(events):
-        ark['A'+rad].value = f"{kol['datum']} {kol['tid']:>5}"
+        ark['A'+rad].value = kol['datum']
         ark['B'+rad] = kol['typ']
         ark['C'+rad] = float(kol['timmar'])
         ark['D'+rad] = float(kol['koeff'])

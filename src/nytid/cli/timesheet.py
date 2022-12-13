@@ -102,17 +102,22 @@ def main():
         try:
             ta = ls.get_student(get_ladok_id(f"{user}@kth.se", students))
         except KeyError as err:
-            print(f"can't look up TA in LADOK: {err}")
+            print(f"can't look up {user} in LADOK: {err}")
             continue
 
         ta_events = summarize_user(user, course, course_events)
-        timesheet.make_xlsx(f"{ta.first_name} {ta.last_name}",
-                            f"{user}@kth.se",
-                            ta_events,
-                            course_leader=("Daniel Bosk", "dbosk@kth.se"),
-                            HoD="Karl Meinke",
-                            org="JH", project="1102",
-                            course_leader_signature="~/Pictures/signature.png")
+        try:
+            timesheet.make_xlsx(ta.personnummer,
+                                f"{ta.first_name} {ta.last_name}",
+                                f"{user}@kth.se",
+                                ta_events,
+                                course_leader=("Daniel Bosk", "dbosk@kth.se"),
+                                HoD="Karl Meinke",
+                                org="JH", project="1102",
+                                course_leader_signature="~/Pictures/signature.png")
+        except AttributeError as err:
+            print(f"can't access {user}'s LADOK data: {err}")
+            continue
 
 if __name__ == "__main__":
     main()

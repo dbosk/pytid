@@ -240,7 +240,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "flake8 
 
 [[package]]
 name = "ladok3"
-version = "1.24"
+version = "2.0"
 description = "Python wrapper and CLI for the LADOK3 REST API."
 category = "main"
 optional = false
@@ -463,7 +463,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "489584a035bb7b89acf02a73e4c7aaced48925d581e83880f03ad38d63a5f8fa"
+content-hash = "2c3f3c1cefa6c47219ec778f9392aae45eb920eb37452e5e868a9c34bef98a34"
 
 [metadata.files]
 appdirs = [

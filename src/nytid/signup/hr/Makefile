@@ -1,4 +1,5 @@
-SUBDIR+=	timesheet
+SUBDIR_GOALS=	all clean distclean
+SUBDIR+=		timesheet
 
 MODULES+=	__init__.py
 

@@ -1,4 +1,5 @@
-SUBDIR+=	hr
+SUBDIR_GOALS=	all clean distclean
+SUBDIR+=		hr
 
 MODULES+=	sheets.py
 MODULES+=	utils.py

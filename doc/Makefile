@@ -6,7 +6,7 @@ TEX_PYTHONTEX=	yes
 PYTHONTEXFLAGS=	--interpreter "python:poetry run python3"
 
 nytid.pdf: ../src/nytid/schedules.tex
-nytid.pdf: ../src/nytid/signup/hr.tex
+nytid.pdf: ../src/nytid/signup/hr/hr.tex
 nytid.pdf: ../src/nytid/signup/sheets.tex
 nytid.pdf: ../src/nytid/signup/utils.tex
 #nytid.pdf: ../src/nytid/cli/init.tex

@@ -1,0 +1,21 @@
+\chapter{The [[config]] subcommand}
+
+In this chapter, we document the [[config]] command of [[nytid]].
+This is located in the [[nytid.cli.config]] module.
+
+We use the structure outlined in \cref{CLIoverview}.
+<<init.py>>=
+"""The nytid config command"""
+
+import typer
+
+<<helper functions>>
+
+cli = typer.Typer()
+
+<<config subcommands>>
+
+if __name__ == "__main__":
+  cli()
+@
+

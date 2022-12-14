@@ -11,6 +11,7 @@ nytid.pdf: ../src/nytid/signup/sheets.tex
 nytid.pdf: ../src/nytid/signup/utils.tex
 
 nytid.pdf: ../src/nytid/cli/init.tex
+nytid.pdf: ../src/nytid/cli/config/init.tex
 
 nytid.pdf: ../src/nytid
 

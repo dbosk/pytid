@@ -1,4 +1,4 @@
-\chapter{CLI design overview}
+\chapter{CLI design overview}\label{CLIoverview}
 
 The [[nytid]] CLI has a similar design as Git, it consists of various 
 subcommands with different options.

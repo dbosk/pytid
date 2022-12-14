@@ -6,6 +6,9 @@ authors = ["Daniel Bosk <daniel@bosk.se>"]
 exclude = ["*.csv"]
 include = ["src/**/*.py"]
 
+[tool.poetry.scripts]
+nytid = "nytid.cli:cli"
+
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "^2.27.1"

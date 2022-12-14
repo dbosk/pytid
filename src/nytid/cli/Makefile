@@ -1,12 +1,14 @@
 SUBDIR_GOALS=	all clean distclean
+SUBDIR+=		config
 
-SUBDIR+=	cli
-SUBDIR+=	signup
-
-MODULES+=	schedules.py
+MODULES+=	__init__.py
 
 .PHONY: all
 all: ${MODULES}
+
+.INTERMEDIATE: init.py
+__init__.py: init.py
+	${MV} $< $@
 
 
 .PHONY: clean
@@ -15,6 +17,6 @@ clean:
 	${RM} *.tex
 
 
-INCLUDE_MAKEFILES=../../makefiles
+INCLUDE_MAKEFILES=../../../makefiles
 include ${INCLUDE_MAKEFILES}/noweb.mk
 include ${INCLUDE_MAKEFILES}/subdir.mk

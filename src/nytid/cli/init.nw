@@ -1,0 +1,43 @@
+\chapter{CLI design overview}
+
+The [[nytid]] CLI has a similar design as Git, it consists of various 
+subcommands with different options.
+For instance, [[nytid timesheet -h]] will print the help of the [[timesheet]] 
+command.
+In this chapter, we document the base of the CLI.
+This is located in the [[nytid.cli]] module.
+Each subcommand is a submodule of [[nytid.cli]], for instance the [[timesheet]] 
+command above is located in [[nytid.cli.timesheet]].
+Each subcommand is documented in one of the subsequent chapters.
+
+We use the Typer package to create the CLI.
+This means that each subcommand module will have the same structure as the main 
+CLI module.
+That structure looks like this:
+<<init.py>>=
+"""The CLI of nytid"""
+
+import typer
+<<import subcommand modules>>
+
+cli = typer.Typer()
+
+<<add subcommand typer to cli>>
+
+if __name__ == "__main__":
+  cli()
+@
+
+One nice side effect of this design is that each such module can be run on its 
+own and will then work as an independent program.
+For instance, [[python3 -m nytid.cli.timesheet -h]] will be the same as running 
+[[nytid timesheet -h]].
+
+To add a subcommand, we then simply import the module and add its Typer 
+instance:
+<<import subcommand modules>>=
+import nytid.cli.config
+@
+<<add subcommand typer to cli>>=
+cli.add_typer(nytid.cli.config.cli, name="config")
+@ We note that each subcommand can in turn also consist of subcommands.

@@ -1,17 +1,46 @@
-\chapter{The [[config]] subcommand}
+\chapter{The [[config]] module and subcommand}
 
 In this chapter, we document the [[config]] command of [[nytid]].
 This is located in the [[nytid.cli.config]] module.
+
+We want the configuration to be stored in a JSON structure.
+\label{ConfigStructure}
+\begin{minted}{JSON}
+{
+  "courses": {
+    "datintro22": {
+      "timesheet": {
+        "url": "https://sheets.google.com/..."
+      },
+      "schedule": {
+        "url": "https://timeedit.net/..."
+      }
+    }
+  }
+}
+\end{minted}
+Then we can access values by dot-separated addresses.
+For instance, we can use [[courses.datintro22.schedule.url]] to access the 
+TimeEdit URL of the datintro22 course.
+
+
+\section{Code outline}
 
 We use the structure outlined in \cref{CLIoverview}.
 <<init.py>>=
 """The nytid config command"""
 
+import appdirs
+import json
+import os
+from pprint import pprint
 import typer
+import typing
+
+dirs = appdirs.AppDirs("nytid", "dbosk@kth.se")
+cli = typer.Typer()
 
 <<helper functions>>
-
-cli = typer.Typer()
 
 <<config subcommands>>
 
@@ -19,7 +48,266 @@ if __name__ == "__main__":
   cli()
 @
 
-<<helper functions>>=
+We also add tests.
+These are all prepended [[test_]] to the function name.
+We will run them using [[pytest]].
+<<test nytidconfig.py>>=
+from nytid.cli.config import *
+
+<<test functions>>
 @
+
+
+\section{Accessing the configuration: the [[get]] and [[set]] functions}
+
+We will provide two functions [[get]] and [[set]] that modifies the config, 
+immediately syncing to the file system.
+<<helper functions>>=
+def get(path: str) -> typing.Any:
+  """
+  Returns the value stored at `path` in the config.
+  """
+  <<read config from file>>
+  <<return the value at path in config>>
+
+def set(path: str, values: typing.List[typing.Any]):
+  """
+  Sets `value` at `path` in the config. `value` will be interpreted as JSON, if 
+  conversion to JSON fails, it will be used as is.
+  """
+  <<read config from file>>
+  <<set the value at path in config>>
+  <<write config back to file>>
+@
+
+Let's start with reading the config file.
+<<read config from file>>=
+conf = read_config()
+@ Whereas writing the file is the corresponding call.
+<<write config back to file>>=
+write_config(conf)
+@ We'll see these functions in \cref{ConfigFile}.
+
+Now that we have the config structure in [[conf]] we can use it.
+Let's start with getting a value.
+<<return the value at path in config>>=
+return get_path(path, conf)
+@
+
+Now, to set a value, we have several cases.
+If the use supplied more than one value, we want a list.
+If only one value, we don't want to store a list with only one value in it.
+Also, we want to try interpret any value as JSON.
+If that fails, we'll use the value as-is.
+<<set the value at path in config>>=
+for i in range(len(values)):
+  try:
+    values[i] = json.loads(values[i])
+  except json.decoder.JSONDecodeError:
+    pass
+
+if len(values) == 1:
+  values = values[0]
+
+conf = set_path(values, path, conf)
+@
+
+Now let's cover [[read_config]], [[write_config]], [[set_path]] and 
+[[get_path]] below.
+
+
+\section{Reading and writing the config file}\label{ConfigFile}
+
+The configuration file is stored in a suitable system location.
+For this we use the AppDirs package, we have the [[dirs]] instance above.
+We want to read the config and return a JSON structure as outlined above 
+(\cref{ConfigStructure}).
+And conversely, write one to the config file as well.
+<<helper functions>>=
+def read_config(conf_path=f"{dirs.user_config_dir}/config.json"):
+  """
+  Returns the config data structure (JSON).
+  `conf_path` is an optional argument providing the path to the config file.
+  """
+  try:
+    with open(conf_path) as conf_file:
+      return json.load(conf_file)
+  except FileNotFoundError:
+    pass
+
+  return {}
+
+def write_config(conf_structure,
+                 conf_path=f"{dirs.user_config_dir}/config.json"):
+  """
+  Stores the config data structure (JSON) in the config file.
+  `conf_path` is an optional argument providing the path to the config file.
+  """
+  conf_dir = os.path.dirname(conf_path)
+  if not os.path.isdir(conf_dir):
+    os.mkdir(conf_dir)
+
+  with open(conf_path, "w") as conf_file:
+    json.dump(conf_structure, conf_file)
+@
+
+
+\section{Navigating config structures}
+
+We provide two functions to navigate the JSON object like this.
+The first gets a value out, the other sets a value in.
+We start with the easy one.
+<<helper functions>>=
+def get_path(path: str, structure: dict|list) -> typing.Any:
+  """
+  Returns object at `path` in JSON `structure`.
+
+  Example:
+  - `path = "courses.datintro22.url"` and
+  - `strucutre = {"courses": {"datintro22": {"url": "https://..."}}}`
+  will return "https://...".
+
+  Any part of the path that can be converted to an integer, will be converted 
+  to an integer. This way we can access elements of lists too.
+  """
+  if not path:
+    return structure
+
+  for part in path.split("."):
+    try:
+      part = int(part)
+    except ValueError:
+      pass
+
+    try:
+      structure = structure[part]
+    except KeyError:
+      raise KeyError(f"{part} along {path} doesn't exist")
+
+  return structure
+@
+
+To set a value is a bit more complex.
+We want to be able to specify a path and create all parents along the path if 
+they don't exist.
+<<helper functions>>=
+def set_path(value: typing.Any, path: str, structure: dict|list):
+  """
+  Sets `value` at `path` in JSON `structure`. Any parts along the path that 
+  doesn't exist is created.
+
+  Example:
+  - `value = "https://..."`,
+  - `path = "courses.datintro22.url"` and
+  - `structure = {}`
+  will return `{"courses": {"datintro22": {"url": "https://..."}}}`.
+
+  Any part of the path that can be converted to an integer, will be converted 
+  to an integer. This way we can access elements of lists too. However, we 
+  cannot create index 3 in a list if it doesn't exist.
+  """
+  structure_root = structure
+
+  parts = path.split(".")
+  for part in parts[:-1]:
+    try:
+      part = int(part)
+    except ValueError:
+      pass
+
+    try:
+      structure = structure[part]
+    except KeyError:
+      structure[part] = {}
+      structure = structure[part]
+
+  part = parts[-1]
+  try:
+    part = int(part)
+  except ValueError:
+    pass
+  structure[part] = value
+
+  return structure_root
+@
+
+We test these functions with the examples from the docstrings.
+<<test functions>>=
+structure = {
+  "courses": {
+    "datintro22": {
+      "url": "https://...",
+      "TAs": ["Asse", "Assa"]
+    }
+  }
+}
+
+def test_get_path():
+  assert get_path("courses.datintro22.url", structure) == "https://..."
+  assert get_path("courses.datintro22.TAs.0", structure) == "Asse"
+
+def test_set_path():
+  global structure
+
+  value = "Asselina"
+  path = "courses.datintro22.TAs.0"
+  structure = set_path(value, path, structure)
+  assert get_path(path, structure) == value
+
+  value = ["Asse", "Assa", "Asselina"]
+  path = "courses.prgx22.TAs"
+  structure = set_path(value, path, structure)
+  assert len(get_path(path, structure)) == len(value)
+@
+
+
+\section{The [[get]] and [[set]] subcommands}
+
+We will provide two subcommands for the [[get]] and [[set]] functions 
+above.
+We simply wrap a function around them that prints the results.
 <<config subcommands>>=
+path_arg = typer.Argument(...,
+                          help="Path in config, e.g. 'courses.datintro22'. "
+                               "Empty string is root of config.")
+value_arg = typer.Argument(...,
+                           help="Values to store. "
+                                "More than one value makes a list.")
+
+@cli.command(name="get")
+def cli_get(path: str = path_arg):
+  """
+  Returns the value stored at `path` in the config.
+  """
+  print_config(get(path), path)
+
+@cli.command(name="set")
+def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
+  """
+  Sets `value` at `path` in the config. `value` will be interpreted as JSON, if 
+  conversion to JSON fails, it will be used as is.
+  """
+  set(path, values)
+@
+
+That [[print_config]] function should print the remaining levels of the config 
+tree.
+And we want it to print on the format of
+[[courses.datintro22.url = https://...]].
+This function will do a depth-first traversal through the config to print all 
+values.
+<<helper functions>>=
+def print_config(conf, path=""):
+  """
+  Prints the config tree contained in `conf` to stdout.
+  Optional `path` is prepended.
+  """
+  try:
+    for key in conf.keys():
+      if path:
+        print_config(conf[key], f"{path}.{key}")
+      else:
+        print_config(conf[key], key)
+  except AttributeError:
+    print(f"{path} = {conf}")
 @

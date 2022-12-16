@@ -36,8 +36,8 @@ For instance, [[python3 -m nytid.cli.timesheet -h]] will be the same as running
 To add a subcommand, we then simply import the module and add its Typer 
 instance:
 <<import subcommand modules>>=
-import nytid.cli.config
+from nytid.cli import config
 @
 <<add subcommand typer to cli>>=
-cli.add_typer(nytid.cli.config.cli, name="config")
+cli.add_typer(config.cli, name="config")
 @ We note that each subcommand can in turn also consist of subcommands.

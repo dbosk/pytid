@@ -272,20 +272,20 @@ path_arg = typer.Argument(...,
                                "Empty string is root of config.")
 value_arg = typer.Argument(...,
                            help="Values to store. "
-                                "More than one value makes a list.")
+                                "More than one value makes a list. "
+                                "Values are treated as JSON if possible.")
 
 @cli.command(name="get")
 def cli_get(path: str = path_arg):
   """
-  Returns the value stored at `path` in the config.
+  Prints the config to stdout.
   """
   print_config(get(path), path)
 
 @cli.command(name="set")
 def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
   """
-  Sets `value` at `path` in the config. `value` will be interpreted as JSON, if 
-  conversion to JSON fails, it will be used as is.
+  Sets values in config.
   """
   set(path, values)
 @

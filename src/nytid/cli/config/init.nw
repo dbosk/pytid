@@ -22,6 +22,7 @@ We want the configuration to be stored in a JSON structure.
 Then we can access values by dot-separated addresses.
 For instance, we can use [[courses.datintro22.schedule.url]] to access the 
 TimeEdit URL of the datintro22 course.
+(We'll use the class provided in \cref{ConfigClass} for this.)
 
 
 \section{Code outline}
@@ -40,6 +41,7 @@ import typing
 dirs = appdirs.AppDirs("nytid", "dbosk@kth.se")
 cli = typer.Typer()
 
+<<classes>>
 <<helper functions>>
 
 <<config subcommands>>
@@ -91,7 +93,7 @@ write_config(conf)
 Now that we have the config structure in [[conf]] we can use it.
 Let's start with getting a value.
 <<return the value at path in config>>=
-return get_path(path, conf)
+return conf.get(path)
 @
 
 Now, to set a value, we have several cases.
@@ -109,7 +111,7 @@ for i in range(len(values)):
 if len(values) == 1:
   values = values[0]
 
-conf = set_path(values, path, conf)
+conf.set(path, values)
 @
 
 Now let's cover [[read_config]], [[write_config]], [[set_path]] and 
@@ -131,11 +133,11 @@ def read_config(conf_path=f"{dirs.user_config_dir}/config.json"):
   """
   try:
     with open(conf_path) as conf_file:
-      return json.load(conf_file)
+      return Config(json.load(conf_file))
   except FileNotFoundError:
     pass
 
-  return {}
+  return Config()
 
 def write_config(conf_structure,
                  conf_path=f"{dirs.user_config_dir}/config.json"):
@@ -152,112 +154,169 @@ def write_config(conf_structure,
 @
 
 
-\section{Navigating config structures}
+\section{Navigating config structures}\label{ConfigClass}
 
-We provide two functions to navigate the JSON object like this.
+We provide the class [[Config]] to navigate the config structure.
+This class has two methods that are central:
 The first gets a value out, the other sets a value in.
-We start with the easy one.
-<<helper functions>>=
-def get_path(path: str, structure: dict|list) -> typing.Any:
-  """
-  Returns object at `path` in JSON `structure`.
+Both work with these dot-separated addresses.
+<<classes>>=
+class Config:
+  """Navigates nested JSON structures by dot-separated addressing."""
 
-  Example:
-  - `path = "courses.datintro22.url"` and
-  - `strucutre = {"courses": {"datintro22": {"url": "https://..."}}}`
-  will return "https://...".
+  def __init__(self, json_data={}):
+    """
+    Constructs a config object to navigate from JSON data `json_data`.
+    """
+    self.__data = json_data
 
-  Any part of the path that can be converted to an integer, will be converted 
-  to an integer. This way we can access elements of lists too.
-  """
-  if not path:
-    return structure
+  def get(self, path: str) -> typing.Any:
+    """
+    Returns object at `path`.
+    Example:
+    - `path = "courses.datintro22.url"` and
+    - Config contains `{"courses": {"datintro22": {"url": "https://..."}}}` 
+      will return "https://...".
 
-  for part in path.split("."):
-    try:
-      part = int(part)
-    except ValueError:
-      pass
+    Any part of the path that can be converted to an integer, will be converted 
+    to an integer. This way we can access elements of lists too.
+    """
+    <<get value at path>>
 
-    try:
-      structure = structure[part]
-    except KeyError:
-      raise KeyError(f"{part} along {path} doesn't exist")
+  def set(self, path: str, value: typing.Any):
+    """
+    Sets `value` at `path`. Any parts along the path that don't exist will be 
+    created.
 
-  return structure
+    Example:
+    - `value = "https://..."`,
+    - `path = "courses.datintro22.url"`
+    will create `{"courses": {"datintro22": {"url": "https://..."}}}`.
+
+    Any part of the path that can be converted to an integer, will be converted 
+    to an integer. This way we can access elements of lists too. However, we 
+    cannot create index 3 in a list if it doesn't exist.
+    """
+    <<set value at path>>
+
+  def paths(self, from_root=""):
+    """
+    Returns all existing paths.
+
+    The optional argument `from_root` is a path and the method return all 
+    subpaths rooted at that point.
+    """
+    <<return list of all paths>>
 @
 
-To set a value is a bit more complex.
-We want to be able to specify a path and create all parents along the path if 
-they don't exist.
-<<helper functions>>=
-def set_path(value: typing.Any, path: str, structure: dict|list):
-  """
-  Sets `value` at `path` in JSON `structure`. Any parts along the path that 
-  doesn't exist is created.
-
-  Example:
-  - `value = "https://..."`,
-  - `path = "courses.datintro22.url"` and
-  - `structure = {}`
-  will return `{"courses": {"datintro22": {"url": "https://..."}}}`.
-
-  Any part of the path that can be converted to an integer, will be converted 
-  to an integer. This way we can access elements of lists too. However, we 
-  cannot create index 3 in a list if it doesn't exist.
-  """
-  structure_root = structure
-
-  parts = path.split(".")
-  for part in parts[:-1]:
-    try:
-      part = int(part)
-    except ValueError:
-      pass
-
-    try:
-      structure = structure[part]
-    except KeyError:
-      structure[part] = {}
-      structure = structure[part]
-
-  part = parts[-1]
-  try:
-    part = int(part)
-  except ValueError:
-    pass
-  structure[part] = value
-
-  return structure_root
-@
-
-We test these functions with the examples from the docstrings.
+We test these methods with the examples from the docstrings.
 <<test functions>>=
-structure = {
+conf = Config({
   "courses": {
     "datintro22": {
       "url": "https://...",
       "TAs": ["Asse", "Assa"]
     }
   }
-}
+})
 
 def test_get_path():
-  assert get_path("courses.datintro22.url", structure) == "https://..."
-  assert get_path("courses.datintro22.TAs.0", structure) == "Asse"
+  assert conf.get("courses.datintro22.url") == "https://..."
+  assert conf.get("courses.datintro22.TAs.0") == "Asse"
 
 def test_set_path():
-  global structure
-
   value = "Asselina"
   path = "courses.datintro22.TAs.0"
-  structure = set_path(value, path, structure)
-  assert get_path(path, structure) == value
+  conf.set(path, value)
+  assert conf.get(path) == value
 
   value = ["Asse", "Assa", "Asselina"]
   path = "courses.prgx22.TAs"
-  structure = set_path(value, path, structure)
-  assert len(get_path(path, structure)) == len(value)
+  conf.set(path, value)
+  assert len(conf.get(path)) == len(value)
+
+def test_paths():
+  assert "courses.datintro22.TAs" in conf.paths()
+  for path in conf.paths():
+    assert conf.get(path)
+@
+
+\subsection{Getting values}
+
+To get the value, we simply walk along the path and returns what remains.
+<<get value at path>>=
+structure = self.__data
+
+if not path:
+  return structure
+
+for part in path.split("."):
+  try:
+    part = int(part)
+  except ValueError:
+    pass
+
+  try:
+    structure = structure[part]
+  except KeyError:
+    raise KeyError(f"{part} along {path} doesn't exist")
+
+return structure
+@
+
+\subsection{Setting values}
+
+To set a value is a bit more complex.
+We want to be able to specify a path and create all parents along the path if 
+they don't exist.
+<<set value at path>>=
+structure = self.__data
+
+parts = path.split(".")
+for part in parts[:-1]:
+  try:
+    part = int(part)
+  except ValueError:
+    pass
+
+  try:
+    structure = structure[part]
+  except KeyError:
+    structure[part] = {}
+    structure = structure[part]
+
+part = parts[-1]
+try:
+  part = int(part)
+except ValueError:
+  pass
+structure[part] = value
+@
+
+\subsection{All existing paths}
+
+Lastly, what we want to do is to create a list containing all paths in the 
+config.
+We will simply traverse the config tree and add paths as we go.
+We need to treat dictionaries and lists differently.
+And anything else is a leaf.
+<<return list of all paths>>=
+paths = []
+root = self.get(from_root)
+
+if isinstance(root, dict):
+  for part in root:
+    if from_root:
+      path = f"{from_root}.{part}"
+    else:
+      path = part
+
+    paths.append(path)
+    paths += self.paths(from_root=path)
+elif isinstance(root, list):
+  paths += [f"{from_root}.{x}" for x in range(len(root))]
+
+return paths
 @
 
 

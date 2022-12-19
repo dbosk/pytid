@@ -65,9 +65,12 @@ from nytid.cli.config import *
 We will provide two functions [[get]] and [[set]] that modifies the config, 
 immediately syncing to the file system.
 <<helper functions>>=
-def get(path: str) -> typing.Any:
+def get(path: str = "") -> typing.Any:
   """
   Returns the value stored at `path` in the config.
+
+  By default, `path = ""`, which returns the entire configuration as a Config 
+  object.
   """
   <<read config from file>>
   <<return the value at path in config>>
@@ -328,7 +331,8 @@ We simply wrap a function around them that prints the results.
 <<config subcommands>>=
 path_arg = typer.Argument(...,
                           help="Path in config, e.g. 'courses.datintro22'. "
-                               "Empty string is root of config.")
+                               "Empty string is root of config.",
+                          autocompletion=complete_path)
 value_arg = typer.Argument(...,
                            help="Values to store. "
                                 "More than one value makes a list. "
@@ -348,6 +352,38 @@ def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
   """
   set(path, values)
 @
+
+\subsection{Autocompleting the path}
+
+The [[complete_path]] functions returns the possible completions for an 
+incomplete path from the command line.
+<<helper functions>>=
+def complete_path(initial_path: str):
+  """
+  Returns all valid paths in the config starting with `initial_path`.
+  """
+  return list(filter(lambda x: x.startswith(initial_path),
+                     Config(get()).paths()))
+@
+
+We test this function as follows.
+<<test functions>>=
+def test_complete_path():
+  conf = Config({
+    "courses": {
+      "datintro22": {
+        "url": "https://...",
+        "TAs": ["Asse", "Assa"]
+      }
+    }
+  })
+
+  incomplete = "courses.datintro22.T"
+  assert "courses.datintro22.TAs" in complete_path(incomplete)
+  assert "courses.datintro22.url" not in complete_path(incomplete)
+@
+
+\subsection{Printing the config}
 
 That [[print_config]] function should print the remaining levels of the config 
 tree.

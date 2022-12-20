@@ -33,6 +33,7 @@ We use the structure outlined in \cref{CLIoverview}.
 
 import appdirs
 import json
+import logging
 import os
 from pprint import pprint
 import typer
@@ -138,14 +139,16 @@ def read_config(conf_path=f"{dirs.user_config_dir}/config.json"):
     with open(conf_path) as conf_file:
       return Config(json.load(conf_file))
   except FileNotFoundError:
-    pass
+    logging.warning(f"Config file {conf_path} could not be found.")
+  except json.decoder.JSONDecodeError as err:
+    logging.warning(f"Config file {conf_path} could not be decoded: {err}")
 
   return Config()
 
-def write_config(conf_structure,
+def write_config(conf,
                  conf_path=f"{dirs.user_config_dir}/config.json"):
   """
-  Stores the config data structure (JSON) in the config file.
+  Stores the config data `conf` (extracts JSON) in the config file.
   `conf_path` is an optional argument providing the path to the config file.
   """
   conf_dir = os.path.dirname(conf_path)
@@ -153,7 +156,7 @@ def write_config(conf_structure,
     os.mkdir(conf_dir)
 
   with open(conf_path, "w") as conf_file:
-    json.dump(conf_structure, conf_file)
+    json.dump(conf.get(), conf_file)
 @
 
 
@@ -173,7 +176,7 @@ class Config:
     """
     self.__data = json_data
 
-  def get(self, path: str) -> typing.Any:
+  def get(self, path: str = "") -> typing.Any:
     """
     Returns object at `path`.
     Example:

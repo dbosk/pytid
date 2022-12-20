@@ -360,13 +360,28 @@ def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
 
 The [[complete_path]] functions returns the possible completions for an 
 incomplete path from the command line.
+Note that we want to complete with the next matching part of a path.
+This way, if there is only one option, the command line will autocomplete it.
+If there are more options, it will simply list all.
 <<helper functions>>=
 def complete_path(initial_path: str):
   """
   Returns all valid paths in the config starting with `initial_path`.
   """
-  return list(filter(lambda x: x.startswith(initial_path),
-                     Config(get()).paths()))
+  if not initial_path:
+    return list(get().keys())
+
+  try:
+    conf = get(initial_path)
+    return [f"{initial_path}.{key}" for key in conf.keys()]
+  except KeyError:
+    pass
+
+  last_section = initial_path.split(".")[-1]
+  complete_path = initial_path[:-len(last_section)-1]
+  matching_last = filter(lambda x: x.startswith(last_section),
+                         get(complete_path).keys())
+  return [f"{complete_path}.{key}" for key in matching_last]
 @
 
 We test this function as follows.

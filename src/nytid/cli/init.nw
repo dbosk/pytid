@@ -37,7 +37,9 @@ To add a subcommand, we then simply import the module and add its Typer
 instance:
 <<import subcommand modules>>=
 from nytid.cli import config
+from nytid.cli import courses
 @
 <<add subcommand typer to cli>>=
 cli.add_typer(config.cli, name="config")
+cli.add_typer(courses.cli, name="courses")
 @ We note that each subcommand can in turn also consist of subcommands.

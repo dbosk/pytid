@@ -1,0 +1,54 @@
+\chapter{The [[cli.courses]] module and subcommands}\label{courses}
+
+In this chapter we cover the [[nytid.cli.courses]] module and its subcommands.
+We want to be able to list all courses in the configuration, create new courses 
+and add courses to the configuration.
+
+We have the local user configuration keeping track of which courses the user is 
+interested in.
+This is the default configuration that the [[nytid.cli.config]] module works 
+with.
+
+We also have the global configuration keeping track of a course's 
+configuration.
+This configuration file should be located in AFS, so that all teachers and TAs 
+can read it.
+We link to this configuration in the user's local configuration when we add the 
+course.
+
+We will simply use the access control of the AFS system to do access control to 
+the course configuration files.
+
+\section{Code outline}
+
+We use the structure outlined in \cref{CLIoverview}.
+That structure looks like this:
+<<courses.py>>=
+"""The nytid courses command and subcommands"""
+
+import logging
+import typer
+import typing
+
+from nytid.cli import config
+
+cli = typer.Typer()
+
+<<classes>>
+<<helper functions>>
+
+<<subcommands>>
+
+if __name__ == "__main__":
+  cli()
+@
+
+We also add tests.
+These are all prepended [[test_]] to the function name.
+We will run them using [[pytest]].
+<<test clicourses.py>>=
+from nytid.cli.courses import *
+
+<<test functions>>
+@
+

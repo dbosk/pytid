@@ -1,4 +1,4 @@
-\chapter{The [[config]] module and subcommand}
+\chapter{The [[cli.config]] module and subcommands}
 
 In this chapter, we document the [[config]] command of [[nytid]].
 This is located in the [[nytid.cli.config]] module.
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 We also add tests.
 These are all prepended [[test_]] to the function name.
 We will run them using [[pytest]].
-<<test nytidconfig.py>>=
+<<test cliconfig.py>>=
 from nytid.cli.config import *
 
 <<test functions>>

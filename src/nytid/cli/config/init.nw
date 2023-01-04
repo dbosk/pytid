@@ -35,7 +35,6 @@ import appdirs
 import json
 import logging
 import os
-from pprint import pprint
 import typer
 import typing
 

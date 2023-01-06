@@ -49,16 +49,59 @@ import typer
 import typing
 
 dirs = appdirs.AppDirs("nytid", "dbosk@kth.se")
-cli = typer.Typer()
 
 <<classes>>
 <<helper functions>>
 
-<<config subcommands>>
+def main():
+  <<main body>>
 
 if __name__ == "__main__":
-  cli()
+  main()
 @
+
+\subsection{Not using [[add_typer]]}
+
+We would like to use the structure outlined in \cref{CLIoverview}.
+However, that would require yet another subcommand, \eg
+\begin{minted}{bash}
+  nytid config get courses.datintro22.schedule.url
+\end{minted}
+to read out the value, which we don't want.
+
+To work around that we need the [[cli]] object from the parent module here.
+Thus, instead of that module doing something like this
+\begin{minted}{python}
+import nytid.config
+# ...
+cli.add_typer(nytid.config.cli, name="config")
+\end{minted}
+(As was outlined in \cref{CLIoverview}.)
+That module will actually have to do
+\begin{minted}{python}
+import nytid.config
+# ...
+nytid.config.add_config_cmd(cli)
+\end{minted}
+This gives us
+<<helper functions>>=
+def add_config_cmd(cli: typer.Typer):
+  """
+  Add config command to Typer cli
+  """
+  <<config subcommands>>
+@
+
+To still make this module runnable on its own, in the same way as outlined in 
+\cref{CLIoverview}, we will create a [[cli]] object in the [[main]] function, 
+then add the config command and finally run it.
+<<main body>>=
+cli = typer.Typer()
+add_config_cmd(cli)
+cli()
+@
+
+\subsection{Testing}
 
 We also add tests.
 These are all prepended [[test_]] to the function name.

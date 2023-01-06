@@ -34,10 +34,18 @@ For instance, [[python3 -m nytid.cli.timesheet -h]] will be the same as running
 [[nytid timesheet -h]].
 
 To add a subcommand, we then simply import the module and add its Typer 
-instance:
+instance.
+This requires that each command in turn consist of subcommands.
+
+For the [[config]] command, which doesn't have subcommands, we must thus do it 
+slightly differently.
+The [[config]] module has added a function [[add_config_cmd]] that takes the 
+Typer instance as argument, and uses that when it create the function for the 
+command.
+See \cref{configmodule} for details.
 <<import subcommand modules>>=
 from nytid.cli import config
 @
 <<add subcommand typer to cli>>=
-cli.add_typer(config.cli, name="config")
-@ We note that each subcommand can in turn also consist of subcommands.
+config.add_config_cmd(cli)
+@

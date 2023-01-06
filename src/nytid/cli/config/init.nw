@@ -325,34 +325,31 @@ return paths
 @
 
 
-\section{The [[get]] and [[set]] subcommands}
+\section{The [[config]] command}
 
-We will provide two subcommands for the [[get]] and [[set]] functions 
-above.
-We simply wrap a function around them that prints the results.
+We will provide the [[config]] command as outlined above.
+If it gets a value, it will set it as the value at path.
+Otherwise, it will print the current value at path.
 <<config subcommands>>=
 path_arg = typer.Argument(...,
                           help="Path in config, e.g. 'courses.datintro22'. "
                                "Empty string is root of config.",
                           autocompletion=complete_path)
-value_arg = typer.Argument(...,
-                           help="Values to store. "
-                                "More than one value makes a list. "
-                                "Values are treated as JSON if possible.")
+value_arg = typer.Option([], "-s", "--set",
+                         help="Values to store. "
+                              "More than one value makes a list. "
+                              "Values are treated as JSON if possible.")
 
-@cli.command(name="get")
-def cli_get(path: str = path_arg):
-  """
-  Prints the config to stdout.
-  """
-  print_config(get(path), path)
-
-@cli.command(name="set")
-def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
+@cli.command(name="config")
+def config_cmd(path: str = path_arg,
+               values: typing.List[str] = value_arg):
   """
   Sets values in config.
   """
-  set(path, values)
+  if values:
+    set(path, values)
+  else:
+    print_config(get(path), path)
 @
 
 \subsection{Autocompleting the path}

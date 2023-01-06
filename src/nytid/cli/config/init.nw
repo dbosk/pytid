@@ -3,14 +3,14 @@
 In this chapter, we document the [[config]] command of [[nytid]].
 This is located in the [[nytid.cli.config]] module.
 
-We want the configuration to be stored in a JSON structure.
+The configuration is a JSON structure.
 \label{ConfigStructure}
 \begin{minted}{JSON}
 {
   "courses": {
     "datintro22": {
       "timesheet": {
-        "url": "https://sheets.google.com/..."
+        "url": "https://sheets.google..."
       },
       "schedule": {
         "url": "https://timeedit.net/..."
@@ -24,10 +24,20 @@ For instance, we can use [[courses.datintro22.schedule.url]] to access the
 TimeEdit URL of the datintro22 course.
 (We'll use the class provided in \cref{ConfigClass} for this.)
 
+We want the command to have the following form:
+\begin{minted}{bash}
+  nytid config courses.datintro22.schedule.url --set https://timeedit.net/...
+\end{minted}
+will set the configuration value at the path, whereas
+\begin{minted}{bash}
+  nytid config courses.datintro22.schedule.url
+\end{minted}
+will return it.
 
-\section{Code outline}
 
-We use the structure outlined in \cref{CLIoverview}.
+\section{Code outline}\label{configmodule}
+
+The base structure is standard.
 <<init.py>>=
 """The nytid config command"""
 
@@ -344,7 +354,7 @@ value_arg = typer.Option([], "-s", "--set",
 def config_cmd(path: str = path_arg,
                values: typing.List[str] = value_arg):
   """
-  Sets values in config.
+  Reads values from or writes values to the config.
   """
   if values:
     set(path, values)

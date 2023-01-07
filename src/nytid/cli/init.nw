@@ -4,11 +4,91 @@ The [[nytid]] CLI has a similar design as Git, it consists of various
 subcommands with different options.
 For instance, [[nytid timesheet -h]] will print the help of the [[timesheet]] 
 command.
-In this chapter, we document the base of the CLI.
-This is located in the [[nytid.cli]] module.
+In this chapter, we outline the design and document the base of the CLI.
+At the end of the chapter, in \cref{climodule}, we outline the code itself of 
+the [[nytid.cli]] module.
 Each subcommand is a submodule of [[nytid.cli]], for instance the [[timesheet]] 
 command above is located in [[nytid.cli.timesheet]].
 Each subcommand is documented in one of the subsequent chapters.
+
+\section{Usage: what problems we can solve and how}
+
+In this section we describe the workflow of various scenarios.
+We describe them in chronological order.
+So in essence, this section serves as a how-to-use manual.
+
+\subsection{Setting up a course}
+
+The course responsible must first set up a course.
+Essentially, we just need to provide the URL to the ICS from TimeEdit.
+\begin{description}
+\item[Course responsible] \mintinline{bash}{nytid courses new prgi23 --timeedit https://...}
+\end{description}
+If there are several teachers, the others can add it after the course 
+responsible has added them as teachers.
+\begin{description}
+\item[Course responsible] \mintinline{bash}{nytid courses teachers prgi23 --add alba}
+\item[alba] \mintinline{bash}{nytid courses add prgi23}
+\end{description}
+
+\subsection{Recruiting TAs}
+
+We want to recruit new TAs to help out on a course.
+We do this is several ways.
+
+We note that a student makes a good presentation, explains well and performs 
+well during the course.
+Then we can add a recommendation.
+\begin{description}
+  \item[Teacher]
+    \mintinline{bash}{nytid recruit recommend --course "prg.*[0-9]{2}" --user student@kth.se}
+\end{description}
+The second scenario is that a student sends an email to the teacher expressing 
+an interest.
+In this case we can also add a recommendation.
+
+The students should also be able to express interest.
+In this case the TA can add courses they're interested in.
+\begin{description}
+  \item[TA]
+    \mintinline{bash}{nytid recruit add-interest --course prgm23 prgcl23}
+\end{description}
+
+Finally, when it's time for to recruit TAs for the course, the teacher can open 
+the recruitment process and send an announcement to the TAs in the pool for the 
+course.
+\begin{description}
+  \item[Teacher]  \mintinline{bash}{nytid recruit open --course "prgi23"}
+  \item[Teacher]  \mintinline{bash}{nytid recruit send --course "prgi23"}
+\end{description}
+
+\subsection{TA schedule and sign-up}
+
+\begin{description}
+  \item[TA]  \mintinline{bash}{nytid schedule mine --set  https://timeedit...}
+  \item[TA]
+    \mintinline{bash}{nytid schedule signed --set ~/public_html/TA.ics}
+  \item[TA] \mintinline{bash}{nytid signup -c "prgi23"}
+\end{description}
+
+\subsection{Managing TA time}
+
+We need to manage the TAs during the course.
+For instance, we must track bookings and who actually worked.
+This way, we can automatically generate time reports.
+
+\begin{description}
+  \item[Teacher] \mintinline{bash}{nytid checkin -c prgi23 --next }
+  \item TimeEdit to automate running check-in.
+  \item Email or Zulip (or Slack) API to send reminders to check in.
+  \item[Teacher] \mintinline{bash}{nytid confirm -c prgi23 --now TA1 TA2 TA3}
+  \item[Teacher]
+    \mintinline{bash}{nytid confirm -c prgi23 --time "2023-09-31 13:15"}
+  \item[Teacher] \mintinline{bash}{nytid report}
+\end{description}
+
+
+\section{The structure of the code}\label{climodule}
 
 We use the Typer package to create the CLI.
 This means that each subcommand module will have the same structure as the main 

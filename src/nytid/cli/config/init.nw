@@ -3,14 +3,14 @@
 In this chapter, we document the [[config]] command of [[nytid]].
 This is located in the [[nytid.cli.config]] module.
 
-We want the configuration to be stored in a JSON structure.
+The configuration is a JSON structure.
 \label{ConfigStructure}
 \begin{minted}{JSON}
 {
   "courses": {
     "datintro22": {
       "timesheet": {
-        "url": "https://sheets.google.com/..."
+        "url": "https://sheets.google..."
       },
       "schedule": {
         "url": "https://timeedit.net/..."
@@ -24,10 +24,20 @@ For instance, we can use [[courses.datintro22.schedule.url]] to access the
 TimeEdit URL of the datintro22 course.
 (We'll use the class provided in \cref{ConfigClass} for this.)
 
+We want the command to have the following form:
+\begin{minted}{bash}
+  nytid config courses.datintro22.schedule.url --set https://timeedit.net/...
+\end{minted}
+will set the configuration value at the path, whereas
+\begin{minted}{bash}
+  nytid config courses.datintro22.schedule.url
+\end{minted}
+will return it.
 
-\section{Code outline}
 
-We use the structure outlined in \cref{CLIoverview}.
+\section{Code outline}\label{configmodule}
+
+The base structure is standard.
 <<init.py>>=
 """The nytid config command"""
 
@@ -35,21 +45,63 @@ import appdirs
 import json
 import logging
 import os
-from pprint import pprint
 import typer
 import typing
 
 dirs = appdirs.AppDirs("nytid", "dbosk@kth.se")
-cli = typer.Typer()
 
 <<classes>>
 <<helper functions>>
 
-<<config subcommands>>
+def main():
+  <<main body>>
 
 if __name__ == "__main__":
-  cli()
+  main()
 @
+
+\subsection{Not using [[add_typer]]}
+
+We would like to use the structure outlined in \cref{CLIoverview}.
+However, that would require yet another subcommand, \eg
+\begin{minted}{bash}
+  nytid config get courses.datintro22.schedule.url
+\end{minted}
+to read out the value, which we don't want.
+
+To work around that we need the [[cli]] object from the parent module here.
+Thus, instead of that module doing something like this
+\begin{minted}{python}
+import nytid.config
+# ...
+cli.add_typer(nytid.config.cli, name="config")
+\end{minted}
+(As was outlined in \cref{CLIoverview}.)
+That module will actually have to do
+\begin{minted}{python}
+import nytid.config
+# ...
+nytid.config.add_command(cli)
+\end{minted}
+This gives us
+<<helper functions>>=
+def add_command(cli: typer.Typer):
+  """
+  Add config command to Typer cli
+  """
+  <<config subcommands>>
+@
+
+To still make this module runnable on its own, in the same way as outlined in 
+\cref{CLIoverview}, we will create a [[cli]] object in the [[main]] function, 
+then add the config command and finally run it.
+<<main body>>=
+cli = typer.Typer()
+add_command(cli)
+cli()
+@
+
+\subsection{Testing}
 
 We also add tests.
 These are all prepended [[test_]] to the function name.
@@ -326,34 +378,31 @@ return paths
 @
 
 
-\section{The [[get]] and [[set]] subcommands}
+\section{The [[config]] command}
 
-We will provide two subcommands for the [[get]] and [[set]] functions 
-above.
-We simply wrap a function around them that prints the results.
+We will provide the [[config]] command as outlined above.
+If it gets a value, it will set it as the value at path.
+Otherwise, it will print the current value at path.
 <<config subcommands>>=
 path_arg = typer.Argument(...,
                           help="Path in config, e.g. 'courses.datintro22'. "
                                "Empty string is root of config.",
                           autocompletion=complete_path)
-value_arg = typer.Argument(...,
-                           help="Values to store. "
-                                "More than one value makes a list. "
-                                "Values are treated as JSON if possible.")
+value_arg = typer.Option([], "-s", "--set",
+                         help="Values to store. "
+                              "More than one value makes a list. "
+                              "Values are treated as JSON if possible.")
 
-@cli.command(name="get")
-def cli_get(path: str = path_arg):
+@cli.command(name="config")
+def config_cmd(path: str = path_arg,
+               values: typing.List[str] = value_arg):
   """
-  Prints the config to stdout.
+  Reads values from or writes values to the config.
   """
-  print_config(get(path), path)
-
-@cli.command(name="set")
-def cli_set(path: str = path_arg, values: typing.List[str] = value_arg):
-  """
-  Sets values in config.
-  """
-  set(path, values)
+  if values:
+    set(path, values)
+  else:
+    print_config(get(path), path)
 @
 
 \subsection{Autocompleting the path}

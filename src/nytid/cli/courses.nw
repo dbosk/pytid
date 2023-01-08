@@ -1,6 +1,7 @@
 \chapter{The [[cli.courses]] module and subcommands}\label{courses}
 
-In this chapter we cover the [[nytid.cli.courses]] module and its subcommands.
+In this chapter we cover the [[nytid.cli.courses]] module and the subcommands 
+of the [[courses]] command.
 We want to be able to list all courses in the configuration, create new courses 
 and add courses to the configuration.
 
@@ -19,6 +20,7 @@ course.
 We will simply use the access control of the AFS system to do access control to 
 the course configuration files.
 
+
 \section{Code outline}
 
 We use the structure outlined in \cref{CLIoverview}.
@@ -32,9 +34,8 @@ import typing
 
 from nytid.cli import config
 
-cli = typer.Typer()
+cli = typer.Typer(help="Manage courses")
 
-<<classes>>
 <<helper functions>>
 
 <<subcommands>>
@@ -52,3 +53,95 @@ from nytid.cli.courses import *
 <<test functions>>
 @
 
+
+\section{Adding a new course, the \texttt{new} command}
+
+We will add a [[new]] command to create a new course.
+<<subcommands>>=
+<<new arguments and options>>
+
+@cli.command()
+def new(name: str = name_arg,
+        ics: str = ics_opt,
+        code: str = code_opt,
+        related_codes: typing.List[str] = related_opt,
+        conf_path: str = conf_path_opt):
+  """
+  <<new command doc>>
+  """
+  <<new command body>>
+@
+
+Now we let the help section (docstring) outline the details.
+<<new command doc>>=
+Creates a new course. It takes the following arguments:
+
+- `name` (mandatory), which is the human readable nickname of the course. This 
+  is used to refer to the course with other parts of nytid.
+@
+We add a similar phrasing for the help text of the argument itself.
+<<new arguments and options>>=
+name_arg = typer.Argument(...,
+                          help="A name to use to refer to the course with "
+                               "other nytid commands.")
+@
+
+Now let's continue with the rest.
+<<new command doc>>=
+- `ics` (optional, default None), a URL to an ICS file with the schedule of the 
+  course. E.g. a URL to a TimeEdit export/subscription.
+
+@
+<<new arguments and options>>=
+ics_opt = typer.Option(None, help="A URL to an ICS file containing the "
+                                  "schedule. E.g. from TimeEdit.")
+@
+<<new command doc>>=
+- `code`, which is the course code. This is to relate the course to other 
+  courses through `related_codes`.
+
+@
+<<new arguments and options>>=
+code_opt = typer.Option(None, help="The course code, "
+                                   "to relate it to similar courses using "
+                                   "`related_codes`.")
+@
+<<new command doc>>=
+- `related_codes`, a list of related course codes. Courses with one of these 
+  course codes can share TAs.
+
+@
+<<new arguments and options>>=
+related_opt = typer.Option([], help="List of related course codes, "
+                                    "courses with any of these codes can "
+                                    "share TAs.")
+@
+<<new command doc>>=
+- `conf_path` is the path to the base config dir. The course's name will be 
+  appended to this path. Default is read from defaults.courses_conf_dir in 
+  config.
+
+@
+We want to provide a default path for the courses.
+This default we want stored in the config.
+However, if it doesn't exist in the config, we will create a default entry for 
+it.
+The default is a subdirectory [[courses]] in the config directory.
+<<new arguments and options>>=
+default_conf_dir = "defaults.courses_conf_dir"
+try:
+  config.get(default_conf_dir)
+except KeyError:
+  config.set(default_conf_dir, f"{config.dirs.user_config_dir}/courses")
+
+conf_path_opt = typer.Option(config.get(default_conf_dir),
+                             help=f"Path to the course's config dir.")
+@
+
+
+\subsection{Creating a new course}
+
+<<helper functions>>=
+@
+<<new command body>>=
+@

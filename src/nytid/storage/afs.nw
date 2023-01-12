@@ -1,0 +1,18 @@
+\chapter{Dealing with AFS}
+
+In this chapter we describe how we will use the AFS file system as storage.
+We will also provide functions to easily work with AFS and set permissions.
+
+
+\section{Code outline}
+
+<<afs.py>>=
+from nytid.cli import config
+
+conf_afs_root = "storage.afs_root"
+try:
+  afs_root = config.get(conf_afs_root)
+except KeyError:
+  afs_root = "/afs/kth.se"
+  config.set(conf_afs_root, afs_root)
+@

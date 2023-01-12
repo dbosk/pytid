@@ -5,6 +5,9 @@ LATEXFLAGS+=	-shell-escape
 TEX_PYTHONTEX=	yes
 PYTHONTEXFLAGS=	--interpreter "python:poetry run python3"
 
+nytid.pdf: ../src/nytid/storage/init.tex
+nytid.pdf: ../src/nytid/storage/afs.tex
+
 nytid.pdf: ../src/nytid/schedules.tex
 nytid.pdf: ../src/nytid/signup/hr/hr.tex
 nytid.pdf: ../src/nytid/signup/sheets.tex

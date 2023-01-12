@@ -128,7 +128,7 @@ However, if it doesn't exist in the config, we will create a default entry for
 it.
 The default is a subdirectory [[courses]] in the config directory.
 <<new arguments and options>>=
-default_conf_dir = "defaults.courses_conf_dir"
+default_conf_dir = "courses.conf_dir"
 try:
   config.get(default_conf_dir)
 except KeyError:

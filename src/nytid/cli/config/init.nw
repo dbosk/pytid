@@ -418,12 +418,16 @@ def config_cmd(path: str = path_arg,
 The [[complete_path]] functions returns the possible completions for an 
 incomplete path from the command line.
 <<helper functions>>=
-def complete_path(initial_path: str):
+def complete_path(initial_path: str, conf: Config = None):
   """
   Returns all valid paths in the config starting with `initial_path`.
+  If `conf` is not None, use that instead of the actual config.
   """
+  if not conf:
+    conf = Config(get())
+
   return list(filter(lambda x: x.startswith(initial_path),
-                     Config(get()).paths()))
+                     conf.paths()))
 @
 
 We test this function as follows.
@@ -439,8 +443,9 @@ def test_complete_path():
   })
 
   incomplete = "courses.datintro22.T"
-  assert "courses.datintro22.TAs" in complete_path(incomplete)
-  assert "courses.datintro22.url" not in complete_path(incomplete)
+  assert "courses.datintro22.TAs" in complete_path(incomplete, conf)
+  assert "courses.datintro22.url" not in complete_path(incomplete, conf)
+  assert len(complete_path(incomplete)) >= 0
 @
 
 \subsection{Printing the config}

@@ -96,7 +96,7 @@ We want to open a file relative to a particular directory.
 We will use Python's [[os.open]] to open a directory and then open files 
 relative to it using an opener.
 <<StorageRoot methods>>=
-def open(*args, **kwargs):
+def open(self, *args, **kwargs):
   """
   Takes the same arguments as built-in `open`.
   """
@@ -148,7 +148,11 @@ We also want to be able to use the storage in a [[with]] statement.
 This means that we need the [[__enter__]] and [[__exit__]] methods.
 However, we only need to specify that we should run [[.close]] on exit.
 <<StorageRoot methods>>=
-def __exit__(self):
+def __enter__(self):
+  """Enter of with statement"""
+  return self
+
+def __exit__(self, *args):
   """Exit of with statement"""
   self.close()
 @

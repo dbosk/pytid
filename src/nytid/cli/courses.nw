@@ -145,3 +145,5 @@ conf_path_opt = typer.Option(config.get(default_conf_dir),
 @
 <<new command body>>=
 @
+<<test functions>>=
+@

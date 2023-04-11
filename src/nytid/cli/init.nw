@@ -126,17 +126,13 @@ from nytid.cli import courses
 cli.add_typer(courses.cli, name="courses")
 @
 
-The second option, applies to [[config]].
-For the [[config]] command, which doesn't have subcommands, we must thus do it 
-slightly differently.
-The [[config]] module has added a function [[add_command]] that takes the Typer 
-instance as argument, and uses that when it create the function for the 
-command.
-See \cref{configmodule} for details.
+For the [[config]] command, we will use the [[typerconf]] package.
+This doesn't have subcommands, we must thus do it slightly differently.
+The [[typerconf]] package has added a function [[add_config_cmd]] that takes 
+the Typer instance as argument, and uses that when it create the function for 
+the command.
+See [[pydoc3 typerconf]] for details.
 <<import subcommand modules>>=
-from nytid.cli import config
-@
+import typerconf as config
 <<add subcommand typer to cli>>=
-config.add_command(cli)
-@
-
+config.add_config_cmd(cli)

@@ -230,4 +230,32 @@ def test_with_StorageRoot():
   with StorageRoot(root_dir.name) as root:
     with root.open("test.txt") as f:
       assert f.read() == test_string
+@
+
+
+\section{Permissions}
+
+We also add the possibility to change permissions, \ie to grant more users 
+access or revoke access.
+We want to do this on the storage root level since this is how it works with 
+both AFS and Git (and can be done with Sheets too):
+AFS does permissions on directory level;
+Git does permissions on repository level.
+
+For the local file system, we will not implement permissions.
+The reason is that we must work with groups.
+We must add a group and then modify users by adding them to the group.
+This requires root permissions.
+Thus, we'll add the methods, but raise [[NotImplementedError]] when called.
+<<StorageRoot methods>>=
+def grant_access(user):
+  <<StorageRoot method not implemented>>
+
+def revoke_access(user):
+  <<StorageRoot method not implemented>>
+<<StorageRoot method not implemented>>=
+"""
+This method is not implemented for `nytid.cli.storage.StorageRoot`.
+"""
+raise NotImplementedError
 

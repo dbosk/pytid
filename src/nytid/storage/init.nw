@@ -1,12 +1,15 @@
-\chapter{Storage overview}
+\chapter{Storage overview, the [[storage]] module}
 
-In this chapter we will describe the design of the backend storage system.
+In this chapter we will describe the design of the backend storage system, the 
+module [[nytid.storage]].
 We will provide a general design.
 We want to have several possible backends with the same interface:
 \begin{itemize}
-\item The AFS file system
-\item Git version management, \eg GitHub.
-\item Google Sheets
+\item the local file system,
+\item the AFS file system (which is very similar to the former, except for 
+permissions),
+\item Git version management, \eg GitHub;
+\item Google Sheets (which we'll ignore for now).
 \end{itemize}
 
 We want to use the [[with]] protocol and hide the storage backend.
@@ -38,7 +41,10 @@ Whenever we close the file after writing, the Git storage will commit and push
 it.
 
 In each storage module we want a class [[StorageRoot]] that allows us to use 
-files in that particular storage..
+files in that particular storage.
+In this chapter we implement the one for the local file system.
+This one can be reused and we just need to overload some methods to implement 
+AFS and Git in subsequent chapters.
 
 
 \section{Code outline}

@@ -15,7 +15,6 @@ We access the file [[bookings.csv]] for the course [[prgm23]] using the AFS
 backend.
 \begin{minted}{python}
 import nytid.storage.afs as storage
-from nytid.cli import config
 
 course_storage = storage.StorageRoot("/afs/kth.se/home/d/b/dbosk/.config/nytid/prgm23")
 
@@ -26,9 +25,8 @@ with course_storage.open("bookings.csv") as bookings:
 Now we do the same with the Git backend.
 We see that there are only two differences: the [[import]] statement and the 
 location/path/URL for the storage.
-\begin{minted}[highlightlines={1,4}]{python}
+\begin{minted}[highlightlines={1,3}]{python}
 import nytid.storage.git as storage
-from nytid.cli import config
 
 course_storage = storage.StorageRoot("git@github.com/dbosk/prgm23.nytid")
 

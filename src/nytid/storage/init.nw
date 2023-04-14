@@ -53,6 +53,7 @@ We want a class [[StorageRoot]] that encapsulates a directory and allows us to
 open files inside that directory or subdirectories.
 <<init.py>>=
 import os
+import pathlib
 
 class StorageRoot:
   """
@@ -64,12 +65,15 @@ class StorageRoot:
     """
     Uses `path` as the root. All files opened are in subdirectories of `path`.
     """
-    self.__root = path
+    self.__path = path
     <<StorageRoot constructor body>>
 
   @property
-  def root(self):
-    return self.__root
+  def path(self):
+    """
+    `pathlib.Path` representation of the storage root.
+    """
+    return pathlib.Path(self.__path)
 
   <<StorageRoot methods>>
 @
@@ -77,6 +81,7 @@ class StorageRoot:
 We also add the tests in a test file that will be used by [[pytest]].
 We need a temporary directory that we can use as the root.
 <<test storage.py>>=
+import pathlib
 import tempfile
 
 from nytid.storage import *
@@ -90,7 +95,7 @@ This way we can test the class above.
 <<test functions>>=
 def test_StorageRoot():
   root = StorageRoot(root_dir.name)
-  assert root.root == root_dir.name
+  assert root.path == pathlib.Path(root_dir.name)
 @
 
 
@@ -135,7 +140,7 @@ def open_dir(self):
   except FileNotFoundError:
     <<handle root directory not existing>>
 <<open root directory file descriptor>>=
-self.__dir_fd = os.open(self.root, os.O_RDONLY)
+self.__dir_fd = os.open(self.path, os.O_RDONLY)
 @
 
 Since this causes the directory file descriptor to be open, we need some way to 
@@ -173,7 +178,7 @@ Because it's the most usable for the user.
 Particularly, when it comes to AFS, we want to configure the root directory 
 with the correct permissions.
 <<handle root directory not existing>>=
-os.makedirs(self.root)
+os.makedirs(self.path)
 <<open root directory file descriptor>>
 @
 

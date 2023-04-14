@@ -45,6 +45,8 @@ files in that particular storage.
 In this chapter we implement the one for the local file system.
 This one can be reused and we just need to overload some methods to implement 
 AFS and Git in subsequent chapters.
+(Currently, only local file system, this module, and AFS are implemented, the 
+[[afs]] module.)
 
 
 \section{Code outline}

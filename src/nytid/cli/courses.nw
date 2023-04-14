@@ -61,25 +61,25 @@ We will add a [[new]] command to create a new course.
 <<new arguments and options>>
 
 @cli.command()
-def new(name: str = name_arg,
-        ics: str = ics_opt,
-        code: str = code_opt,
-        related_codes: typing.List[str] = related_opt,
-        conf_path: str = conf_path_opt):
+def new(<<new command args>>):
   """
+  Creates a new course. It takes the following arguments:
+
   <<new command doc>>
   """
   <<new command body>>
-@
+@ Now we will write the help section (docstring) along with the arguments and 
+how they are used by the command.
 
-Now we let the help section (docstring) outline the details.
 <<new command doc>>=
-Creates a new course. It takes the following arguments:
-
 - `name` (mandatory), which is the human readable nickname of the course. This 
   is used to refer to the course with other parts of nytid.
-@
-We add a similar phrasing for the help text of the argument itself.
+
+@ We add the argument to the argument list of the function.
+<<new command args>>=
+name: str = name_arg,
+@ We add a similar phrasing for the help text of the argument itself, \ie the 
+default value that we just set.
 <<new arguments and options>>=
 name_arg = typer.Argument(...,
                           help="A name to use to refer to the course with "
@@ -91,39 +91,42 @@ Now let's continue with the rest.
 - `ics` (optional, default None), a URL to an ICS file with the schedule of the 
   course. E.g. a URL to a TimeEdit export/subscription.
 
-@
+<<new command args>>=
+ics: str = ics_opt,
 <<new arguments and options>>=
 ics_opt = typer.Option(None, help="A URL to an ICS file containing the "
                                   "schedule. E.g. from TimeEdit.")
-@
+
 <<new command doc>>=
 - `code`, which is the course code. This is to relate the course to other 
   courses through `related_codes`.
 
-@
+<<new command args>>=
+code: str = code_opt,
 <<new arguments and options>>=
 code_opt = typer.Option(None, help="The course code, "
                                    "to relate it to similar courses using "
                                    "`related_codes`.")
-@
 <<new command doc>>=
 - `related_codes`, a list of related course codes. Courses with one of these 
   course codes can share TAs.
 
-@
+<<new command args>>=
+related_codes: typing.List[str] = related_opt,
 <<new arguments and options>>=
 related_opt = typer.Option([], help="List of related course codes, "
                                     "courses with any of these codes can "
                                     "share TAs.")
-@
+
 <<new command doc>>=
 - `conf_path` is the path to the base config dir. The course's name will be 
   appended to this path. Default is read from defaults.courses_conf_dir in 
   config.
 
-@
-We want to provide a default path for the courses.
-This default we want stored in the config.
+<<new command args>>=
+conf_path: str = conf_path_opt
+@ We want to provide a default path for the courses.
+This default we want to store in the config.
 However, if it doesn't exist in the config, we will create a default entry for 
 it.
 The default is a subdirectory [[courses]] in the config directory.
@@ -142,8 +145,5 @@ conf_path_opt = typer.Option(config.get(default_conf_dir),
 \subsection{Creating a new course}
 
 <<helper functions>>=
-@
 <<new command body>>=
-@
 <<test functions>>=
-@

@@ -2,6 +2,7 @@ SUBDIR_GOALS=	all clean distclean
 
 SUBDIR+=	cli
 SUBDIR+=	signup
+SUBDIR+=	storage
 
 MODULES+=	schedules.py
 

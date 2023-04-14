@@ -1,18 +1,428 @@
-\chapter{Dealing with AFS}
+\chapter{Dealing with AFS, the [[storage.afs]] module}
 
-In this chapter we describe how we will use the AFS file system as storage.
-We will also provide functions to easily work with AFS and set permissions.
+In this chapter we describe how we will use the AFS file system as storage, the 
+[[storage.afs]] module.
+
+Working with AFS is the same as working with the local file system, as in the 
+[[storage]] module.
+The only difference is working with permissions.
 
 
 \section{Code outline}
 
+As pointed out above, the only difference to the [[storage]] module is the 
+permissions methods.
+Hence, we only need to overload them.
 <<afs.py>>=
-from nytid.cli import config
+from nytid import storage
+import sys
+<<helper imports>>
 
-conf_afs_root = "storage.afs_root"
-try:
-  afs_root = config.get(conf_afs_root)
-except KeyError:
-  afs_root = "/afs/kth.se"
-  config.set(conf_afs_root, afs_root)
+<<helper constants>>
+<<helper exceptions>>
+<<helper functions>>
+
+class StorageRoot(storage.StorageRoot):
+  """
+  Manages a storage root in the AFS system.
+  """
+
+  <<methods for granting and revoking access>>
 @
+
+We also add the tests in a test file that will be used by [[pytest]].
+We need a temporary directory that we can use as the root.
+<<test storageafs.py>>=
+import shutil
+from nytid.storage.afs import *
+
+root_dir = "/afs/kth.se/home/d/b/dbosk/nytid-nonexisting-test-directory"
+
+try:
+  shutil.rmtree(root_dir)
+except FileNotFoundError:
+  pass
+
+<<test functions>>
+
+try:
+  shutil.rmtree(root_dir)
+except FileNotFoundError:
+  pass
+@
+
+
+\section{Functions for AFS ACL operations}\label{AFSACL}
+
+AFS works by setting the access control list.
+This means that we need to set the complete access control list every time.
+This also means that to revoke access, we simply set no permissions.
+We create a main function that does this, then we'll implement other 
+easier-to-use functions that use it.
+<<helper functions>>=
+def set_acl(path, user_or_group, permissions):
+  """
+  Sets the access control list for directory `path` for user or group 
+  `user_or_group` to permissions in `permissions`.
+
+  `permissions` is a list of one-letter permissions. (A string of letters and a 
+  list of one-letter strings are equivalent.)
+  """
+  <<check \texttt{permissions} and turn into correct format>>
+  <<run fs sa command>>
+
+<<more useful acl functions>>
+@
+
+Before we go into the details of [[set_acl]], we'll cover some more useful 
+functions that use it in \cref{UsefulACLFunctions}.
+But even before that, we must cover how to read the access control lists.
+<<helper functions>>=
+def get_acl(path):
+  """
+  Returns a dictionary containing the access control list:
+  users or groups as key, permissions as value.
+  """
+  acl = {}
+  <<run fs la command>>
+  <<parse fs output into acl dict>>
+  return acl
+@
+
+Let's test these functions.
+We want test both at the same time.
+We need to know the default permissions when creating a directory (all AFS ACL 
+apply to directories).
+Then we can use the functions to modify and check, if both are correct the 
+tests will pass.
+<<test functions>>=
+def test_get_set_acl():
+  with StorageRoot(root_dir) as root:
+    acl = get_acl(root.path)
+    assert "l" in acl["system:anyuser"][0]
+    assert "w" in acl["system:administrators"][0]
+
+    set_acl(root.path, "system:anyuser", "")
+    new_acl = get_acl(root.path)
+    assert "system:anyuser" not in new_acl
+
+  shutil.rmtree(root_dir)
+@
+
+\subsection{Reading the AFS ACL}
+
+To read the ACL, we must run the command [[fs ls path]] to get the ACL for the 
+path.
+If an error occurs, it will return a non-zero return code; so we want to check 
+the return code.
+Also, we must capture the output to get the error messages and the output in 
+case of no errors.
+<<run fs la command>>=
+cmd = ["fs", "la", path]
+try:
+  fsla = subprocess.run(cmd, check=True, capture_output=True)
+except subprocess.CalledProcessError as err:
+  <<handle fs la error>>
+@
+
+Let's start with the error handling before we turn to the parsing of data.
+The error messages are written to [[stderr]], prepended with \enquote{fs: }:
+\begin{minted}[linenos=false]{text}
+fs: File '/home/dbosk/test' doesn't exist
+\end{minted}
+or
+\begin{minted}[linenos=false]{text}
+fs: Invalid argument; it is possible that /home/dbosk is not in AFS.
+\end{minted}
+We want to turn those error messages into exceptions.
+<<handle fs la error>>=
+errmsg = str(err.stderr, encoding=sys.getdefaultencoding())
+raise AFSfsError(f"`fs la {path}` returned with error: {errmsg}")
+<<helper exceptions>>=
+class AFSfsError(Exception):
+  pass
+@
+
+Now, let's have a look at the output when successful.
+\begin{minted}{text}
+Access list for test is
+Normal rights:
+  dbosk:remote-users rlidwka
+  system:administrators rlidwka
+  system:anyuser l
+  dbosk rlidwka
+\end{minted}
+It can also look like this, when there are negative permissions.
+\begin{minted}{text}
+Access list for test is
+Normal rights:
+  dbosk:remote-users rlidwka
+  system:administrators rlidwka
+  system:anyuser l
+  dbosk rlidwka
+Negative rights:
+  dbosk w
+\end{minted}
+This yields the following algorithm:
+Divide [[stdout]] into lines.
+Iterate through the lines by popping lines from the front.
+Check for \enquote{Normal rights:} and \enquote{Negative rights:}.
+Then read all indented lines as part of that category.
+Finally, we merge them as a tuple (normal rights, negative rights) for a user.
+<<parse fs output into acl dict>>=
+lines = str(fsla.stdout, encoding=sys.getdefaultencoding()).split("\n")
+pos_permissions = {}
+neg_permissions = {}
+
+while lines:
+  line = lines.pop(0)
+  if line == "Normal rights:":
+    pos_permissions.update(pop_permissions(lines))
+  elif line == "Negative rights:":
+    neg_permissions.update(pop_permissions(lines))
+
+<<merge positive and negative permissions>>
+@
+
+We want to merge the dictionaries from
+[[(user, permissions)]] into
+[[(user, (pos_permissions, neg_permissions))]].
+We do this by iterating through the positive, the majority is here.
+We add both positive and negative.
+When done, we must iterate through the negative to add only those that didn't 
+also have positive permissions.
+<<merge positive and negative permissions>>=
+for key, value in pos_permissions.items():
+  try:
+    acl[key] = (value, neg_permissions[key])
+  except KeyError:
+    acl[key] = (value, None)
+
+for key, value in neg_permissions.items():
+  if key in acl:
+    continue
+  else:
+    acl[key] = (None, value)
+@
+
+The [[pop_permissions]] function will read all indented lines, return a 
+dictionary with user or group as key and the permissions as value.
+<<helper functions>>=
+def pop_permissions(lines):
+  """
+  Pops all indented lines from front in `lines`. Returns dictionary containing 
+  username (or group) as keys, permissions as values.
+  """
+  acl = {}
+
+  while lines:
+    if not lines[0].startswith("  "):
+      return acl
+
+    user_or_group, permissions = lines.pop(0).split()
+
+    acl[user_or_group] = permissions
+
+  return acl
+@
+
+We can test this code as follows.
+<<test functions>>=
+def test_pop_permissions():
+  perm_lines = [
+    "  dbosk rlw",
+    "  alba rl",
+    "  system:anyuser rl"
+  ]
+  acl = pop_permissions(perm_lines)
+
+  assert acl["alba"] == "rl"
+  assert acl["system:anyuser"] == "rl"
+  assert acl["dbosk"] == "rlw"
+@
+
+\subsection{Useful AFS ACL functions}\label{UsefulACLFunctions}
+
+There are some combinations of AFS permissions that are very usable for us.
+We will create a small set of them here.
+Let's cover them in a (sort of) hierarchical order.
+
+\paragraph{Revoke all permissions}
+
+Let's start with the simplest, revoking all permissions.
+<<more useful acl functions>>=
+def revoke_all(path, user_or_group):
+  """
+  Revokes all access to `path` for `user_or_group`.
+  """
+  set_acl(path, user_or_group, "")
+@
+
+\paragraph{Drop box}
+
+The first one which grants permissions is the \enquote{drop box} permission.
+The user is allowed to insert files in a directory, but not read back or change 
+them later.
+<<more useful acl functions>>=
+def grant_dropbox(path, user_or_group):
+  """
+  Lets `user_or_group` use `path` as a dropbox, i.e. can insert files, but not 
+  list, read or modify them.
+  """
+  set_acl(path, user_or_group, "i")
+@
+
+\paragraph{Reader}
+
+The simples reading permissions is simply to list files and be able to read 
+them.
+We also allow the reader to put locks on files it's reading.
+<<more useful acl functions>>=
+def grant_lookup(path, user_or_group):
+  """
+  Lets `user_or_group` list/lookup files in `path`.
+  """
+  set_acl(path, user_or_group, "l")
+
+def grant_reader(path, user_or_group):
+  """
+  Lets `user_or_group` list, read and lock files in `path`.
+  """
+  set_acl(path, user_or_group, "rlk")
+@
+
+\paragraph{Writer}
+
+The next level is to also have write access.
+It makes sense that a writer can also read the file, so that they can modify 
+files.
+We also allow a writer to delete files, as they could truncate them anyway.
+Also, we want the writer to be able to lock files before writing.
+<<more useful acl functions>>=
+def grant_writer(path, user_or_group):
+  """
+  Lets `user_or_group` list, read, lock, write, delete files in `path`.
+  """
+  set_acl(path, user_or_group, "rlidwk")
+@
+
+\paragraph{Admin}
+
+Finally, the last level is the admin, who, in addition to the writer, can 
+modify the access control list.
+(We cover [[VALID_PERMISSIONS]] in \cref{CheckPermissions}.)
+<<more useful acl functions>>=
+def grant_admin(path, user_or_group):
+  """
+  Lets `user_or_group` do anything to `path` and files in it.
+  """
+  set_acl(path, user_or_group, VALID_PERMISSIONS)
+@
+
+\subsection{Run [[fs sa]] command}
+
+We can start with how to run the command-line utility.
+We simply piece together the command line.
+Note that we want to pass the arguments in the list format, not in string 
+format, as that is more secure (we don't need to worry about escapes).
+We want to check the return codes automatically and capture any output to use 
+for error handling.
+<<run fs sa command>>=
+cmd = ["fs", "sa", path, user_or_group, permissions]
+try:
+  fssa = subprocess.run(cmd, check=True, capture_output=True)
+except subprocess.CalledProcessError as err:
+  <<handle fs sa error>>
+<<helper imports>>=
+import subprocess
+@
+
+If the [[fs]] command exited with non-zero return code, we want to relay the 
+error further.
+What's interesting is the error messages in [[stderr]].
+<<handle fs sa error>>=
+errmsg = str(err.stderr, encoding=sys.getdefaultencoding())
+raise AFSACLError(f"Error while setting AFS ACL: "
+                  f"`{err.cmd}` resulted in '{errmsg}'")
+<<helper exceptions>>=
+class AFSACLError(Exception):
+  pass
+@
+
+\subsection{Check the permissions}\label{CheckPermissions}
+
+Now let's look at [[permissions]].
+We allow it to be either a string of letters or a list of letters (one-letter 
+strings).
+We want to check that it contains valid permissions and convert it to the 
+string format to pass to the [[fs sa]] command above.
+To make it more useful for the user, we sort out all the invalid permissions.
+<<check \texttt{permissions} and turn into correct format>>=
+valid_permissions = ""
+invalid_permissions = ""
+
+for permission in permissions:
+  if permission in VALID_PERMISSIONS:
+    valid_permissions += permission
+  else:
+    invalid_permissions += permission
+
+if invalid_permissions:
+  <<handle invalid permission>>
+<<helper constants>>=
+VALID_PERMISSIONS = "rlidwka"
+@
+
+Now, when there is an invalid permission, we have sorted out all the invalid 
+permissions.
+So we can pass them to the user using an exception.
+<<handle invalid permission>>=
+raise AFSPermissionError(f"{invalid_permissions} are invalid permissions.")
+<<helper exceptions>>=
+class AFSPermissionError(Exception):
+  pass
+@
+
+
+\section{Granting and revoking access to storage root}
+
+We will add methods to grant access to users using the functions from 
+\cref{AFSACL}.
+These methods will thus be more like convenient wrappers around those 
+functions.
+%according to the \enquote{roles} defined above (\cref{UsefulACLFunctions}).
+
+\subsection{Revoking access}
+
+We start with the most basic: revoking all permissions.
+<<methods for granting and revoking access>>=
+def revoke_access(self, user_or_group):
+  """
+  Revokes access to storage root for a user or group. Returns nothing.
+  """
+  revoke_all(self.path, user_or_group)
+@
+
+\subsection{Granting access}
+
+Let's start with the most general method, that can grant any combinations of 
+permissions.
+<<methods for granting and revoking access>>=
+def grant_access(self, user_or_group, permissions):
+  """
+  Sets `permissions` as access rights for `user_or_group`.
+
+  `permissions` is a substring of the AFS permissions: "rlidwka".
+
+  l -- Lookup: Note that a user needs Lookup to a parent directory
+               as well as access to a subdirectory to access files in
+               the subdirectory.
+  r -- Read:   Allows user to read or copy any file in the directory.
+  w -- Write:  Allows user to modify any existing file in the directory.
+  k -- Lock:   Allows user to flock a file.
+  i -- Insert: Allows user to add new files and create new subdirectories.
+  d -- Delete: Allows user to remove files and empty subdirectories.
+  a -- Admin:  Allows user to change the ACL for a directory.
+  """
+  set_acl(self.path, user_or_group, permissions)
+

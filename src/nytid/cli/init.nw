@@ -88,7 +88,7 @@ This way, we can automatically generate time reports.
 \end{description}
 
 
-\section{The structure of the code}\label{climodule}
+\section{The structure of the [[cli]] module}\label{climodule}
 
 We use the Typer package to create the CLI.
 This means that each command module will have the same structure as the main 
@@ -136,3 +136,4 @@ See [[pydoc3 typerconf]] for details.
 import typerconf as config
 <<add subcommand typer to cli>>=
 config.add_config_cmd(cli)
+

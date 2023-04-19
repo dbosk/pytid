@@ -28,11 +28,11 @@ That structure looks like this:
 <<courses.py>>=
 """The nytid courses command and subcommands"""
 
+import typerconf as config
+
 import logging
 import typer
 import typing
-
-from nytid.cli import config
 
 cli = typer.Typer(help="Manage courses")
 

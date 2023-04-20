@@ -1,4 +1,4 @@
-\chapter{Storage overview, the [[storage]] module}
+\chapter{Storage overview, the [[storage]] module}\label{storage}
 
 In this chapter we will describe the design of the backend storage system, the 
 module [[nytid.storage]].

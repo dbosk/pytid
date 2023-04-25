@@ -48,6 +48,34 @@ AFS and Git in subsequent chapters.
 (Currently, only local file system, this module, and AFS are implemented, the 
 [[afs]] module.)
 
+However, we also implement a function [[open_root]] that can determine which 
+module to use.
+This would change the above examples into the following.
+To use AFS:
+\begin{minted}[highlightlines={1,3}]{python}
+from nytid import storage
+
+course_storage = storage.open_root("/afs/kth.se/home/d/b/dbosk/.config/nytid/prgm23")
+
+with course_storage.open("bookings.csv") as bookings:
+  # do something with bookings
+  pass
+\end{minted}
+To use GitHub:
+\begin{minted}[highlightlines={1,3}]{python}
+from nytid import storage
+
+course_storage = storage.open_root("git@github.com/dbosk/prgm23.nytid")
+
+with course_storage.open("bookings.csv") as bookings:
+  # do something with bookings
+  pass
+\end{minted}
+We see that the only differences are the import (only import main storage 
+module) and the path (supplied to [[open_root]]).
+[[open_root]] determines from the path which [[StorageRoot]] to use, 
+[[afs.StorageRoot]] or [[git.StorageRoot]].
+
 
 \section{Code outline}
 
@@ -78,6 +106,15 @@ class StorageRoot:
     return pathlib.Path(self.__path)
 
   <<StorageRoot methods>>
+
+def open_root(*args, **kwargs):
+  """
+  Takes arguments (`*args` and `**kwargs`), determines which submodule is the 
+  best and passes the arguments onto the `StorageRoot` constructor of that 
+  module.
+  """
+  <<determine which storage module to use>>
+  <<create and return a suitable [[StorageRoot]] object>>
 @
 
 We also add the tests in a test file that will be used by [[pytest]].
@@ -265,4 +302,53 @@ def revoke_access(user):
 This method is not implemented for `nytid.cli.storage.StorageRoot`.
 """
 raise NotImplementedError
+@
 
+
+\section{Create a suitable [[StorageRoot]] object}
+
+Now, let's return to the [[storage.open_root]] function.
+The idea is that it will take arguments and determine which submodule to use, 
+\eg~[[storage.afs]] or [[storage.git]].
+
+To avoid the endless recursive import of importing the submoudles (as they must 
+include the storage module), we will only include them in the function call.
+Thus, we will determine which module to use, then import only that module.
+That module can later be used in
+[[<<create and return a suitable [[StorageRoot]] object>>]].
+
+We look for characteristic values in [[*args]] and [[**kwargs]] to determine 
+which module to use.
+If the path ([[args[0]]]) starts with [[/afs]], then we should use the AFS 
+module.
+<<determine which storage module to use>>=
+if args[0].startswith("/afs"):
+  import storage.afs as storage_module
+@
+
+If the URL ([[args[0]]]) ends with [[.git]] then we should use the Git module.
+However, the Git repo can be hosted in the AFS file system.
+It could also be hosted on GitHub.
+In both these cases, permission management is different.
+This means that the [[git.StorageRoot]] must be able to handle a parent 
+[[StorageRoot]] for permissions.
+But we defer that handling to the [[storage.git]] module.
+Thus we don't use [[elif]], but rather replace any existing [[storage_module]].
+<<determine which storage module to use>>=
+if args[0].endswith(".git"):
+  import storage.git as storage_module
+@
+
+Once we've determined the storage module to use, we use it.
+However, if we couldn't determine which storage module to use, the 
+[[storage_module]] object doesn't exist.
+In try pythonic way, we simply try to use it.
+If it fails, we use the [[StorageRoot]] of the this module (the [[storage]] 
+module, \ie a simple file system root) instead.
+<<create and return a suitable [[StorageRoot]] object>>=
+try:
+  root = storage_module.StorageRoot(*args, **kwargs)
+except NameError:
+  root = StorageRoot(*args, **kwargs)
+
+return root

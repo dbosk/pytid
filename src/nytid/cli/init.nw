@@ -100,6 +100,8 @@ That structure looks like this:
 import typer
 <<import subcommand modules>>
 
+<<configure logging>>
+
 cli = typer.Typer()
 
 <<add subcommand typer to cli>>
@@ -136,4 +138,15 @@ See [[pydoc3 typerconf]] for details.
 import typerconf as config
 <<add subcommand typer to cli>>=
 config.add_config_cmd(cli)
+@
 
+
+\section{Configure logging}
+
+We want to use Python's built-in [[logging]] module to emit errors.
+<<configure logging>>=
+import logging
+import sys
+
+logging.basicConfig(format=f"nytid: %(levelname)s: %(message)s")
+@

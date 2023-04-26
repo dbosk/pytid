@@ -323,7 +323,7 @@ If the path ([[args[0]]]) starts with [[/afs]], then we should use the AFS
 module.
 <<determine which storage module to use>>=
 if args[0].startswith("/afs"):
-  import storage.afs as storage_module
+  import nytid.storage.afs as storage_module
 @
 
 If the URL ([[args[0]]]) ends with [[.git]] then we should use the Git module.
@@ -336,7 +336,7 @@ But we defer that handling to the [[storage.git]] module.
 Thus we don't use [[elif]], but rather replace any existing [[storage_module]].
 <<determine which storage module to use>>=
 if args[0].endswith(".git"):
-  import storage.git as storage_module
+  import nytid.storage.git as storage_module
 @
 
 Once we've determined the storage module to use, we use it.
@@ -352,3 +352,32 @@ except NameError:
   root = StorageRoot(*args, **kwargs)
 
 return root
+@
+
+Let's test this.
+Note that the Git test should fail since that module doesn't exist yet.
+Also, the test for the local root is flawed; since any of the others inherit 
+from that class, all will be an instance of it.
+But we can test that it's not an instance of the AFS class at least.
+<<test functions>>=
+def test_open_root():
+  from nytid.storage import afs
+
+  afs_dir = "/afs/kth.se/home/d/b/dbosk/nytid-nonexisting-test-directory"
+  local_dir = "/home/dbosk/nytid-nonexisting-test-directory"
+  git_repo = "git@github.com:dbosk/nytid.git"
+
+  afs_root = open_root(afs_dir)
+  assert isinstance(afs_root, afs.StorageRoot)
+
+  local_root = open_root(local_dir)
+  assert isinstance(local_root, StorageRoot)
+  assert not isinstance(local_root, afs.StorageRoot)
+
+  try:
+    git_root = open_root(git_repo)
+  except ModuleNotFoundError:
+    assert True
+  else:
+    assert False
+@

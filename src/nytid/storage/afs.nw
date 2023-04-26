@@ -425,4 +425,247 @@ def grant_access(self, user_or_group, permissions):
   a -- Admin:  Allows user to change the ACL for a directory.
   """
   set_acl(self.path, user_or_group, permissions)
+@
 
+
+\section{Group management}
+
+An easy way to manage access is through groups.
+This way we just add a group to the ACL using the functions above and then add 
+members to the group to give that access.
+
+AFS provides the command [[pts]] to manage groups.
+So we need to create wrapper functions around that command in the same way we 
+did with [[fs]] above (\cref{UsefulACLFunctions}).
+We want to be able to run
+\begin{itemize}
+\item [[pts creategroup]], to create a group;
+\item [[pts delete]], to remove a group;
+\item [[pts adduser]], to add a user to a group;
+\item [[pts removeuser]], to remove a user from a group;
+\item [[pts membership]], to list members of the group.
+\end{itemize}
+
+We can run the [[pts]] command in the same way we did with [[fs]] in 
+\cref{AFSACL}.
+We can set the list [[cmd]], for example,
+[[cmd = ["pts", "membership", "dbosk:datintro23"]]],
+and then run it as follows.
+Note that [[pts]] can give an error even when it doesn't give a non-zero return 
+code.
+So we must check for errors even on success.
+<<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>=
+try:
+  pts = subprocess.run(cmd, check=True, capture_output=True)
+except subprocess.CalledProcessError as err:
+  <<handle pts errors>>
+else:
+  <<create [[pts_lines]] from [[pts.stdout]]>>
+<<create [[pts_lines]] from [[pts.stdout]]>>=
+pts_lines = str(pts.stdout, encoding=sys.getdefaultencoding()).split("\n")
+@
+
+When an error occurs, the [[pts]] command prints [[pts: error message]].
+We simply use that error message as the error message in an exception that we 
+raise when an error occurs.
+<<handle pts errors>>=
+pts_lines = str(err.stderr, encoding=sys.getdefaultencoding()).split("\n")
+raise AFSGroupError(f"`{' '.join(cmd)}` returned an error: {pts_lines[0]}")
+<<helper exceptions>>=
+class AFSGroupError(Exception):
+  pass
+@
+
+Let's determine which group names to use for testing this code.
+<<test functions>>=
+test_group_name = "dbosk:nytid-nonexisting-group"
+@
+
+
+\subsection{Creating groups}
+
+Let's start with creating a group.
+<<helper functions>>=
+def create_group(group_name):
+  """
+  Creates a group in AFS named `group_name`.
+  """
+  cmd = ["pts", "creategroup", group_name]
+  <<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>
+@
+
+Let's test this command.
+<<test functions>>=
+def test_create_group():
+  try:
+    create_group("dbosk:remote-users")
+  except AFSGroupError as err:
+    assert "already exists" in str(err)
+
+  create_group(test_group_name)
+@
+
+\subsection{Adding users to groups}
+
+Let's continue by adding a user to a group that we've created.
+<<helper functions>>=
+def add_user_to_group(username, group_name):
+  """
+  Adds user `username` to the AFS group `group_name`.
+  """
+  cmd = ["pts", "adduser", username, group_name]
+  <<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>
+@
+
+Let's test this.
+We add the author's username to the test group.
+The first time it should work, since it's an empty group that was just created.
+The second time it should fail, since the user is already a member of the 
+group.
+<<test functions>>=
+def test_add_user_to_group():
+  try:
+    add_user_to_group("dbosk", test_group_name)
+  except AFSGroupError as err:
+    assert False
+  else:
+    assert True
+
+  try:
+    add_user_to_group("dbosk", test_group_name)
+  except AFSGroupError as err:
+    assert True
+  else:
+    assert False
+@
+
+\subsection{Listing users in a group}
+
+Now, let's list the users in a group.
+The membership command of [[pts]] doesn't report errors correctly.
+It doesn't return a non-zero return code on errors, but returns zero.
+So the only way to detect errors here is to parse the output.
+
+Once we're done with determining error or not, we remove the header from the 
+lines.
+Then it contains only the usernames that must be stripped.
+<<helper functions>>=
+def list_users_in_group(group_name):
+  """
+  Lists the members of the group `group_name`.
+  """
+  cmd = ["pts", "membership", group_name]
+  <<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>
+
+  <<determine if [[pts_lines]] indicates an error or not. pop first line>>
+
+  return [user.strip() for user in pts_lines]
+@
+
+We can determine this by inspecting the first line of output.
+\begin{minted}{text}
+$ pts membership dbosk:remote-users
+Members of dbosk:remote-users (id: -32576) are:
+  dbosk
+$ pts membership dbosk:remoteusers
+pts: User or group doesn't exist so couldn't look up id for dbosk:remoteusers
+\end{minted}
+<<determine if [[pts_lines]] indicates an error or not. pop first line>>=
+first_line = pts_lines.pop(0)
+if first_line.startswith("pts: "):
+  raise AFSGroupError(f"`{' '.join(cmd)}` returned an error: {first_line}")
+@
+
+Let's test this.
+<<test functions>>=
+def test_list_users_in_group():
+  users = list_users_in_group(test_group_name)
+  assert "dbosk" in users
+
+  try:
+    users = list_users_in_group(test_group_name+"-nonexisting-ending")
+  except AFSGroupError as err:
+    assert "group doesn't exist" in str(err)
+@
+
+\subsection{Removing users from groups}
+
+Let's continue by removing a user from a group that we've created.
+<<helper functions>>=
+def remove_user_from_group(username, group_name):
+  """
+  Removes user `username` from the AFS group `group_name`.
+  """
+  cmd = ["pts", "removeuser", username, group_name]
+  <<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>
+@
+
+Let's test this.
+We start by adding the user, although the user should already be added by the 
+test above (if it didn't fail).
+Then we try to remove it twice; the first time it succeeds, second time it 
+fails.
+<<test functions>>=
+def test_remove_user_from_group():
+  try:
+    add_user_to_group("dbosk", test_group_name)
+  except AFSGroupError as err:
+    pass
+
+  try:
+    remove_user_from_group("dbosk", test_group_name)
+  except AFSGroupError as err:
+    assert False
+  else:
+    assert True
+
+  try:
+    remove_user_from_group("dbosk", test_group_name)
+  except AFSGroupError as err:
+    assert True
+  else:
+    assert False
+@
+
+\subsection{Deleting a group}
+
+Finally, let's delete a group that we've created.
+The delete command of [[pts]] is the same as its membership command, it doesn't 
+return non-zero on errors.
+<<helper functions>>=
+def delete_group(group_name):
+  """
+  Deletes the AFS group `group_name`.
+  """
+  cmd = ["pts", "delete", group_name]
+  <<run the [[pts]] command in [[cmd]], put output in [[pts_lines]]>>
+  <<check for error deleting group>>
+@
+
+Unlike the membership command, the delete command outputs its error message to 
+standard error (membership wrote the error message to standard out).
+<<check for error deleting group>>=
+pts_lines = str(pts.stderr, encoding=sys.getdefaultencoding()).split("\n")
+if pts_lines[0].startswith("pts: "):
+  raise AFSGroupError(f"`{' '.join(cmd)}` returned an error: {pts_lines[0]}")
+@
+
+Let's test this.
+The first time we remove the test group, it should already exist (if the tests 
+above didn't fail).
+The second time, it should fail.
+<<test functions>>=
+def test_delete_group():
+  try:
+    delete_group(test_group_name)
+  except AFSGroupError as err:
+    assert False
+  else:
+    assert True
+
+  try:
+    delete_group(test_group_name)
+  except AFSGroupError as err:
+    assert True
+  else:
+    assert False

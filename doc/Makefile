@@ -11,6 +11,9 @@ nytid.pdf: ../src/nytid/cli/courses.tex
 nytid.pdf: ../src/nytid/storage/init.tex
 nytid.pdf: ../src/nytid/storage/afs.tex
 
+nytid.pdf: ../src/nytid/courses/init.tex
+nytid.pdf: ../src/nytid/courses/registry.tex
+
 nytid.pdf: ../src/nytid/schedules.tex
 nytid.pdf: ../src/nytid/signup/hr/hr.tex
 nytid.pdf: ../src/nytid/signup/sheets.tex

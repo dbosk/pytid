@@ -79,7 +79,8 @@ We want to be able to
 \begin{itemize}
 \item add,
 \item remove,
-\item list
+\item list, and
+\item get the path of
 \end{itemize}
 course registers.
 
@@ -152,7 +153,8 @@ def test_add():
 <<functions>>=
 def list(<<config arg>>):
   """
-  Lists course registers added to configuration `config`.
+  Lists course registers added to configuration `config`. Returns a list of 
+  (name, path)-tuples.
 
   <<config arg doc>>
   """
@@ -209,7 +211,7 @@ We add the course register to test for in the listing by using [[add]] since we
 want to test the relationship between [[add]] and [[get]], not implementation 
 details.
 <<test functions>>=
-def test_list():
+def test_get():
   config = Config()
   add(test_name, test_path, config=config)
   assert get(test_name, config=config) == test_name
@@ -241,7 +243,7 @@ def remove(<<directory rm args>>
 Finally, to remove an entry, we simply need the name.
 Then we can drop that entry from the config.
 <<directory rm args>>=
-name
+name,
 <<directory rm args doc>>=
 - `name` is the name of the course register entry
 
@@ -269,7 +271,7 @@ We add the course register to test for in the listing by using [[add]] since we
 want to test the relationship between [[add]], [[remove]] and [[list]], not 
 implementation details.
 <<test functions>>=
-def test_list():
+def test_rm():
   config = Config()
   add(test_name, test_path, config=config)
   remove(test_name, config=config)

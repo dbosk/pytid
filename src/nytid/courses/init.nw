@@ -32,7 +32,6 @@ These are all prepended [[test_]] to the function name.
 We will run them using [[pytest]].
 <<test courses.py>>=
 from nytid.cli.courses import *
-<<test imports>>
 
 <<test functions>>
 @
@@ -99,7 +98,7 @@ register: str = None,
 
 <<determine which course register path [[register_path]] to use>>=
 if not register:
-  registers = registry.list()
+  registers = registry.ls()
 
   if len(registers) > 1:
     raise ValueError(f"Must specify a course register: {registers.keys()}")
@@ -264,13 +263,13 @@ course register ([[register]]) to get its config file.
 
 As mentioned above, if the user doesn't specify a course register, we must 
 search through all of them.
-In that case, we'll use [[registry.list()]].
+In that case, we'll use [[registry.ls()]].
 If we have a register specified, we'll use [[registry.get(register_name)]].
 <<set [[course]]'s config file as [[conf]]>>=
 if register:
   register_map = [register, registry.get(register)]
 else:
-  register_map = registry.list()
+  register_map = registry.ls()
 @
 
 In the course register, each course has its own subdirectory.
@@ -282,13 +281,13 @@ except KeyError as err:
   raise KeyError(f"Couldn't uniquely identify {course} in "
                  f"registers {register_map.keys()}: {err}")
 
-conf = Config(conf_file=conf_path)
+conf = config.Config(conf_file=conf_path)
 @
 
 We want [[get_course_conf_path]] to ensure a unique match for [[course]].
 This means that we must search through all the course registers and keep 
 track of the number of matches.
-<<helper functions>>=
+<<functions>>=
 def get_course_conf_path(course, register_map):
   """
   Find the course named `course` among all the courses in the registers found 
@@ -311,7 +310,7 @@ hit in [[register_name]].
 courses = all_courses(register_path)
 matching_courses = list(filter(lambda x: x == course, courses))
 if len(matching_courses) > 0:
-  conf_path = course_dir_path / course / "config.json"
+  conf_path = f"{register_path}/{course}/config.json"
   hits_from_register_dirs.append(register_name)
 <<[[get_course_conf_path]] variables>>=
 hits_from_register_dirs = []
@@ -320,7 +319,7 @@ conf_path = None
 
 To list all the courses, we simply list all directories in the register's 
 directory.
-<<helper functions>>=
+<<functions>>=
 def all_courses(register_path):
   """
   Returns a list (generator) of all courses found in `register_path`.
@@ -343,3 +342,4 @@ elif len(hits_from_register_dirs) > 1:
   raise KeyError(f"Course `{course}` found in "
                   f"several course registers: {hits_from_course_dirs}.")
 
+return conf_path

@@ -29,8 +29,10 @@ That structure looks like this:
 
 import typerconf as config
 
+from nytid import courses
 import logging
 import pathlib
+from nytid.courses import registry
 from nytid import storage
 import sys
 import typer
@@ -38,7 +40,6 @@ import typing
 
 cli = typer.Typer(help="Manage courses")
 
-<<helper constants>>
 <<helper functions>>
 
 <<subcommands>>
@@ -63,7 +64,7 @@ from nytid.cli.courses import *
 
 In this chapter we will cover the overall storage structure used for data.
 The idea is that we have a dictionary containing configurations for several 
-courses, we call this a courses directory (or directory of courses).
+courses, we call this a register (or directory of courses).
 This way, we can access all existing courses through this directory.
 These configurations will point to the course data directories, \ie where the 
 actual course data is located.
@@ -87,109 +88,96 @@ By this design, we'll let AFS and GitHub do the access control for us.
 We will use the [[storage]] module (\cref{storage}) to access the directories 
 and manage them.
 
-Since we can have several courses directories, we will refer to them by name in 
+Since we can have several registers, we will refer to them by name in 
 other commands.
 The idea is similar to that of \enquote{remotes} in Git.
 
 
-\section{Adding courses directories, the [[directory]] subcommands}
+\section{Managing registers, the [[registry]] subcommands}
 
-We will now manage the courses directories, where we can find all available 
+We will now manage the registers, where we can find all available 
 courses.
 We want the subcommands [[add]], [[rm]] and [[ls]].
-We will add a new Typer instance for the [[directory]] command and add the 
-three subcommands above.
+We will add a new Typer instance for the [[registry]] command and add the three 
+subcommands above.
 <<subcommands>>=
-directory = typer.Typer(name="directory",
-                        help="Manage courses directories")
+registrycli = typer.Typer(name="registry",
+                          help="Manage course registers")
 
-cli.add_typer(directory)
+cli.add_typer(registrycli)
 
-@directory.command(name="ls")
-def directory_ls():
+@registrycli.command(name="ls")
+def registry_ls():
   """
-  Lists courses directories added to configuration.
+  Lists registers added to the configuration.
   """
-  <<list courses directories>>
+  <<list registers>>
 
-@directory.command(name="add")
-def directory_add(<<directory add args>>):
+@registrycli.command(name="add")
+def registry_add(<<registry add args>>):
   """
-  Adds a courses directory.
+  Adds a register to the configuration.
 
-  <<directory add args doc>>
+  <<registry add args doc>>
   """
-  <<add courses directory>>
+  <<add register>>
 
-@directory.command(name="rm")
-def directory_rm(<<directory rm args>>):
+@registrycli.command(name="rm")
+def registry_rm(<<registry rm args>>):
   """
-  Removes a courses directory.
+  Removes a register from the configuration.
 
-  <<directory rm args doc>>
+  <<registry rm args doc>>
   """
-  <<remove courses directory>>
+  <<remove register>>
 @
 
-As mentioned above, we want each courses directory to be named, so that we can 
-reference it easily.
+As mentioned above, we want each register to be named, so that we can reference 
+each easily.
 This means that we need those two arguments.
-<<directory add args>>=
+<<registry add args>>=
 name: str,
-courses_dir: str
-<<directory add args doc>>=
-- `name` is the name to refer to this courses directory
-- `courses_dir` is the actual path to the directory
+register_path: str
+<<registry add args doc>>=
+- `name` is the name to refer to this register 
+- `register_path` is the actual path to the register
 @
 
-Finally, to add the courses directory, we simply enter it into the config.
+Finally, to add the register, we simply make the proper call to the 
+[[registry]] module.
 We replace any existing entry with the same name.
-<<add courses directory>>=
-<<check that name is valid, raise ValueError otherwise>>
-config.set(f"{COURSES_DIRS}.{name}", courses_dir)
-<<helper constants>>=
-COURSES_DIRS = "courses_dirs"
+<<add register>>=
+try:
+  registry.add(name, register_path)
+except KeyError as err:
+  logging.error(f"Can't add {name}: {err}")
+  return
 @
 
-This means that we can list all courses directories by listing the contents of 
-the [[courses_dirs]] path in the config.
-<<list courses directories>>=
-try:
-  for name, courses_dir in config.get(COURSES_DIRS).items():
-    print(f"{name}\t{courses_dir}")
-except KeyError:
-  pass
+This means that we can list all registers by using the [[registry]] module 
+again.
+This requires no arguments.
+<<list registers>>=
+for name, register_path in registry.ls():
+  print(f"{name}\t{register_path}")
 @
 
 Finally, to remove an entry, we simply need the name.
-Then we can drop that entry from the config.
-<<directory rm args>>=
+<<registry rm args>>=
 name
-<<directory rm args doc>>=
-- `name` is the name of the courses directory entry
+<<registry rm args doc>>=
+- `name` is the name of the courses registry entry
 
 @
 
-To remove the entry; we must fetch the dictionary containing all 
-name--directory pairs from the config, then we remove this particular 
-name--directory pair and, finally, we can set the resulting dictionary to 
-replace that entire tree in the config.
-<<remove courses directory>>=
-<<check that name is valid, raise ValueError otherwise>>
-current_dirs = config.get(COURSES_DIRS)
+To remove the entry; we simply make the appropriate call to the [[registry]] 
+module.
+<<remove register>>=
 try:
-  del current_dirs[name]
-except KeyError:
-  logging.warning(f"There is no such directory: {name}")
-else:
-  config.set(COURSES_DIRS, current_dirs)
-@
-
-Now, we need to check that the [[name]] is valid, \ie that it doesn't contain 
-any periods.
-<<check that name is valid, raise ValueError otherwise>>=
-if "." in name:
-  raise ValueError(f"`{name}` can't contain a period due to config addressing")
+  registry.remove(name)
+except KeyError as err:
+  logging.error(f"Can't remove {name}: {err}")
+  return
 @
 
 
@@ -210,6 +198,9 @@ def new(<<new command args>>):
 @ We will write the help section (docstring) along with the arguments and how 
 they are used by the command.
 
+To finally create the courses, we'll use the [[new]] function from the 
+[[nytid.courses]] module.
+
 \subsection{Creating the course}\label{CreatingTheCourse}
 
 To create a course, we need a name for the course.
@@ -224,68 +215,32 @@ name_arg = typer.Argument(...,
                           help="A name to use to refer to the course.")
 @
 
-We will create the course by creating a directory in an available courses 
-directory and write a [[config.json]] file there.
-However, if it exists, we want to exit with an error.
-<<new command body>>=
-<<determine which course directory to use>>
-
-with storage.open_root(f"{courses_dir}/{name}") as root:
-  try:
-    with root.open("config.json", "r") as course_conf_file:
-      pass
-  except FileNotFoundError:
-    course_conf = config.Config()
-  else:
-    logging.error(f"The directory for {name} already exists: "
-                  f"{courses_dir}/{name}")
-    sys.exit(1)
-
-  <<add settings to [[course_conf]]>>
-
-  with root.open("config.json", "w") as course_conf_file:
-    course_conf.write_config(course_conf_file)
-@
-
-We would first like to create the course in one of the courses directories 
-available.
-If there is only one directory, we'll create the course there.
+We would first like to create the course in one of the registers available.
+If there is only one register, we'll create the course there.
 If there are more, however, we need the user to decide which one to use.
 <<new command doc>>=
-- `courses_dir_name` is the name of the courses directory to use. Required if 
-  there are more than one courses directory in the config.
+- `register_name` is the name of the register to use. Required if there are 
+  more than one register in the config.
 
 <<new arguments and options>>=
-courses_dir_option = typer.Option(None,
-                                  help="Name of courses directory to use.",
-                                  shell_complete=complete_courses_dir_name)
+register_option = typer.Option(None,
+                               help="Name of register to use.",
+                               shell_complete=complete_register_name)
 <<new command args>>=
-courses_dir_name: str = courses_dir_option,
-<<determine which course directory to use>>=
-courses_dirs = config.get(COURSES_DIRS)
-
-if not courses_dir_name:
-  if len(courses_dirs) > 1:
-    raise ValueError(f"Must specify courses_dir: {courses_dirs.keys()}")
-  elif len(courses_dirs) < 1:
-    raise ValueError(f"There are no courses directories, "
-                     f"see `nytid courses directory --help`.")
-  else:
-    courses_dir_name = list(courses_dirs.keys())[0]
-
-courses_dir = courses_dirs[courses_dir_name]
+register_name: str = register_option,
 @
 
 We also want to have a function for autocompletion in the shell.
-We simply filter out the matching names available in the config.
+We simply filter out the matching names available in the registry.
 <<helper functions>>=
-def complete_courses_dir_name(ctx, param, incomplete: str):
+def complete_register_name(ctx, param, incomplete: str):
   """
-  Returns list of matching courses directory names available.
+  Returns list of matching register names available.
   """
   return filter(lambda x: x.startswith(incomplete),
-                config.get(COURSES_DIRS).keys())
+                registry.ls().keys())
 @
+
 
 \section{Setting the course settings}
 
@@ -300,8 +255,8 @@ package\footnote{%
 }.
 When we create the course, we will set all options to some value (possibly 
 [[None]]).
-Then we can let the [[config]] command read the available options from the 
-course config.
+Then we can let the [[courses config]] command read the available options from 
+the course config.
 
 Let's add the settings.
 
@@ -328,25 +283,10 @@ contact_opt = typer.Option(None, help="The course responsible's contact info. "
                                       "Default can be set using "
                                       "`nytid config me.name --set xxx` and "
                                       "`nytid config me.email --set yyy`.")
-<<add settings to [[course_conf]]>>=
-if not contact:
-  try:
-    contact = config.get("me.name")
-  except KeyError:
-    contact = ""
-
-  try:
-    email = config.get("me.email")
-  except KeyError:
-    pass
-  else:
-    if contact:
-      contact += f" <{email}>"
-    else:
-      contact = email
-
-course_conf.set("contact", contact)
 @
+
+Note that we don't have to set those values to anything but [[None]] here, the 
+call to [[courses.new]] will do that for us.
 
 \subsection{Course code}
 
@@ -375,9 +315,6 @@ related_codes: typing.List[str] = related_opt,
 related_opt = typer.Option([], help="List of related course codes, "
                                     "courses with any of these codes can "
                                     "share TAs.")
-<<add settings to [[course_conf]]>>=
-course_conf.set("code", code)
-course_conf.set("related_codes", related_codes)
 @
 
 \subsection{The schedule}
@@ -393,8 +330,6 @@ ics: str = ics_opt,
 <<new arguments and options>>=
 ics_opt = typer.Option(None, help="A URL to an ICS file containing the "
                                   "schedule. E.g. from TimeEdit.")
-<<add settings to [[course_conf]]>>=
-course_conf.set("ics", ics)
 @
 
 \subsection{The data directory}
@@ -418,13 +353,16 @@ data_path_opt = typer.Option(None,
 
 If the user didn't specify a data directory, then [[data_path]] will be 
 [[None]].
-In this case, we should update it with the default value.
-We get the default value from [[root.path]] (see
-[[<<new command body>>]]).
-<<add settings to [[course_conf]]>>=
-if not data_path:
-  data_path = str(root.path / "data")
-course_conf.set("data_path", data_path)
+The [[courses.new]] function will set the default.
+
+\subsection{Finally creating the course}
+
+Now that we have all the arguments, we can simply make the call to 
+[[courses.new]].
+<<new command body>>=
+courses.new(name, register_name, contact,
+            code, related_codes,
+            ics, data_path)
 @
 
 
@@ -443,7 +381,7 @@ nytid courses config course path --set value
 \end{minted}
 We need to know which course's config to operate on.
 This is the only difference to the config command of [[typerconf]].
-However, since we can have multiple courses directories, the user must be able 
+However, since we can have multiple registers, the user must be able 
 to specify, in case the same name occurs in more than one.
 But if the user doesn't specify, we search through all of them.
 
@@ -457,7 +395,7 @@ This corresponds to how the [[.set]] method of [[Config]] works.
 
 @cli.command(name="config")
 def config_cmd(course: str = name_arg_autocomplete,
-               courses_dir = courses_dir_option,
+               register = register_option,
                path: str = path_arg,
                values: typing.List[str] = value_arg):
   """
@@ -472,7 +410,7 @@ def config_cmd(course: str = name_arg_autocomplete,
     print_config(conf.get(path), path)
 @
 
-We will now cover [[name_arg_autocomplete]], [[courses_dir_option]] \etc in
+We will now cover [[name_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
 as we cover the relevant parts of the algorithm.
 
@@ -480,9 +418,9 @@ as we cover the relevant parts of the algorithm.
 
 Let's start with the course.
 We need the name of the course ([[course_name]]) so that we can look it up in 
-the courses directory ([[courses_dir]]) to get its config file.
+the register ([[register]]) to get its config file.
 
-We'll reuse the [[courses_dir_option]] from earlier, see 
+We'll reuse the [[register_option]] from earlier, see 
 \cref{CreatingTheCourse}.
 We don't want to reuse [[name_arg]], since that one lacks autocompletion.
 <<default values for [[config_cmd]]>>=
@@ -493,116 +431,67 @@ name_arg_autocomplete = typer.Argument(...,
 @
 
 To complete the course name we simply need to look up all matching courses in 
-the courses directories.
+the registers.
 We want to improve the autocompletion for the user by including from which 
-courses directory as course is.
-Hence, we need both the courses directory name and its path.
+register each course is.
+Hence, we need both the register name and its path.
 <<helper functions>>=
 def complete_course_name(ctx: typer.Context, incomplete: str):
   """
   Returns a list of course names matching `incomplete`.
   """
-  <<populate [[courses_dirs]] with the courses directories to use>>
-  for course_dir_name, course_dir_path in courses_dirs:
-    <<yield (course name, course dir name) tuples that matches [[incomplete]]>>
+  <<populate [[registers]] with the registers to use>>
+  for register_name, register_path in registers:
+    <<yield (course name, register name) tuples that matches [[incomplete]]>>
 @
 
-As mentioned above, if the user doesn't specify a courses directory, we search 
-through all of them.
-Remember that we want the name--path tuple for each courses directory.
-<<populate [[courses_dirs]] with the courses directories to use>>=
-courses_dirs = courses_dirs_pairs(ctx.params.get("courses_dir"))
+As mentioned above, if the user doesn't specify a register, we search through 
+all of them.
+Remember that we want the name--path tuple for each register.
+<<populate [[registers]] with the registers to use>>=
+registers = register_pairs(ctx.params.get("register"))
 <<helper functions>>=
-def courses_dirs_pairs(courses_dir_name=None):
+def register_pairs(register_name=None):
   """
-  Returns a list of (name, path)-tuples (pairs) for courses directories to use.
+  Returns a list of (name, path)-tuples (pairs) for registers to use.
 
-  If `courses_dir_name` is None, we use all existing courses directories found 
+  If `register_name` is None, we use all existing registers found 
   in the config. Otherwise, we look up the path of the one specified and return 
   a list containing only that name--path-tuple.
   """
-  if courses_dir_name:
-    return [(courses_dir_name,
-             config.get(f"{COURSES_DIRS}.{courses_dir_name}"))]
+  if register_name:
+    return [(register_name,
+             registry.get(register_name))]
   else:
-    return list(config.get(COURSES_DIRS).items())
+    return registry.ls()
 @
 
-In the courses directory, each course has its own subdirectory.
-So we simply need to return the subdirectories of [[course_dir_path]] matching 
-[[incomplete]] together with [[course_dir_name]].
-<<yield (course name, course dir name) tuples that matches [[incomplete]]>>=
-courses = all_courses(courses_dir_path)
+In the register, each course has its own subdirectory.
+So we simply need to return the subdirectories of [[register_path]] matching 
+[[incomplete]] together with [[register_name]].
+<<yield (course name, register name) tuples that matches [[incomplete]]>>=
+courses = all_courses(register_path)
 matching_courses = filter(lambda x: x.startswith(incomplete), courses)
-return map(lambda x: (x, f"from {courses_dir_name}"),
+return map(lambda x: (x, f"from {register_name}"),
            matching_courses)
 <<helper functions>>=
-def all_courses(courses_dir_path):
+def all_courses(register_path):
   """
-  Returns a list (generator) of all courses found in `courses_dir_path`.
+  Returns a list (generator) of all courses found in `register_path`.
   """
-  for file in pathlib.Path(course_dir_path).iterdir():
+  for file in pathlib.Path(register_path).iterdir():
     if file.is_dir():
       yield file.name
 @
 
-Now let's turn back to the main problem.
+Now let's turn back to the main problem:
+we want to find the configuration of the given course.
 <<set [[course]]'s config file as [[conf]]>>=
-courses_dirs = courses_dirs_pairs(courses_dir)
-
 try:
-  conf_path = get_conf_path(course, courses_dirs)
+  conf = courses.get_course_config(course, register)
 except KeyError as err:
   logging.error(err)
   sys.exit(1)
-
-conf = Config()
-conf.read_config(conf_path)
-@
-
-We want [[get_conf_path]] to ensure a unique match for [[course]].
-This means that we must search through all the courses directories and keep 
-track of the number of matches.
-<<helper functions>>=
-def get_conf_path(course, courses_dirs):
-  """
-  Find the course named `course` among all the courses in `courses_dirs`.
-  If `course` is not a unique match, it raises a `KeyError`.
-  """
-  <<[[get_conf_path]] variables>>
-
-  for course_dir_name, course_dir_path in courses_dirs:
-    <<search for matches to [[course]] in [[course_dir_path]]>>
-
-  <<check ending criteria for [[get_conf_path]], return>>
-@
-
-In each courses directory, we go through the courses to check for a match.
-If we find the course, we note its [[conf_path]] and also note that we had a 
-hit in [[courses_dir_name]].
-<<search for matches to [[course]] in [[course_dir_path]]>>=
-courses = all_courses(course_dir_path)
-matching_courses = list(filter(lambda x: x == course, courses))
-if len(matching_courses) > 0:
-  conf_path = course_dir_path / course / "config.json"
-  hits_from_courses_dirs.append(course_dir_name)
-<<[[get_conf_path]] variables>>=
-hits_from_courses_dirs = []
-conf_path = None
-@
-
-Once we're through all the courses, we check if we have a non-[[None]] value in 
-[[conf_path]].
-If not, we didn't find anything.
-Otherwise, we check how many entries we have in [[hits_from_courses_dirs]].
-If we have more than one, we raise an exception saying there were too many 
-matches.
-<<check ending criteria for [[get_conf_path]], return>>=
-if not conf_path:
-  raise KeyError(f"Couldn't find course {course}.")
-elif len(hits_from_courses_dirs) > 1:
-  raise KeyError(f"Course `{course}` found in "
-                  f"several courses directories ({hits_from_course_dirs}).")
 @
 
 \subsection{Navigating the course config}
@@ -623,10 +512,12 @@ def complete_config_path(ctx: typer.Context, incomplete: str):
   """
   Returns all valid paths in the config starting with `incomplete`.
   """
-  courses_dirs = courses_dirs_pairs(ctx.params.get("course_dir"))
-  conf_path = get_conf_path(ctx.params.get("course"), courses_dirs)
-  conf = Config()
-  conf.read_config(conf_path)
+  register = ctx.params.get("register")
+  course = ctx.params.get("course")
+  try:
+    conf = courses.get_course_config(course, register)
+  except:
+    return []
 
   return filter(lambda x: x.startswith(incomplete),
                 conf.paths())

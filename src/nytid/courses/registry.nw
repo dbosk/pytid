@@ -63,8 +63,6 @@ We will set a default course and path to use.
 from typerconf import Config
 import pathlib
 
-<<test imports>>
-
 from nytid.courses.registry import *
 
 test_name = "test_register"
@@ -151,7 +149,7 @@ def test_add():
 \section{Listing all course registers}
 
 <<functions>>=
-def list(<<config arg>>):
+def ls(<<config arg>>):
   """
   Lists course registers added to configuration `config`. Returns a list of 
   (name, path)-tuples.
@@ -181,9 +179,9 @@ details.
 def test_list():
   config = Config()
   add(test_name, test_path, config=config)
-  assert test_name in list(config=config)
+  assert test_name in ls(config=config)
 
-  assert list(config=Config()) == []
+  assert ls(config=Config()) == []
 @
 
 
@@ -275,7 +273,7 @@ def test_rm():
   config = Config()
   add(test_name, test_path, config=config)
   remove(test_name, config=config)
-  assert test_name not in list(config=config)
+  assert test_name not in ls(config=config)
 
   try:
     remove(test_name, config=Config())

@@ -66,7 +66,7 @@ import pathlib
 from nytid.courses.registry import *
 
 test_name = "test_register"
-test_path = "/a/nonexisting/path"
+test_path = tempfile.mkdtemp()
 
 <<test functions>>
 @
@@ -271,9 +271,22 @@ implementation details.
 <<test functions>>=
 def test_rm():
   config = Config()
+
   add(test_name, test_path, config=config)
+  try:
+    get(test_name, config=config)
+  except KeyError:
+    assert False
+  else:
+    assert True
+
   remove(test_name, config=config)
-  assert test_name not in ls(config=config)
+  try:
+    get(test_name, config=config)
+  except KeyError:
+    assert True
+  else:
+    assert False
 
   try:
     remove(test_name, config=Config())

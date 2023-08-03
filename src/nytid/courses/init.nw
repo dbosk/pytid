@@ -105,7 +105,7 @@ if not register:
   elif len(registers) < 1:
     raise ValueError(f"There are no course registers in the config.")
   else:
-    register = registers[0]
+    register = registers[0][0]
 
 register_path = registry.get(register)
 @

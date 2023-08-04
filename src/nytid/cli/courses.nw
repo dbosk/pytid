@@ -158,8 +158,8 @@ This means that we can list all registers by using the [[registry]] module
 again.
 This requires no arguments.
 <<list registers>>=
-for name, register_path in registry.ls():
-  print(f"{name}\t{register_path}")
+for register in registry.ls():
+  print(f"{register}\t{registry.get(register)}")
 @
 
 Finally, to remove an entry, we simply need the name.
@@ -238,7 +238,7 @@ def complete_register_name(ctx, param, incomplete: str):
   Returns list of matching register names available.
   """
   return filter(lambda x: x.startswith(incomplete),
-                registry.ls().keys())
+                registry.ls())
 @
 
 
@@ -463,7 +463,9 @@ def register_pairs(register_name=None):
     return [(register_name,
              registry.get(register_name))]
   else:
-    return registry.ls()
+    return [(register_name,
+             registry.get(register_name))
+            for register_name in registry.ls()]
 @
 
 In the register, each course has its own subdirectory.

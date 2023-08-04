@@ -105,7 +105,7 @@ if not register:
   elif len(registers) < 1:
     raise ValueError(f"There are no course registers in the config.")
   else:
-    register = registers[0][0]
+    register = registers[0]
 
 register_path = registry.get(register)
 @
@@ -269,7 +269,8 @@ If we have a register specified, we'll use [[registry.get(register_name)]].
 if register:
   register_map = [register, registry.get(register)]
 else:
-  register_map = registry.ls()
+  register_map = [(register, registry.get(register, config=config))
+                  for register in registry.ls(config=config)]
 @
 
 In the course register, each course has its own subdirectory.

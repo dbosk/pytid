@@ -151,8 +151,8 @@ def test_add():
 <<functions>>=
 def ls(<<config arg>>):
   """
-  Lists course registers added to configuration `config`. Returns a list of 
-  (name, path)-tuples.
+  Lists course registers added to configuration `config`. Returns a list of all 
+  register names.
 
   <<config arg doc>>
   """
@@ -164,7 +164,7 @@ the [[REGISTERS]] path in the config.
 If there is no [[REGISTERS]] in the config, we simply return an empty list.
 <<list course registers>>=
 try:
-  return list(config.get(REGISTERS).items())
+  return list(config.get(REGISTERS).keys())
 except KeyError:
   return []
 @

@@ -27,13 +27,41 @@ import typing
 <<functions>>
 @
 
+\subsection{Testing}
+
 We also add tests.
 These are all prepended [[test_]] to the function name.
 We will run them using [[pytest]].
+
+We need some setup for the testing.
+Particularly, we must set up a register.
+For this we need a config and a temporary directory.
 <<test courses.py>>=
+from typerconf import Config
+import pathlib
+import tempfile
+
 from nytid.cli.courses import *
 
+register = "register"
+reg_path = pathlib.Path(tempfile.mkdtemp())
+
+course = "course"
+
+config = Config()
+
+registry.add(register, str(reg_path), config=config)
+
 <<test functions>>
+@
+
+We want to be able to override the default configuration by supplying a value 
+to the [[config]] argument of these functions.
+This also helps with testing.
+<<config arg>>=
+config=config
+<<config arg doc>>=
+The default `config` is the default config of the `typerconf` package.
 @
 
 
@@ -41,15 +69,22 @@ from nytid.cli.courses import *
 
 We will add a function [[new]] to create a new course.
 <<functions>>=
-def new(<<new args>>):
+def new(<<new args>>
+        <<config arg>>):
   """
   Creates a new course. It takes the following arguments:
 
   <<new doc>>
+
+  <<config arg doc>>
   """
   <<new body>>
 @ We will write the help section (docstring) along with the arguments and how 
 they are used by the command.
+(Note that there is no comma between [[<<new args>>]] and [[<<config arg>>]] in 
+the function head, this is due to there being enough commas in [[<<new args>>]] 
+due to it not knowing what is the last argument---so it terminates with a 
+comma.)
 
 \subsection{Creating the course}\label{CreatingTheCourse}
 
@@ -84,9 +119,32 @@ with storage.open_root(f"{register_path}/{name}") as root:
     course_conf.write_config(course_conf_file)
 @
 
+Now we want to test the function~[[new]].
+This means that we want to check that there is a directory for the course in 
+the path~[[reg_path]].
+And inside it, there should be a file~[[config.json]].
+<<test functions>>=
+def test_new_create():
+  for subdir in reg_path.iterdir():
+    if subdir.name == course:
+      assert False
+
+  <<call new to test>>
+
+  found = False
+  for subdir in reg_path.iterdir():
+    if subdir.name == course:
+      for file in subdir.iterdir():
+        if file.name == "config.json":
+          found = True
+
+  if not found:
+    assert False
+@
+
 We would first like to create the course in one of the available course 
 registers.
-If there is only one directory, we'll create the course there.
+If there is only one register, we'll create the course there.
 If there are more, however, we need the user to decide which one to use.
 <<new args>>=
 register: str = None,
@@ -96,9 +154,13 @@ register: str = None,
   the only available course register. If more registers, raises exception 
   `ValueError`.
 
+@
+
+Now, remember that when we make calls to [[registry]], we must pass on the 
+[[config]] argument in case it's overridden.
 <<determine which course register path [[register_path]] to use>>=
 if not register:
-  registers = registry.ls()
+  registers = registry.ls(config=config)
 
   if len(registers) > 1:
     raise ValueError(f"Must specify a course register: {registers.keys()}")
@@ -107,11 +169,11 @@ if not register:
   else:
     register = registers[0]
 
-register_path = registry.get(register)
+register_path = registry.get(register, config=config)
 @
 
 
-\section{Setting the course settings}
+\subsection{Setting the course settings}
 
 We want to be able to set the course settings at two times:
 first, when we create the course; second, when we want to see or modify the 
@@ -230,6 +292,13 @@ if not data_path:
 course_conf.set("data_path", data_path)
 @
 
+\subsection{Testing the [[new]] function}
+
+Now we can finally make the call to [[new]] to test it.
+<<call new to test>>=
+new(course, register, config=config)
+@
+
 
 \section{Revising the config of a course}
 
@@ -241,7 +310,8 @@ We need two things to locate a course.
 We need the course name and the course register in which it is located.
 <<functions>>=
 def get_course_config(course: str,
-                      register: str = None) -> config.Config:
+                      register: str = None,
+                      <<config arg>>) -> config.Config:
   """
   Returns a typerconf.Config object for the course's configuration. Writeback 
   is enabled meaning that any changes made to the config object will be written 
@@ -250,9 +320,26 @@ def get_course_config(course: str,
   `course` identifies the course in the `register`. If `register` is None, 
   search through all registers in the registry, use the first one found 
   (undefined in which order duplicates are sorted).
+
+  <<config arg doc>>
   """
   <<set [[course]]'s config file as [[conf]]>>
   return conf
+@
+
+Let's test this.
+<<test functions>>=
+def test_get_course_config():
+  conf = get_course_config(course, register, config=config)
+  assert conf.get("data_path") == str(reg_path / course / "data")
+  assert conf.get("contact") is None
+
+  conf.set("data_path", "a/b/c")
+  conf.set("contact", "Me")
+
+  conf2 = get_course_config(course, register, config=config)
+  assert conf2.get("data_path") == "a/b/c"
+  assert conf2.get("contact") == "Me"
 @
 
 \subsection{Finding the course}
@@ -267,7 +354,7 @@ In that case, we'll use [[registry.ls()]].
 If we have a register specified, we'll use [[registry.get(register_name)]].
 <<set [[course]]'s config file as [[conf]]>>=
 if register:
-  register_map = [register, registry.get(register)]
+  register_map = [(register, registry.get(register, config=config))]
 else:
   register_map = [(register, registry.get(register, config=config))
                   for register in registry.ls(config=config)]

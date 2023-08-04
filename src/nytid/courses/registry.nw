@@ -59,9 +59,10 @@ These are all prepended [[test_]] to the function name.
 We will run them using [[pytest]].
 We will set a default course and path to use.
 (Note that the path will not be created).
-<<test coursesdirs.py>>=
+<<test registry.py>>=
 from typerconf import Config
 import pathlib
+import tempfile
 
 from nytid.courses.registry import *
 

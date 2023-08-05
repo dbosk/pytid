@@ -407,7 +407,10 @@ def config_cmd(course: str = name_arg_autocomplete,
     <<if [[values]] is empty string, replace it with [[None]]>>
     conf.set(path, values)
   else:
-    print_config(conf.get(path), path)
+    try:
+      print_config(conf.get(path), path)
+    except KeyError as err:
+      logging.error(f"{path} doen't exist in the config: {err}")
 @
 
 We will now cover [[name_arg_autocomplete]], [[register_option]] \etc in

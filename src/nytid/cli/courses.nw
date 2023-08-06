@@ -211,10 +211,10 @@ To create a course, we need a name for the course.
   is used to refer to the course with other parts of nytid.
 
 <<new command args>>=
-name: str = name_arg,
+name: str = course_arg,
 <<new arguments and options>>=
-name_arg = typer.Argument(...,
-                          help="A name to use to refer to the course.")
+course_arg = typer.Argument(...,
+                            help="A name to use to refer to the course.")
 @
 
 We would first like to create the course in one of the registers available.
@@ -396,7 +396,7 @@ This corresponds to how the [[.set]] method of [[Config]] works.
 <<default values for [[config_cmd]]>>
 
 @cli.command(name="config")
-def config_cmd(course: str = name_arg_autocomplete,
+def config_cmd(course: str = course_arg_autocomplete,
                register = register_option,
                path: str = path_arg,
                values: typing.List[str] = value_arg):
@@ -416,7 +416,7 @@ def config_cmd(course: str = name_arg_autocomplete,
       sys.exit(1)
 @
 
-We will now cover [[name_arg_autocomplete]], [[register_option]] \etc in
+We will now cover [[course_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
 as we cover the relevant parts of the algorithm.
 
@@ -449,11 +449,10 @@ the register ([[register]]) to get its config file.
 
 We'll reuse the [[register_option]] from earlier, see 
 \cref{CreatingTheCourse}.
-We don't want to reuse [[name_arg]], since that one lacks autocompletion.
+We don't want to reuse [[course_arg]], since that one lacks autocompletion.
 <<default values for [[config_cmd]]>>=
-name_arg_autocomplete = typer.Argument(...,
-                            help="Name of the course whose config we want to "
-                                 "operate on.",
+course_arg_autocomplete = typer.Argument(...,
+                            help="Name (nickname) of the target course.",
                             autocompletion=complete_course_name)
 @
 

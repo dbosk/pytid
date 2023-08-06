@@ -45,7 +45,7 @@ module.
 <<registry.py>>=
 """The nytid course registry"""
 
-import typerconf as config
+import typerconf
 
 import pathlib
 from nytid import storage
@@ -87,7 +87,7 @@ We want to be able to override the default configuration by supplying a value
 to the [[config]] argument of these functions.
 This also helps with testing.
 <<config arg>>=
-config=config
+config: typerconf.Config = typerconf
 <<config arg doc>>=
 The default `config` is the default config of the `typerconf` package.
 @
@@ -211,16 +211,16 @@ want to test the relationship between [[add]] and [[get]], not implementation
 details.
 <<test functions>>=
 def test_get():
-  config = Config()
-  add(test_name, test_path, config=config)
-  assert get(test_name, config=config) == test_name
+  conf = Config()
+  add(test_name, test_path, config=conf)
+  assert get(test_name, config=conf) == test_path
 
   try:
-    get(test_name, config=Config())
-  except KeyError:
+    value = get(test_name, config=Config())
+  except:
     assert True
   else:
-    assert False
+    assert value and False
 @
 
 

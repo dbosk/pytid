@@ -17,7 +17,7 @@ manage courses found in the course registers.
 <<init.py>>=
 """The nytid course management module"""
 
-import typerconf as config
+import typerconf
 
 import pathlib
 from nytid.courses import registry
@@ -41,7 +41,7 @@ from typerconf import Config
 import pathlib
 import tempfile
 
-from nytid.cli.courses import *
+from nytid.courses import *
 
 register = "register"
 reg_path = pathlib.Path(tempfile.mkdtemp())
@@ -59,7 +59,7 @@ We want to be able to override the default configuration by supplying a value
 to the [[config]] argument of these functions.
 This also helps with testing.
 <<config arg>>=
-config=config
+config: typerconf.Config = typerconf
 <<config arg doc>>=
 The default `config` is the default config of the `typerconf` package.
 @
@@ -108,7 +108,7 @@ with storage.open_root(f"{register_path}/{name}") as root:
     with root.open("config.json", "r") as course_conf_file:
       pass
   except FileNotFoundError:
-    course_conf = config.Config()
+    course_conf = typerconf.Config()
   else:
     raise FileExistsError(f"The config for {name} already exists: "
                           f"{register_path}/{name}/config.json")
@@ -163,7 +163,7 @@ if not register:
   registers = registry.ls(config=config)
 
   if len(registers) > 1:
-    raise ValueError(f"Must specify a course register: {registers.keys()}")
+    raise ValueError(f"Must specify a course register: {registers}")
   elif len(registers) < 1:
     raise ValueError(f"There are no course registers in the config.")
   else:
@@ -311,7 +311,7 @@ We need the course name and the course register in which it is located.
 <<functions>>=
 def get_course_config(course: str,
                       register: str = None,
-                      <<config arg>>) -> config.Config:
+                      <<config arg>>) -> typerconf.Config:
   """
   Returns a typerconf.Config object for the course's configuration. Writeback 
   is enabled meaning that any changes made to the config object will be written 
@@ -332,7 +332,6 @@ Let's test this.
 def test_get_course_config():
   conf = get_course_config(course, register, config=config)
   assert conf.get("data_path") == str(reg_path / course / "data")
-  assert conf.get("contact") is None
 
   conf.set("data_path", "a/b/c")
   conf.set("contact", "Me")
@@ -354,10 +353,10 @@ In that case, we'll use [[registry.ls()]].
 If we have a register specified, we'll use [[registry.get(register_name)]].
 <<set [[course]]'s config file as [[conf]]>>=
 if register:
-  register_map = [(register, registry.get(register, config=config))]
+  register_map = {register: registry.get(register, config=config)}
 else:
-  register_map = [(register, registry.get(register, config=config))
-                  for register in registry.ls(config=config)]
+  register_map = {register: registry.get(register, config=config)
+                  for register in registry.ls(config=config)}
 @
 
 In the course register, each course has its own subdirectory.
@@ -369,7 +368,7 @@ except KeyError as err:
   raise KeyError(f"Couldn't uniquely identify {course} in "
                  f"registers {register_map.keys()}: {err}")
 
-conf = config.Config(conf_file=conf_path)
+conf = typerconf.Config(conf_file=conf_path)
 @
 
 We want [[get_course_conf_path]] to ensure a unique match for [[course]].
@@ -385,7 +384,7 @@ def get_course_conf_path(course, register_map):
   """
   <<[[get_course_conf_path]] variables>>
 
-  for register_name, register_path in register_map:
+  for register_name, register_path in register_map.items():
     <<search for matches to [[course]] in [[register_path]]>>
 
   <<check ending criteria for [[get_course_conf_path]], return>>

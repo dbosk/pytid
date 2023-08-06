@@ -1,7 +1,7 @@
 SUBDIR_GOALS=	all clean distclean
 
 MODULES+=	__init__.py
-MODULES+=	courses.py
+MODULES+=	registry.py
 
 .PHONY: all
 all: ${MODULES}

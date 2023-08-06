@@ -17,7 +17,7 @@ $(foreach files,${TESTS},$(eval $(call def_target, ${files})))
 
 .PHONY: test
 test: all
-	poetry run pytest
+	poetry run pytest ${PYTEST_FLAGS}
 
 .PHONY: clean
 clean:

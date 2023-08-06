@@ -88,10 +88,10 @@ This way, we can automatically generate time reports.
 \end{description}
 
 
-\section{The structure of the code}\label{climodule}
+\section{The structure of the [[cli]] module}\label{climodule}
 
 We use the Typer package to create the CLI.
-This means that each subcommand module will have the same structure as the main 
+This means that each command module will have the same structure as the main 
 CLI module.
 That structure looks like this:
 <<init.py>>=
@@ -99,6 +99,8 @@ That structure looks like this:
 
 import typer
 <<import subcommand modules>>
+
+<<configure logging>>
 
 cli = typer.Typer()
 
@@ -113,9 +115,18 @@ own and will then work as an independent program.
 For instance, [[python3 -m nytid.cli.timesheet -h]] will be the same as running 
 [[nytid timesheet -h]].
 
-To add a subcommand, we then simply import the module and add its Typer 
-instance.
-This requires that each command in turn consist of subcommands.
+To add a command, there are two options.
+If a command has several subcommands, we can do as above.
+For instance, the [[courses]] command (and module).
+We simply import the module and add its Typer instance.
+This requires that each command in turn consist of subcommands, which is the 
+case for [[courses]].
+<<import subcommand modules>>=
+from nytid.cli import courses
+@
+<<add subcommand typer to cli>>=
+cli.add_typer(courses.cli, name="courses")
+@
 
 For the [[config]] command, we will use the [[typerconf]] package.
 This doesn't have subcommands, we must thus do it slightly differently.
@@ -127,3 +138,15 @@ See [[pydoc3 typerconf]] for details.
 import typerconf as config
 <<add subcommand typer to cli>>=
 config.add_config_cmd(cli)
+@
+
+
+\section{Configure logging}
+
+We want to use Python's built-in [[logging]] module to emit errors.
+<<configure logging>>=
+import logging
+import sys
+
+logging.basicConfig(format=f"nytid: %(levelname)s: %(message)s")
+@

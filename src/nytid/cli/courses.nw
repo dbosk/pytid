@@ -151,7 +151,7 @@ try:
   registry.add(name, register_path)
 except KeyError as err:
   logging.error(f"Can't add {name}: {err}")
-  return
+  sys.exit(1)
 @
 
 This means that we can list all registers by using the [[registry]] module 
@@ -177,7 +177,7 @@ try:
   registry.remove(name)
 except KeyError as err:
   logging.error(f"Can't remove {name}: {err}")
-  return
+  sys.exit(1)
 @
 
 

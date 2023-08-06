@@ -675,3 +675,37 @@ def test_get():
 
   result = runner.invoke(cli, ["config", target_course])
   assert target_value in result.stdout
+@
+
+
+\section{Listing all courses}
+
+We also want to be able to list all available courses over all available 
+registers.
+
+For this command, we can reuse a lot from above.
+We already have the option settings in [[register_option]].
+We also already have a function to list all courses, [[all_courses]].
+<<subcommands>>=
+@cli.command()
+def ls(register: str = register_option):
+  """
+  Lists all available courses in all registers in the registry. Output format: 
+
+    register<tab>course
+
+  If `register` (a register name) is provided, only courses from that register 
+  are listed.
+  """
+  if register:
+    try:
+      <<list all courses in [[register]]>>
+    except KeyError as err:
+      logging.error(err)
+      sys.exit(1)
+  else:
+    for register in registry.ls():
+      <<list all courses in [[register]]>>
+<<list all courses in [[register]]>>=
+for course in all_courses(registry.get(register)):
+  print(f"{register}\t{course}")

@@ -45,7 +45,7 @@ module.
 <<registry.py>>=
 """The nytid course registry"""
 
-import typerconf as config
+import typerconf
 
 import pathlib
 from nytid import storage
@@ -59,16 +59,15 @@ These are all prepended [[test_]] to the function name.
 We will run them using [[pytest]].
 We will set a default course and path to use.
 (Note that the path will not be created).
-<<test coursesdirs.py>>=
+<<test registry.py>>=
 from typerconf import Config
 import pathlib
-
-<<test imports>>
+import tempfile
 
 from nytid.courses.registry import *
 
 test_name = "test_register"
-test_path = "/a/nonexisting/path"
+test_path = tempfile.mkdtemp()
 
 <<test functions>>
 @
@@ -79,7 +78,8 @@ We want to be able to
 \begin{itemize}
 \item add,
 \item remove,
-\item list
+\item list, and
+\item get the path of
 \end{itemize}
 course registers.
 
@@ -87,7 +87,7 @@ We want to be able to override the default configuration by supplying a value
 to the [[config]] argument of these functions.
 This also helps with testing.
 <<config arg>>=
-config=config
+config: typerconf.Config = typerconf
 <<config arg doc>>=
 The default `config` is the default config of the `typerconf` package.
 @
@@ -150,9 +150,10 @@ def test_add():
 \section{Listing all course registers}
 
 <<functions>>=
-def list(<<config arg>>):
+def ls(<<config arg>>):
   """
-  Lists course registers added to configuration `config`.
+  Lists course registers added to configuration `config`. Returns a list of all 
+  register names.
 
   <<config arg doc>>
   """
@@ -164,7 +165,7 @@ the [[REGISTERS]] path in the config.
 If there is no [[REGISTERS]] in the config, we simply return an empty list.
 <<list course registers>>=
 try:
-  return list(config.get(REGISTERS).items())
+  return list(config.get(REGISTERS).keys())
 except KeyError:
   return []
 @
@@ -179,9 +180,9 @@ details.
 def test_list():
   config = Config()
   add(test_name, test_path, config=config)
-  assert test_name in list(config=config)
+  assert test_name in ls(config=config)
 
-  assert list(config=Config()) == []
+  assert ls(config=Config()) == []
 @
 
 
@@ -209,17 +210,17 @@ We add the course register to test for in the listing by using [[add]] since we
 want to test the relationship between [[add]] and [[get]], not implementation 
 details.
 <<test functions>>=
-def test_list():
-  config = Config()
-  add(test_name, test_path, config=config)
-  assert get(test_name, config=config) == test_name
+def test_get():
+  conf = Config()
+  add(test_name, test_path, config=conf)
+  assert get(test_name, config=conf) == test_path
 
   try:
-    get(test_name, config=Config())
-  except KeyError:
+    value = get(test_name, config=Config())
+  except:
     assert True
   else:
-    assert False
+    assert value and False
 @
 
 
@@ -241,7 +242,7 @@ def remove(<<directory rm args>>
 Finally, to remove an entry, we simply need the name.
 Then we can drop that entry from the config.
 <<directory rm args>>=
-name
+name,
 <<directory rm args doc>>=
 - `name` is the name of the course register entry
 
@@ -269,11 +270,24 @@ We add the course register to test for in the listing by using [[add]] since we
 want to test the relationship between [[add]], [[remove]] and [[list]], not 
 implementation details.
 <<test functions>>=
-def test_list():
+def test_rm():
   config = Config()
+
   add(test_name, test_path, config=config)
+  try:
+    get(test_name, config=config)
+  except KeyError:
+    assert False
+  else:
+    assert True
+
   remove(test_name, config=config)
-  assert test_name not in list(config=config)
+  try:
+    get(test_name, config=config)
+  except KeyError:
+    assert True
+  else:
+    assert False
 
   try:
     remove(test_name, config=Config())

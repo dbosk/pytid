@@ -56,6 +56,8 @@ from nytid.cli.courses import *
 
 <<test imports>>
 
+<<test setup>>
+
 <<test functions>>
 @
 
@@ -411,11 +413,33 @@ def config_cmd(course: str = name_arg_autocomplete,
       print_config(conf.get(path), path)
     except KeyError as err:
       logging.error(f"{path} doen't exist in the config: {err}")
+      sys.exit(1)
 @
 
 We will now cover [[name_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
 as we cover the relevant parts of the algorithm.
+
+\subsection{Testing the [[courses config]] command}
+
+Before we delve into the details, let's first device the testing.
+Typer makes this very easy.
+<<test setup>>=
+runner = CliRunner()
+
+register = "test register"
+register_path = tempfile.mkdtemp()
+runner.invoke(cli, ["registry", "add", register, register_path])
+
+target_course = "test course"
+target_path = "contact"
+target_value = "Test Tester"
+
+runner.invoke(cli, ["new", target_course])
+<<test imports>>=
+import tempfile
+from typer.testing import CliRunner
+@
 
 \subsection{Finding the course}
 
@@ -553,6 +577,34 @@ if values == "":
   values = None
 @
 
+\subsection{Testing setting values}
+
+Let's look at the actual tests.
+We want to set a value, this should yield no error.
+We also check that this worked by looking for the target value when we print 
+the whole config.
+<<test functions>>=
+def test_set():
+  result = runner.invoke(cli, ["config", target_course,
+                               target_path, "--set", target_value])
+  assert result.exit_code == 0
+
+  result = runner.invoke(cli, ["config", target_course, target_path])
+  assert target_value in result.stdout
+@
+
+We also want to remove the target again.
+This should work by setting it to the empty string.
+<<test functions>>=
+def test_clear():
+  result = runner.invoke(cli, ["config", target_course,
+                              target_path, "--set", ""])
+  assert result.exit_code == 0
+
+  result = runner.invoke(cli, ["config", target_course])
+  assert target_path not in result.stdout
+@
+
 \subsection{Printing the config}
 
 That [[print_config]] function should print the remaining levels of the config 
@@ -600,47 +652,26 @@ except AttributeError:
   print(f"{path} = {conf}")
 @
 
-\subsection{Testing the [[courses config]] command}
+\subsection{Testing the printing of the config}
 
-Let's test this command.
-We'll set up the testing.
+There are two cases that we want to test.
+The first is to specify a non-existing path of the config, that should result 
+in an error.
+In the second case, we should try to get a part of the config that actually 
+does exist.
+The same should happen if we don't specify any part of the config, then we 
+should get the whole config; in which case, we also get the target value.
 <<test functions>>=
-runner = CliRunner()
+def test_get():
+  result = runner.invoke(cli, ["config", target_course,
+                               f"{target_path}.nonexisting"])
+  assert result.exit_code == 1
 
-def test_cli():
-  <<run tests on [[cli]]>>
-<<test imports>>=
-from typer.testing import CliRunner
-@
+  result = runner.invoke(cli, ["config", target_course,
+                               target_path, "--set", target_value])
+  result = runner.invoke(cli, ["config", target_course,
+                               target_path])
+  assert target_value in result.stdout
 
-Let's look at the actual tests.
-<<run tests on [[cli]]>>=
-target_course = "test"
-target_path = "contact"
-target_value = "Test Tester"
-
-result = runner.invoke(cli, ["new", target_course]),
-
-# set example data
-result = runner.invoke(cli, ["config", target_course,
-                             target_path, "--set", target_value])
-assert result.exit_code == 0
-
-# try access nonexisting
-result = runner.invoke(cli, ["config", target_course,
-                             f"{target_path}.nonexisting"])
-assert result.exit_code == 1
-
-# access existing
-result = runner.invoke(cli, ["config", target_course,
-                             target_path])
-assert target_value in result.stdout
-
-# clear config
-result = runner.invoke(cli, ["config", target_course,
-                             target_path, "--set", None])
-assert result.exit_code == 0
-
-# check that it's cleared
-result = runner.invoke(cli, ["config", target_course])
-assert target_path not in result.stdout
+  result = runner.invoke(cli, ["config", target_course])
+  assert target_value in result.stdout

@@ -144,6 +144,10 @@ def test_add():
   config = Config()
   add(test_name, test_path, config=config)
   assert config.get(f"{REGISTERS}.{test_name}") == test_path
+
+  new_config = Config()
+  add(test_name, pathlib.Path(test_path), config=new_config)
+  assert new_config.get(f"{REGISTERS}.{test_name}") == test_path
 @
 
 
@@ -191,14 +195,14 @@ def test_list():
 In a similar fashion as the [[list]] function, we want to get the path of a 
 single course register.
 <<functions>>=
-def get(name, <<config arg>>):
+def get(name: str, <<config arg>>) -> pathlib.Path:
   """
   Returns the path of the course register named by `name`.
 
   <<config arg doc>>
   """
   try:
-    return config.get(REGISTERS)[name]
+    return pathlib.Path(config.get(REGISTERS)[name])
   except KeyError as err:
     raise KeyError(f"Can't find register named `{name}`: {err}")
 @
@@ -213,7 +217,7 @@ details.
 def test_get():
   conf = Config()
   add(test_name, test_path, config=conf)
-  assert get(test_name, config=conf) == test_path
+  assert get(test_name, config=conf) == pathlib.Path(test_path)
 
   try:
     value = get(test_name, config=Config())

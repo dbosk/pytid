@@ -113,7 +113,7 @@ reference it easily.
 This means that we need those two arguments.
 <<add register args>>=
 name: str,
-register_path: str,
+register_path: pathlib.Path,
 <<add register args doc>>=
 - `name` is the name to refer to this course register
 - `register_path` is the actual path to the directory
@@ -126,7 +126,7 @@ courses).
 When setting this, we replace any existing entry with the same name.
 <<add course register>>=
 <<check that name is valid, raise ValueError otherwise>>
-config.set(f"{REGISTERS}.{name}", register_path)
+config.set(f"{REGISTERS}.{name}", str(register_path))
 <<constants>>=
 REGISTERS = "registers"
 @

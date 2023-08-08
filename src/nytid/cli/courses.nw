@@ -478,8 +478,8 @@ In the register, each course has its own subdirectory.
 So we simply need to return the subdirectories of [[register_path]] matching 
 [[incomplete]] together with [[register_name]].
 <<yield (course name, register name) tuples that matches [[incomplete]]>>=
-courses = courses.all_courses(register_path)
-matching_courses = filter(lambda x: x.startswith(incomplete), courses)
+courses_in_reg = courses.all_courses(register_path)
+matching_courses = filter(lambda x: x.startswith(incomplete), courses_in_reg)
 return map(lambda x: (x, f"from {register_name}"),
            matching_courses)
 @

@@ -679,3 +679,64 @@ def ls(register: Annotated[str, register_option] = None):
 <<list all courses in [[register]]>>=
 for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")
+@
+
+
+\section{Accessing the course data}
+
+We would like an easy way to access the data of a course to debug.
+We will add a set of subcommands under the command [[data]].
+<<subcommands>>=
+datacli = typer.Typer(name="data",
+                      help="Access the raw course data")
+
+cli.add_typer(datacli)
+
+<<data subcommands>>
+@
+
+\subsection{Spawning a shell in the data directory}
+
+The first subcommand will spawn a shell in the data directory so that we can 
+explore it freely.
+
+We will change the current working directory to the data directory of the 
+course, then spawn a shell.
+When the shell is done, we'll change back the current working directory.
+
+The shell we'll use will be the same as the one the user is currently running, 
+\ie what we find in the [[SHELL]] environment variable.
+<<data subcommands>>=
+@datacli.command()
+def shell(course: Annotated[str, course_arg_autocomplete],
+          register: Annotated[str, register_name_arg] = None):
+  """
+  Spawns a shell in the data directory of a course.
+  """
+  try:
+    data_dir = courses.get_course_data(course, register)
+    subprocess.Popen(os.environ["SHELL"], cwd=data_dir.path)
+  <<handle data dir exceptions>>
+  <<handle shell exceptions>>
+<<subcommand imports>>=
+import os
+import subprocess
+@
+
+The first error to handle is if the given course doesn't exist.
+<<handle data dir exceptions>>=
+except KeyError as err:
+  logging.error(err)
+  sys.exit(1)
+@
+
+If the course is just created, the data directory might not have been created 
+just yet.
+However, in that case, we'd like to try to create the directory if the user 
+wants to spawn a shell.
+(Since they might want to create something there manually.)
+<<handle shell exceptions>>=
+except FileNotFoundError as err:
+  logging.warning(f"The data directory doesn't exist: {err}")
+  os.makedirs(data_dir.path)
+  shell(course, register)

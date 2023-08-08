@@ -91,15 +91,15 @@ class StorageRoot:
   This of this as a simple chroot jail (just not for security).
   """
 
-  def __init__(self, path):
+  def __init__(self, path: pathlib.Path):
     """
     Uses `path` as the root. All files opened are in subdirectories of `path`.
     """
-    self.__path = path
+    self.__path = pathlib.Path(path)
     <<StorageRoot constructor body>>
 
   @property
-  def path(self):
+  def path(self) -> pathlib.Path:
     """
     `pathlib.Path` representation of the storage root.
     """
@@ -107,7 +107,7 @@ class StorageRoot:
 
   <<StorageRoot methods>>
 
-def open_root(*args, **kwargs):
+def open_root(*args, **kwargs) -> StorageRoot:
   """
   Takes arguments (`*args` and `**kwargs`), determines which submodule is the 
   best and passes the arguments onto the `StorageRoot` constructor of that 

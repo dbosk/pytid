@@ -27,7 +27,7 @@ That structure looks like this:
 <<courses.py>>=
 """The nytid courses command and subcommands"""
 
-import typerconf as config
+import typerconf
 
 from nytid import courses
 import logging
@@ -37,6 +37,7 @@ from nytid import storage
 import sys
 import typer
 import typing
+from typing_extensions import Annotated
 
 cli = typer.Typer(help="Manage courses")
 
@@ -134,13 +135,12 @@ As mentioned above, we want each register to be named, so that we can reference
 each easily.
 This means that we need those two arguments.
 <<registry add args>>=
-name: str = new_register_arg,
-register_path: str = register_path_arg
+name: Annotated[str, new_register_arg],
+register_path: Annotated[pathlib.Path, register_path_arg]
 <<argument and option definitions>>=
-new_register_arg = typer.Argument(...,
-                          help="A name to refer to the register.")
-register_path_arg = typer.Argument(...,
-                          help="The absolute path to the register directory.")
+new_register_arg = typer.Argument(help="A name to refer to the register.")
+register_path_arg = typer.Argument(help="The absolute path to the register "
+                                        "directory.")
 @
 
 Finally, to add the register, we simply make the proper call to the 
@@ -166,11 +166,10 @@ Finally, to remove an entry, we simply need the name.
 In this case it makes sense to autocomplete, since this is an existing 
 register.
 <<registry rm args>>=
-name: str = register_name_arg
+name: Annotated[str, register_name_arg]
 <<argument and option definitions>>=
-register_name_arg = typer.Argument(...,
-                          help="The name of the register.",
-                          autocompletion=complete_register_arg)
+register_name_arg = typer.Argument(help="The name of the register.",
+                                   autocompletion=complete_register_arg)
 @
 
 To complete the register name, we provide the 
@@ -219,23 +218,21 @@ To finally create the courses, we'll use the [[new]] function from the
 
 To create a course, we need a name for the course.
 <<new command args>>=
-name: str = course_arg,
+name: Annotated[str, course_arg],
 <<new arguments and options>>=
-course_arg = typer.Argument(...,
-                            help="A name used to refer to the course.")
+course_arg = typer.Argument(help="A name used to refer to the course.")
 @
 
 We would first like to create the course in one of the registers available.
 If there is only one register, we'll create the course there.
 If there are more, however, we need the user to decide which one to use.
+<<new command args>>=
+register_name: Annotated[str, register_option] = None,
 <<new arguments and options>>=
-register_option = typer.Option(None,
-                               help="Name of register to use. "
+register_option = typer.Option(help="Name of register to use. "
                                     "Must be used if there are more than "
                                     "one register in the config.",
                                shell_complete=complete_register_name)
-<<new command args>>=
-register_name: str = register_option,
 @
 
 We also want to have a function for autocompletion in the shell.
@@ -277,13 +274,13 @@ Usually, it's the course responsible who will run the [[courses new]] command.
 We will let the user adjust the default values through the main config file, in 
 the same fashion as Git.
 <<new command args>>=
-contact: str = contact_opt,
+contact: Annotated[str, contact_opt] = None,
 <<new arguments and options>>=
-contact_opt = typer.Option(None, help="The course responsible's contact info. "
-                                      "Default can be set using "
-                                      "`nytid config me.name --set 'First Last'"
-                                      " and "
-                                      "`nytid config me.email --set x@y.z.")
+contact_opt = typer.Option(help="The course responsible's contact info. "
+                                "Default can be set using "
+                                "`nytid config me.name --set 'First Last'"
+                                " and "
+                                "`nytid config me.email --set x@y.z.")
 @
 
 Note that we don't have to set those values to anything but [[None]] here, the 
@@ -297,33 +294,29 @@ courses.
 The reason we're interested in this is because then we can recruit TAs from 
 similar enough courses.
 <<new command args>>=
-code: str = code_opt,
+code: Annotated[str, code_opt] = None,
 <<new arguments and options>>=
-code_opt = typer.Option(None, help="The course code, "
-                                   "to relate it to similar courses using "
-                                   "`related_codes`.")
+code_opt = typer.Option(help="The course code, "
+                             "to relate it to similar courses using "
+                             "`related_codes`.")
 <<new command args>>=
-related_codes: typing.List[str] = related_opt,
+related_codes: Annotated[typing.List[str], related_opt] = [],
 <<new arguments and options>>=
-related_opt = typer.Option([], help="List of related course codes, "
-                                    "courses with any of these codes can "
-                                    "share TAs.")
+related_opt = typer.Option(help="List of related course codes, "
+                                "courses with any of these codes can "
+                                "share TAs.")
 @
 
 \subsection{The schedule}
 
 All courses need a schedule for their teaching.
 We add a URL to the ICS file, \eg TimeEdit.
-<<new command doc>>=
-- `ics` (optional, default None), a URL to an ICS file with the schedule of the 
-  course. E.g. a URL to a TimeEdit export/subscription.
-
 <<new command args>>=
-ics: str = ics_opt,
+ics: Annotated[str, ics_opt] = None,
 <<new arguments and options>>=
-ics_opt = typer.Option(None, help="A URL to an ICS file containing the "
-                                  "schedule. E.g. an export/subscription from "
-                                  "TimeEdit.")
+ics_opt = typer.Option(help="A URL to an ICS file containing the "
+                            "schedule. E.g. an export/subscription from "
+                            "TimeEdit.")
 @
 
 \subsection{The data directory}
@@ -333,10 +326,9 @@ The data directory is a directory that only members can access.
 It can contain a more detailed config or TA bookings.
 The default path is simply to append [[data]] to the course's config path.
 <<new command args>>=
-data_path: pathlib.Path = data_path_opt
+data_path: Annotated[pathlib.Path, data_path_opt] = None,
 <<new arguments and options>>=
-data_path_opt = typer.Option(None,
-                             help="Path to the course's data directory, "
+data_path_opt = typer.Option(help="Path to the course's data directory, "
                                   "default is to append `/data` to the "
                                   "course's config directory.")
 @
@@ -384,10 +376,10 @@ This corresponds to how the [[.set]] method of [[Config]] works.
 <<default values for [[config_cmd]]>>
 
 @cli.command(name="config")
-def config_cmd(course: str = course_arg_autocomplete,
-               register = register_option,
-               path: str = path_arg,
-               values: typing.List[str] = value_arg):
+def config_cmd(course: Annotated[str, course_arg_autocomplete],
+               register: Annotated[str, register_option] = None,
+               path: Annotated[str, path_arg] = "",
+               values: Annotated[typing.List[str], value_arg] = None):
   """
   Reads values from or writes `values` to the config of `course` at `path`.
   """
@@ -439,9 +431,9 @@ We'll reuse the [[register_option]] from earlier, see
 \cref{CreatingTheCourse}.
 We don't want to reuse [[course_arg]], since that one lacks autocompletion.
 <<default values for [[config_cmd]]>>=
-course_arg_autocomplete = typer.Argument(...,
-                            help="Name (nickname) of the target course.",
-                            autocompletion=complete_course_name)
+course_arg_autocomplete = typer.Argument(help="Name (nickname) of the target "
+                                              "course.",
+                                         autocompletion=complete_course_name)
 @
 
 To complete the course name we simply need to look up all matching courses in 
@@ -486,18 +478,10 @@ In the register, each course has its own subdirectory.
 So we simply need to return the subdirectories of [[register_path]] matching 
 [[incomplete]] together with [[register_name]].
 <<yield (course name, register name) tuples that matches [[incomplete]]>>=
-courses = all_courses(register_path)
-matching_courses = filter(lambda x: x.startswith(incomplete), courses)
+courses_in_reg = courses.all_courses(register_path)
+matching_courses = filter(lambda x: x.startswith(incomplete), courses_in_reg)
 return map(lambda x: (x, f"from {register_name}"),
            matching_courses)
-<<helper functions>>=
-def all_courses(register_path):
-  """
-  Returns a list (generator) of all courses found in `register_path`.
-  """
-  for file in pathlib.Path(register_path).iterdir():
-    if file.is_dir():
-      yield file.name
 @
 
 Now let's turn back to the main problem:
@@ -514,8 +498,7 @@ except KeyError as err:
 
 We can autocomplete the path since we can predict the possible values.
 <<default values for [[config_cmd]]>>=
-path_arg = typer.Argument("",
-                          help="Path in config, e.g. 'courses.datintro22'. "
+path_arg = typer.Argument(help="Path in config, e.g. 'courses.datintro22'. "
                                "Empty string is root of config. Defaults to "
                                "the empty string.",
                           autocompletion=complete_config_path)
@@ -543,7 +526,7 @@ def complete_config_path(ctx: typer.Context, incomplete: str):
 
 We let the user supply a list of values to set on the target path.
 <<default values for [[config_cmd]]>>=
-value_arg = typer.Option([], "-s", "--set",
+value_arg = typer.Option("-s", "--set",
                          help="Values to store. "
                               "More than one value makes a list. "
                               "Values are treated as JSON if possible.")
@@ -604,7 +587,7 @@ The idea is that the config path will move from the dictionary representation
 in [[conf]] to the string representation in [[path]].
 When at the leaf, [[conf]] will contain the value and [[path]] the entire path.
 <<helper functions>>=
-def print_config(conf, path=""):
+def print_config(conf: typerconf.Config, path: str = ""):
   """
   Prints the config tree contained in `conf` to stdout.
   Optional `path` is prepended.
@@ -675,7 +658,7 @@ We already have the option settings in [[register_option]].
 We also already have a function to list all courses, [[all_courses]].
 <<subcommands>>=
 @cli.command()
-def ls(register: str = register_option):
+def ls(register: Annotated[str, register_option] = None):
   """
   Lists all available courses in all registers in the registry. Output format: 
 
@@ -694,5 +677,5 @@ def ls(register: str = register_option):
     for register in registry.ls():
       <<list all courses in [[register]]>>
 <<list all courses in [[register]]>>=
-for course in all_courses(registry.get(register)):
+for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")

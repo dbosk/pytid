@@ -407,7 +407,7 @@ conf_path = None
 To list all the courses, we simply list all directories in the register's 
 directory.
 <<functions>>=
-def all_courses(register_path):
+def all_courses(register_path: pathlib.Path) -> typing.List[str]:
   """
   Returns a list (generator) of all courses found in `register_path`.
   """

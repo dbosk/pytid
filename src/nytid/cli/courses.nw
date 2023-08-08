@@ -31,7 +31,9 @@ import typerconf
 
 from nytid import courses
 import logging
+import os
 import pathlib
+import pty
 from nytid.courses import registry
 from nytid import storage
 import sys
@@ -715,9 +717,17 @@ def shell(course: Annotated[str, course_arg_autocomplete],
   """
   try:
     data_dir = courses.get_course_data(course, register)
-    subprocess.Popen(os.environ["SHELL"], cwd=data_dir.path)
   <<handle data dir exceptions>>
+  try:
+    cwd = os.getcwd()
+    os.chdir(data_dir.path)
+    shell = os.environ["SHELL"]
+    print(f"--- {course}/data shell ---")
+    pty.spawn(shell)
+    print(f"--- {course}/data shell terminated ---")
   <<handle shell exceptions>>
+  finally:
+    os.chdir(cwd)
 <<subcommand imports>>=
 import os
 import subprocess

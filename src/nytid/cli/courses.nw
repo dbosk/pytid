@@ -27,7 +27,7 @@ That structure looks like this:
 <<courses.py>>=
 """The nytid courses command and subcommands"""
 
-import typerconf as config
+import typerconf
 
 from nytid import courses
 import logging
@@ -596,7 +596,7 @@ The idea is that the config path will move from the dictionary representation
 in [[conf]] to the string representation in [[path]].
 When at the leaf, [[conf]] will contain the value and [[path]] the entire path.
 <<helper functions>>=
-def print_config(conf, path=""):
+def print_config(conf: typerconf.Config, path: str = ""):
   """
   Prints the config tree contained in `conf` to stdout.
   Optional `path` is prepended.

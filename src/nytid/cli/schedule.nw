@@ -1,3 +1,23 @@
+\chapter{The [[cli.schedule]] and the [[schedule]] command}%
+\label{cli.schedule}
+
+In this chapter we introduce the subommands found under [[nytid schedule]],
+it's the [[cli.schedule]] module.
+<<schedule.py>>=
+import typer
+
+<<imports>>
+
+cli = typer.Typer(name="schedule",
+                  help="Working with course schedules")
+
+<<helper functions>>
+<<argument and option definitions>>
+<<subcommands>>
+@
+
+
+<<schedule.py>>=
 import arrow
 from config import COURSES, SIGNUP
 import ics.icalendar

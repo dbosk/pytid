@@ -136,7 +136,6 @@ This requires that each command in turn consist of subcommands, which is the
 case for [[courses]].
 <<import subcommand modules>>=
 from nytid.cli import courses
-@
 <<add subcommand typer to cli>>=
 cli.add_typer(courses.cli, name="courses")
 @
@@ -151,6 +150,14 @@ See [[pydoc3 typerconf]] for details.
 import typerconf as config
 <<add subcommand typer to cli>>=
 config.add_config_cmd(cli)
+@
+
+\subsection{Adding more subcommands}
+
+<<import subcommand modules>>=
+from nytid.cli import schedule
+<<add subcommand typer to cli>>=
+cli.add_typer(schedule.cli, name="schedule")
 @
 
 

@@ -486,18 +486,10 @@ In the register, each course has its own subdirectory.
 So we simply need to return the subdirectories of [[register_path]] matching 
 [[incomplete]] together with [[register_name]].
 <<yield (course name, register name) tuples that matches [[incomplete]]>>=
-courses = all_courses(register_path)
+courses = courses.all_courses(register_path)
 matching_courses = filter(lambda x: x.startswith(incomplete), courses)
 return map(lambda x: (x, f"from {register_name}"),
            matching_courses)
-<<helper functions>>=
-def all_courses(register_path):
-  """
-  Returns a list (generator) of all courses found in `register_path`.
-  """
-  for file in pathlib.Path(register_path).iterdir():
-    if file.is_dir():
-      yield file.name
 @
 
 Now let's turn back to the main problem:
@@ -694,5 +686,5 @@ def ls(register: str = register_option):
     for register in registry.ls():
       <<list all courses in [[register]]>>
 <<list all courses in [[register]]>>=
-for course in all_courses(registry.get(register)):
+for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")

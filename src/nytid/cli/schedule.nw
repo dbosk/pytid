@@ -6,6 +6,7 @@ it's the [[cli.schedule]] module.
 <<schedule.py>>=
 import datetime
 import ics.icalendar
+import logging
 import typer
 from typing_extensions import Annotated
 
@@ -115,8 +116,18 @@ schedules.
 We simply fetch the course's ICS calendar from the course configuration.
 Then we can simply get a calendar object from that URL.
 <<add schedule of [[a_course]] to [[schedule]]>>=
-course_conf = courseutils.get_course_config(a_course, a_register)
-course_ics_url = course_conf.get("ics")
+try:
+  course_conf = courseutils.get_course_config(a_course, a_register)
+except KeyError as err:
+  logging.error(f"Can't find {a_course} in {a_register}: {err}")
+  continue
+
+try:
+  course_ics_url = course_conf.get("ics")
+except KeyError as err:
+  logging.error(f"Can't find schedule URL for {a_course}: {err}")
+  continue
+
 course_schedule = schedutils.read_calendar(course_ics_url)
 
 schedule.events |= course_schedule.events

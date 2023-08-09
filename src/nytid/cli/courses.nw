@@ -782,12 +782,14 @@ A register might contain all courses of a department,
 but we want to only keep track our own courses.
 Then we add (link) them to the [[mine]] register.
 <<subcommands>>=
-minecli = typer.Typer(name="mine",
+minecli = typer.Typer(name=MINE,
                       help="Manage my courses")
 
 cli.add_typer(minecli)
 
 <<mine subcommands>>
+<<constants>>=
+MINE = "mine"
 @
 
 The subcommands of [[mine]] will be similar to those of [[registry]].
@@ -816,7 +818,7 @@ def mine_add(course: Annotated[str, course_arg_autocomplete],
   if not alias:
     alias = course
 
-  mine_path = registry.get(MINE)
+  <<set [[mine_path]] to the path of the mine register>>
   <<exit if [[alias]] is already in [[mine_path]]>>
 
   <<set [[course_path]] to [[course]]'s path>>
@@ -824,9 +826,32 @@ def mine_add(course: Annotated[str, course_arg_autocomplete],
 <<argument and option definitions>>=
 alias_opt = typer.Option(help="Alias to use instead of "
                               "the original course name")
-<<constants>>=
-MINE = "my_courses"
 @
+
+\subsection{Create the default mine register if it doesn't exist}
+
+When we attempt to get the [[mine_path]] from [[registry]], it might not exist 
+if it's the first time we use it.
+This means we want to create it in the default location.
+<<set [[mine_path]] to the path of the mine register>>=
+try:
+  mine_path = registry.get(MINE)
+except KeyError:
+  <<create the default mine register>>
+  mine_path = registry.get(MINE)
+@
+
+Now, if the register doesn't exist, we want to create it in [[~/.nytid/mine]] 
+and add it to the registry.
+<<create the default mine register>>=
+home_path = pathlib.Path(os.environ["HOME"])
+registry.add(MINE, home_path / ".nytid/mine")
+mine_path = registry.get(MINE)
+os.makedirs(mine_path)
+logging.warning(f"Added register {MINE} and created its path {mine_path}.")
+@
+
+\subsection{Check if the course is already among my courses}
 
 To check if the alias already exists among our courses, we simply iterate 
 through and look for such a filename.
@@ -856,7 +881,7 @@ If so, we add [[register_name]] to the list of matches.
 <<search for matches to [[course]] in [[register_path]]>>=
 matching_courses = filter(lambda x: x == course,
                           courses.all_courses(register_path))
-if len(matching_courses) > 0:
+if len(list(matching_courses)) > 0:
   matching_registers.append(register_name)
 <<variables for search for [[course]] in [[register_map]]>>=
 matching_registers = []
@@ -911,6 +936,18 @@ def mine_rm(course: Annotated[str, my_course_arg]):
   except FileNotFoundError as err:
     logging.error(f"Couldn't find {course}: {err}")
     sys.exit(1)
+<<argument and option definitions>>=
+my_course_arg = typer.Argument(help="The course in my courses.",
+                               autocompletion=complete_my_course_arg)
+<<helper functions>>=
+def complete_my_course_arg(incomplete: str) -> typing.List[str]:
+  """
+  Returns a list of courses in my courses that match `incomplete`.
+  """
+  mine_path = registry.get(MINE)
+  for course in mine_path.iterdir():
+    if course.startswith(incomplete):
+      yield course
 @
 
 \subsection{Testing the [[mine]] subcommands}

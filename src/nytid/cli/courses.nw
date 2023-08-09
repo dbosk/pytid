@@ -35,6 +35,7 @@ import logging
 import os
 import pathlib
 from nytid.courses import registry
+import re
 from nytid import storage
 import subprocess
 import sys
@@ -949,3 +950,121 @@ def complete_my_course_arg(incomplete: str) -> typing.List[str]:
   for course in mine_path.iterdir():
     if course.startswith(incomplete):
       yield course
+@
+
+
+\section{Matching courses and register using regex}
+
+In other modules we might like to use other versions of these arguments.
+For instance, matching the course on regex rather than exactly.
+The same for the register option.
+Here we'll provide the arguments and options together with the autocompletion.
+
+\subsection{Matching registers using regex}
+
+We'd sometimes like to match courses from several registers.
+Then we'd like to filter them based on regex.
+<<argument and option definitions>>=
+register_option_regex = typer.Option(help="Regex for register names to use.",
+                                     shell_complete=registers_regex)
+@
+
+The autocomplete function should take the regex and match all registers that 
+matches the current regex.
+This function can be used for other purposes too, like when to get all 
+registers that match the regex.
+<<helper functions>>=
+def registers_regex(regex: str) -> typing.List[str]:
+  """
+  Returns a list of registers matching the `regex`.
+
+  Matching is done `re.match`.
+  """
+  pattern = re.compile(regex)
+
+  registers = registry.ls()
+  for register in registers:
+    if pattern.match(register):
+      yield register
+@
+
+Let's test this.
+The [[<<test setup>>]] adds a register \enquote{test register}.
+We'll add one more to matching.
+<<test functions>>=
+def test_registers_regex():
+  add_register = "test"
+  add_reg_path = tempfile.mkdtemp()
+
+  runner.invoke(cli, ["registry", "add", add_register, add_reg_path])
+
+  matches = list(registers_regex("test"))
+  assert add_register in matches and register in matches
+
+  matches = list(registers_regex(".* .*"))
+  assert add_register not in matches and register in matches
+@
+
+\subsection{Matching courses using regex}
+
+Now we'll provide a course argument similar to [[register_option_regex]].
+<<argument and option definitions>>=
+course_arg_regex = typer.Argument(help="Regex matching courses.",
+                                  autocompletion=complete_course_regex)
+@
+
+The [[complete_course_regex]] is a bit more complex than the one for the 
+register option.
+Here we must take context into consideration.
+So we'll have to create two functions, the second being 
+[[complete_course_regex]].
+
+We want a function that takes a regex and a list of registers and returns a 
+list of all courses matching.
+To separate courses from different registers we must return a tuples of 
+course--register pairs.
+<<helper functions>>=
+def courses_regex(regex: str, registers: typing.List[str] = None) \
+    -> typing.List[str]:
+  """
+  Returns a list of courses matching the `regex`.
+
+  Matching is done `re.match`.
+  """
+  pattern = re.compile(regex)
+
+  if not registers:
+    registers = registry.ls()
+
+  for register in registers:
+    the_courses = courses.all_courses(registry.get(register))
+    for course in the_courses:
+      if pattern.match(course):
+        yield (course, register)
+@
+
+Let's test this function.
+We already have a course [[target_course]] added in [[<<test setup>>]].
+We'll use that one.
+<<test functions>>=
+def test_courses_regex():
+  matches = list(courses_regex(".* .*"))
+  for course, _ in matches:
+    if target_course == course:
+      assert True
+      break
+  else:
+    assert False
+@
+
+Now it's time to write the [[complete_course_regex]] function.
+We'll use [[courses_regex]] to get all courses matching based on the registers 
+we get from the context.
+<<helper functions>>=
+def complete_course_regex(ctx: typer.Context, regex: str) -> typing.List[str]:
+  """
+  """
+  register_regex = ctx.params.get("register")
+  registers = registers_regex(register_regex)
+
+  return courses_regex(regex, registers)

@@ -32,13 +32,18 @@ import typerconf
 
 from nytid import courses
 import logging
+import os
 import pathlib
 from nytid.courses import registry
 from nytid import storage
+import subprocess
 import sys
 import typer
 import typing
 from typing_extensions import Annotated
+
+<<subcommand imports>>
+<<constants>>
 
 cli = typer.Typer(help="Manage courses")
 
@@ -716,19 +721,38 @@ def shell(course: Annotated[str, course_arg_autocomplete],
   """
   try:
     data_dir = courses.get_course_data(course, register)
-    subprocess.Popen(os.environ["SHELL"], cwd=data_dir.path)
   <<handle data dir exceptions>>
+  try:
+    print(f"--- {course}/data shell ---")
+    <<spawn shell in [[data_dir]]>>
   <<handle shell exceptions>>
+  finally:
+    print(f"--- {course}/data shell terminated ---")
 <<subcommand imports>>=
 import os
 import subprocess
 @
 
 The first error to handle is if the given course doesn't exist.
+In that case, we give the error message and exit with a non-zero return code.
 <<handle data dir exceptions>>=
 except KeyError as err:
   logging.error(err)
   sys.exit(1)
+@
+
+To spawn the shell, we modify the prompt environment variable~[[PS1]].
+We want to add a note so that the user knows we're in this shell.
+In addition to that, it's just to map stdin, stdout and stderr so that we can 
+get an interactive shell.
+We also set the current working directory~[[cwd]] to the directory we want to 
+be in.
+<<spawn shell in [[data_dir]]>>=
+env = os.environ.copy()
+env["PS1"] = f"{course}/data {env['PS1']}"
+subprocess.run([os.environ["SHELL"]],
+                cwd=data_dir.path, env=env,
+                stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
 @
 
 If the course is just created, the data directory might not have been created 
@@ -736,8 +760,197 @@ just yet.
 However, in that case, we'd like to try to create the directory if the user 
 wants to spawn a shell.
 (Since they might want to create something there manually.)
+Once we've created it, we simply try again.
 <<handle shell exceptions>>=
 except FileNotFoundError as err:
   logging.warning(f"The data directory doesn't exist: {err}")
-  os.makedirs(data_dir.path)
-  shell(course, register)
+  try:
+    os.makedirs(data_dir.path)
+    logging.warning(f"Created {data_dir.path}")
+    <<spawn shell in [[data_dir]]>>
+  except Exception as err:
+    logging.error(f"Can't create directory: {err}")
+    sys.exit(1)
+@
+
+
+\section{My courses, the [[mine]] subcommands}
+
+We will now create a kind of meta-register called [[mine]] that will include 
+all courses we consider ours.
+The use-case is this:
+A register might contain all courses of a department,
+but we want to only keep track our own courses.
+Then we add (link) them to the [[mine]] register.
+<<subcommands>>=
+minecli = typer.Typer(name=MINE,
+                      help="Manage my courses")
+
+cli.add_typer(minecli)
+
+<<mine subcommands>>
+<<constants>>=
+MINE = "mine"
+@
+
+The subcommands of [[mine]] will be similar to those of [[registry]].
+We want to list them, add them and remove them.
+We will do this by maintaining a special register named [[MINE]] that will 
+contain symlinks to courses in other registers.
+
+\subsection{Adding a course to my courses}
+
+Adding a course to my courses is quite straight-forward.
+We simply create a symlink to the original course directory.
+If we want to add two courses of the same name (from different registers 
+perhaps), then we can separate them by providing an alias that will be used 
+instead of the original course name.
+<<mine subcommands>>=
+@minecli.command(name="add")
+def mine_add(course: Annotated[str, course_arg_autocomplete],
+             register: Annotated[str, register_name_arg] = None,
+             alias: Annotated[str, alias_opt] = None):
+  """
+  Adds a course to my courses.
+  """
+  if not register:
+    <<set [[register]] to which register [[course]] is in>>
+
+  if not alias:
+    alias = course
+
+  <<set [[mine_path]] to the path of the mine register>>
+  <<exit if [[alias]] is already in [[mine_path]]>>
+
+  <<set [[course_path]] to [[course]]'s path>>
+  os.symlink(course_path, mine_path / alias)
+<<argument and option definitions>>=
+alias_opt = typer.Option(help="Alias to use instead of "
+                              "the original course name")
+@
+
+\subsection{Create the default mine register if it doesn't exist}
+
+When we attempt to get the [[mine_path]] from [[registry]], it might not exist 
+if it's the first time we use it.
+This means we want to create it in the default location.
+<<set [[mine_path]] to the path of the mine register>>=
+try:
+  mine_path = registry.get(MINE)
+except KeyError:
+  <<create the default mine register>>
+  mine_path = registry.get(MINE)
+@
+
+Now, if the register doesn't exist, we want to create it in [[~/.nytid/mine]] 
+and add it to the registry.
+<<create the default mine register>>=
+home_path = pathlib.Path(os.environ["HOME"])
+registry.add(MINE, home_path / ".nytid/mine")
+mine_path = registry.get(MINE)
+os.makedirs(mine_path)
+logging.warning(f"Added register {MINE} and created its path {mine_path}.")
+@
+
+\subsection{Check if the course is already among my courses}
+
+To check if the alias already exists among our courses, we simply iterate 
+through and look for such a filename.
+<<exit if [[alias]] is already in [[mine_path]]>>=
+for my_course in mine_path.iterdir():
+  if my_course == alias:
+    logging.error(f"{alias} is already among your courses.")
+    sys.exit(1)
+@
+
+If the user didn't specify the register, we must look it up.
+This means that we must search through all registers for the course and hope to 
+find a unique match.
+<<set [[register]] to which register [[course]] is in>>=
+register_map = {register: registry.get(register)
+                for register in registry.ls()}
+
+<<variables for search for [[course]] in [[register_map]]>>
+for register_name, register_path in register_map.items():
+  <<search for matches to [[course]] in [[register_path]]>>
+
+<<check for ending criteria and set [[register]] to [[course]]'s>>
+@
+
+Now, we just need to check if [[course]] is part of [[register_name]].
+If so, we add [[register_name]] to the list of matches.
+<<search for matches to [[course]] in [[register_path]]>>=
+matching_courses = filter(lambda x: x == course,
+                          courses.all_courses(register_path))
+if len(list(matching_courses)) > 0:
+  matching_registers.append(register_name)
+<<variables for search for [[course]] in [[register_map]]>>=
+matching_registers = []
+@
+
+Finally, if there is a unique match, we can use it as [[register]].
+Otherwise, we print an error since the user must provide the [[register]] 
+argument to get a unique match.
+<<check for ending criteria and set [[register]] to [[course]]'s>>=
+num_matches = len(matching_registers)
+if num_matches == 1:
+  register = matching_registers[0]
+elif num_matches < 1:
+  logging.error(f"Can't find course {course} in any register")
+  sys.exit(1)
+elif num_matches > 1:
+  logging.error(f"Too many matches for {course}, "
+                f"specify one of the registers {matching_registers}.")
+  sys.exit(1)
+@
+
+Now, we must determine the course's path.
+That is simply the register's path with the course's name appended to it.
+<<set [[course_path]] to [[course]]'s path>>=
+course_path = registry.get(register) / course
+@
+
+\subsection{Listing my courses}
+
+<<mine subcommands>>=
+@minecli.command(name="ls")
+def mine_ls():
+  """
+  Lists my courses.
+  """
+  mine_path = registry.get(MINE)
+  for course in mine_path.iterdir():
+    print(course.name)
+@
+
+\subsection{Removing a course from my courses}
+
+<<mine subcommands>>=
+@minecli.command(name="rm")
+def mine_rm(course: Annotated[str, my_course_arg]):
+  """
+  Removes a course from my courses.
+  """
+  mine_path = registry.get(MINE)
+  try:
+    os.unlink(mine_path / course)
+  except FileNotFoundError as err:
+    logging.error(f"Couldn't find {course}: {err}")
+    sys.exit(1)
+<<argument and option definitions>>=
+my_course_arg = typer.Argument(help="The course in my courses.",
+                               autocompletion=complete_my_course_arg)
+<<helper functions>>=
+def complete_my_course_arg(incomplete: str) -> typing.List[str]:
+  """
+  Returns a list of courses in my courses that match `incomplete`.
+  """
+  mine_path = registry.get(MINE)
+  for course in mine_path.iterdir():
+    if course.startswith(incomplete):
+      yield course
+@
+
+\subsection{Testing the [[mine]] subcommands}
+
+\dots

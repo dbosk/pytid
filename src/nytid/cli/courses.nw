@@ -949,8 +949,3 @@ def complete_my_course_arg(incomplete: str) -> typing.List[str]:
   for course in mine_path.iterdir():
     if course.startswith(incomplete):
       yield course
-@
-
-\subsection{Testing the [[mine]] subcommands}
-
-\dots

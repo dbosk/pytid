@@ -31,9 +31,11 @@ import typerconf
 
 from nytid import courses
 import logging
+import os
 import pathlib
 from nytid.courses import registry
 from nytid import storage
+import subprocess
 import sys
 import typer
 import typing
@@ -679,3 +681,89 @@ def ls(register: Annotated[str, register_option] = None):
 <<list all courses in [[register]]>>=
 for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")
+@
+
+
+\section{Accessing the course data}
+
+We would like an easy way to access the data of a course to debug.
+We will add a set of subcommands under the command [[data]].
+<<subcommands>>=
+datacli = typer.Typer(name="data",
+                      help="Access the raw course data")
+
+cli.add_typer(datacli)
+
+<<data subcommands>>
+@
+
+\subsection{Spawning a shell in the data directory}
+
+The first subcommand will spawn a shell in the data directory so that we can 
+explore it freely.
+
+We will change the current working directory to the data directory of the 
+course, then spawn a shell.
+When the shell is done, we'll change back the current working directory.
+
+The shell we'll use will be the same as the one the user is currently running, 
+\ie what we find in the [[SHELL]] environment variable.
+<<data subcommands>>=
+@datacli.command()
+def shell(course: Annotated[str, course_arg_autocomplete],
+          register: Annotated[str, register_name_arg] = None):
+  """
+  Spawns a shell in the data directory of a course.
+  """
+  try:
+    data_dir = courses.get_course_data(course, register)
+  <<handle data dir exceptions>>
+  try:
+    print(f"--- {course}/data shell ---")
+    <<spawn shell in [[data_dir]]>>
+  <<handle shell exceptions>>
+  finally:
+    print(f"--- {course}/data shell terminated ---")
+<<subcommand imports>>=
+import os
+import subprocess
+@
+
+The first error to handle is if the given course doesn't exist.
+In that case, we give the error message and exit with a non-zero return code.
+<<handle data dir exceptions>>=
+except KeyError as err:
+  logging.error(err)
+  sys.exit(1)
+@
+
+To spawn the shell, we modify the prompt environment variable~[[PS1]].
+We want to add a note so that the user knows we're in this shell.
+In addition to that, it's just to map stdin, stdout and stderr so that we can 
+get an interactive shell.
+We also set the current working directory~[[cwd]] to the directory we want to 
+be in.
+<<spawn shell in [[data_dir]]>>=
+env = os.environ.copy()
+env["PS1"] = f"{course}/data {env['PS1']}"
+subprocess.run([os.environ["SHELL"]],
+                cwd=data_dir.path, env=env,
+                stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+@
+
+If the course is just created, the data directory might not have been created 
+just yet.
+However, in that case, we'd like to try to create the directory if the user 
+wants to spawn a shell.
+(Since they might want to create something there manually.)
+Once we've created it, we simply try again.
+<<handle shell exceptions>>=
+except FileNotFoundError as err:
+  logging.warning(f"The data directory doesn't exist: {err}")
+  try:
+    os.makedirs(data_dir.path)
+    logging.warning(f"Created {data_dir.path}")
+    <<spawn shell in [[data_dir]]>>
+  except Exception as err:
+    logging.error(f"Can't create directory: {err}")
+    sys.exit(1)

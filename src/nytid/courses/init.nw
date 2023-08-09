@@ -404,6 +404,8 @@ hits_from_register_dirs = []
 conf_path = None
 @
 
+\subsection{Listing all courses in register}
+
 To list all the courses, we simply list all directories in the register's 
 directory.
 <<functions>>=
@@ -430,3 +432,24 @@ elif len(hits_from_register_dirs) > 1:
                   f"several course registers: {hits_from_course_dirs}.")
 
 return conf_path
+@
+
+
+\section{Getting the data directory of a course}
+
+We want to access a course's data directory.
+We'll now provide a function that returns a [[StorageRoot]] object for a given 
+course's data directory.
+<<functions>>=
+def get_course_data(course: str,
+                    register: str = None,
+                    <<config arg>>) -> storage.StorageRoot:
+  """
+  Returns a StorageRoot object for the data directory of the course `course`.
+
+  If `register` is `None` (default), the first occurence of `course` in all 
+  registers will be used.
+  """
+  course_conf = get_course_config(course, register, config)
+  return storage.open_root(course_conf.get("data_path"))
+

@@ -7,6 +7,7 @@ PYTHONTEXFLAGS=	--interpreter "python:poetry run python3"
 
 nytid.pdf: ../src/nytid/cli/init.tex
 nytid.pdf: ../src/nytid/cli/courses.tex
+nytid.pdf: ../src/nytid/cli/schedule.tex
 
 nytid.pdf: ../src/nytid/storage/init.tex
 nytid.pdf: ../src/nytid/storage/afs.tex

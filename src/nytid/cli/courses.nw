@@ -965,7 +965,7 @@ Here we'll provide the arguments and options together with the autocompletion.
 We'd sometimes like to match courses from several registers.
 Then we'd like to filter them based on regex.
 <<argument and option definitions>>=
-register_option_regex = typer.Option(help="Regex for register names to use.",
+register_opt_regex = typer.Option(help="Regex for register names to use.",
                                      shell_complete=registers_regex)
 @
 
@@ -1007,7 +1007,7 @@ def test_registers_regex():
 
 \subsection{Matching courses using regex}
 
-Now we'll provide a course argument similar to [[register_option_regex]].
+Now we'll provide a course argument similar to [[register_opt_regex]].
 <<argument and option definitions>>=
 course_arg_regex = typer.Argument(help="Regex matching courses.",
                                   autocompletion=complete_course_regex)

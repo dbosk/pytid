@@ -5,6 +5,7 @@ In this chapter we introduce the subommands found under [[nytid schedule]],
 it's the [[cli.schedule]] module.
 <<schedule.py>>=
 import datetime
+from enum import Enum
 import ics.icalendar
 import logging
 import typer
@@ -31,7 +32,8 @@ We will use regex to match the courses and registers.
 <<subcommands>>=
 @cli.command()
 def show(<<default arguments for matching courses>>,
-         <<default arguments for start and end dates>>):
+         <<default arguments for start and end dates>>,
+         <<printing control options>>):
   """
   Shows schedule for courses in human readable format.
   """
@@ -148,18 +150,39 @@ elif event.begin.date() > end.date():
 
 \subsubsection{Printing the events}
 
-To print the events in a more useful way, we'd like to have an empty line 
-between weeks.
-So we must detect when weeks shift.
+To print the events in a more useful way, we'd like to have an empty line here 
+and there.
+Where we'd like to have it might vary on the printout.
+If we print a week, we'd might want to have it between days.
+Otherwise, between weeks for longer periods.
+<<printing control options>>=
+group_by: Annotated[GroupByDayOrWeek, group_by_day_or_week]
+  = "week"
+<<argument and option definitions>>=
+class GroupByDayOrWeek(str, Enum):
+  week = "week"
+  day = "day"
+
+group_by_day_or_week = typer.Option(help="Choose whether to group events "
+                                         "by day or week",
+                                    case_sensitive=False)
+@
+
+To print, we simply keep track of the first round, no extra spacing there; and 
+then add a line whenever we detect a change in either day or week.
 <<printing events variables>>=
 first = True
+if group_by == GroupByDayOrWeek.week:
+  group_by_idx = 1
+elif group_by == GroupByDayOrWeek.day:
+  group_by_idx = 2
 <<otherwise print [[event]]>>=
 if first:
   first = False
-  current_week = event.begin.isocalendar()[1]
-elif event.begin.isocalendar()[1] != current_week:
+  current_epoc = event.begin.isocalendar()[group_by_idx]
+elif event.begin.isocalendar()[group_by_idx] != current_epoc:
   print("\n")
-  current_week = event.begin.isocalendar()[1]
+  current_epoc = event.begin.isocalendar()[group_by_idx]
 
 print(schedutils.format_event_short(event))
 @

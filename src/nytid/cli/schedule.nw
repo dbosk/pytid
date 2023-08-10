@@ -37,7 +37,8 @@ def show(<<default arguments for matching courses>>,
   """
   Shows schedule for courses in human readable format.
   """
-  <<generate the schedule and print it to screen>>
+  <<generate [[schedule]]>>
+  <<print [[schedule]]>>
 @
 
 \subsection{Default arguments for matching courses}
@@ -80,7 +81,7 @@ def update_end_date(start, end):
   if end < start:
     return start + datetime.timedelta(weeks=1)
   return end
-<<generate the schedule and print it to screen>>=
+<<generate [[schedule]]>>=
 end = update_end_date(start, end)
 @
 
@@ -88,18 +89,13 @@ end = update_end_date(start, end)
 
 We want to generate a schedule containing the schedules of all matching 
 courses.
-<<generate the schedule and print it to screen>>=
+<<generate [[schedule]]>>=
 <<let [[the_courses]] be a list of (course, register)-pairs>>
 
 schedule = ics.icalendar.Calendar()
 
 for a_course, a_register in the_courses:
   <<add schedule of [[a_course]] to [[schedule]]>>
-
-<<printing events variables>>
-for event in schedule.timeline:
-  <<continue if [[event]] is not in start-end interval>>
-  <<otherwise print [[event]]>>
 @
 
 \subsubsection{Find the courses}
@@ -150,6 +146,15 @@ elif event.begin.date() > end.date():
 
 \subsubsection{Printing the events}
 
+To print, we simply go through the timeline and print events that fall within 
+the time interval that we're interested in.
+<<print [[schedule]]>>=
+<<printing events variables>>
+for event in schedule.timeline:
+  <<continue if [[event]] is not in start-end interval>>
+  <<otherwise print [[event]]>>
+@
+
 To print the events in a more useful way, we'd like to have an empty line here 
 and there.
 Where we'd like to have it might vary on the printout.
@@ -186,6 +191,7 @@ elif event.begin.isocalendar()[group_by_idx] != current_epoc:
 
 print(schedutils.format_event_short(event))
 @
+
 
 \section{Generate sign-up sheet}
 

@@ -24,6 +24,7 @@ clean:
 	${RM} $(foreach files,${TESTS},$(shell echo ${files} | cut -d: -f1))
 	${RM} -Rf __pycache__
 	${RM} test_*.py
+	${RM} ~/.config/pytest/config.json
 
 .PHONY: distclean
 distclean:

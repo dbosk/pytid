@@ -123,6 +123,8 @@ def read_calendar(url):
   if response.status_code == requests.codes.ok:
     return ics.icalendar.Calendar(imports=response.text)
   raise Exception(response.text)
+<<imports>>=
+import requests
 @
 
 

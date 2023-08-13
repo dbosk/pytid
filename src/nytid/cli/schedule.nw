@@ -1,3 +1,258 @@
+\chapter{The [[cli.schedule]] and the [[schedule]] subcommands}%
+\label{cli.schedule}
+
+In this chapter we introduce the subommands found under [[nytid schedule]],
+it's the [[cli.schedule]] module.
+<<schedule.py>>=
+import datetime
+from enum import Enum
+import ics.icalendar
+import logging
+import typer
+from typing_extensions import Annotated
+
+from nytid.cli import courses as coursescli
+from nytid import courses as courseutils
+from nytid import schedules as schedutils
+
+cli = typer.Typer(name="schedule",
+                  help="Working with course schedules")
+
+<<helper functions>>
+<<argument and option definitions>>
+<<subcommands>>
+@
+
+
+\section{Showing the schedule, the [[schedule show]] command}
+
+We want a command to just show the schedule in human readable format.
+It should be able to include several courses.
+We will use regex to match the courses and registers.
+<<subcommands>>=
+@cli.command()
+def show(<<default arguments for matching courses>>,
+         <<default arguments for start and end dates>>,
+         <<printing control options>>):
+  """
+  Shows schedule for courses in human readable format.
+  """
+  <<generate [[schedule]]>>
+  <<print [[schedule]]>>
+@
+
+\subsection{Default arguments for matching courses}
+
+The first argument we need is to identify a set of courses.
+For this we might also have to identify a set of registers.
+We'll use the argument and option defined in the [[cli.courses]] module.
+We'll default to all courses ([[.*]]) in the register of the [[mine]] command.
+<<default arguments for matching courses>>=
+course: Annotated[str, coursescli.course_arg_regex] = ".*",
+register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
+@
+
+\subsection{Default arguments for start and end dates}
+
+We'd also like to show only part of the schedule, given a start and end points.
+We want to have today as the default start point and a week later as the 
+default end point.
+<<default arguments for start and end dates>>=
+start: Annotated[datetime.datetime, start_date_opt]
+  = str(datetime.date.today()),
+end: Annotated[datetime.datetime, end_date_opt]
+  = str(datetime.date.today() + datetime.timedelta(weeks=1))
+<<argument and option definitions>>=
+start_date_opt = typer.Option(help="The start date",
+                              formats=["%Y-%m-%d"])
+end_date_opt = typer.Option(help="The end date",
+                            formats=["%Y-%m-%d"])
+@
+
+If we change the start date, but not the end date, the end date might be before 
+the start date.
+A user will likely expect that if they update only the start date, the end date 
+will still be a week after the start date.
+<<helper functions>>=
+def update_end_date(start, end):
+  """
+  Returns a correct end date.
+  """
+  if end < start:
+    return start + datetime.timedelta(weeks=1)
+  return end
+<<generate [[schedule]]>>=
+end = update_end_date(start, end)
+@
+
+\subsection{Generating the schedule and printing it}
+
+We want to generate a schedule containing the schedules of all matching 
+courses.
+<<generate [[schedule]]>>=
+<<let [[the_courses]] be a list of (course, register)-pairs>>
+
+schedule = ics.icalendar.Calendar()
+
+for a_course, a_register in the_courses:
+  <<add schedule of [[a_course]] to [[schedule]]>>
+@
+
+\subsubsection{Find the courses}
+
+We can easily find the courses using the helper functions from the [[coursescli]] 
+module.
+<<let [[the_courses]] be a list of (course, register)-pairs>>=
+registers = coursescli.registers_regex(register)
+the_courses = list(coursescli.courses_regex(course, registers))
+@
+
+\subsubsection{Merge the schedules}
+
+To create one schedule, we simply merge the events from the different 
+schedules.
+We simply fetch the course's ICS calendar from the course configuration.
+Then we can simply get a calendar object from that URL.
+<<add schedule of [[a_course]] to [[schedule]]>>=
+try:
+  course_conf = courseutils.get_course_config(a_course, a_register)
+except KeyError as err:
+  logging.error(f"Can't find {a_course} in {a_register}: {err}")
+  continue
+
+try:
+  course_ics_url = course_conf.get("ics")
+except KeyError as err:
+  logging.error(f"Can't find schedule URL for {a_course}: {err}")
+  continue
+
+course_schedule = schedutils.read_calendar(course_ics_url)
+
+schedule.events |= course_schedule.events
+@
+
+\subsubsection{Filter events based on start--end time}
+
+We don't want to print events that end before our starting time and we don't 
+want to print events that start after our ending time.
+Once we've passed the ending time, we can break, since the timeline is given in 
+chronological order.
+<<continue if [[event]] is not in start-end interval>>=
+if event.end.date() < start.date():
+  continue
+elif event.begin.date() > end.date():
+  continue
+@
+
+\subsubsection{Printing the events}
+
+To print, we simply go through the timeline and print events that fall within 
+the time interval that we're interested in.
+<<print [[schedule]]>>=
+<<printing events variables>>
+for event in schedule.timeline:
+  <<continue if [[event]] is not in start-end interval>>
+  <<otherwise print [[event]]>>
+@
+
+To print the events in a more useful way, we'd like to have an empty line here 
+and there.
+Where we'd like to have it might vary on the printout.
+If we print a week, we'd might want to have it between days.
+Otherwise, between weeks for longer periods.
+<<printing control options>>=
+group_by: Annotated[GroupByDayOrWeek, group_by_day_or_week]
+  = "week"
+<<argument and option definitions>>=
+class GroupByDayOrWeek(str, Enum):
+  week = "week"
+  day = "day"
+
+group_by_day_or_week = typer.Option(help="Choose whether to group events "
+                                         "by day or week",
+                                    case_sensitive=False)
+@
+
+To print, we simply keep track of the first round, no extra spacing there; and 
+then add a line whenever we detect a change in either day or week.
+<<printing events variables>>=
+first = True
+if group_by == GroupByDayOrWeek.week:
+  group_by_idx = 1
+elif group_by == GroupByDayOrWeek.day:
+  group_by_idx = 2
+<<otherwise print [[event]]>>=
+if first:
+  first = False
+  current_epoc = event.begin.isocalendar()[group_by_idx]
+elif event.begin.isocalendar()[group_by_idx] != current_epoc:
+  print("\n")
+  current_epoc = event.begin.isocalendar()[group_by_idx]
+
+print(schedutils.format_event_short(event))
+@
+
+
+\section{Generate sign-up sheet}
+
+<<time.py>>=
+from config import COURSES, SIGNUP
+import config
+from nytid.signup import utils
+from nytid.signup import sheets
+from nytid.signup import hr
+
+def to_hours(td):
+    return td.total_seconds()/60/60
+
+def needed_TAs(event):
+    if "Övning" in event.name and event.begin.weekday() in [3, 4]:
+        return 1
+    elif "laboration" in event.name or "Laboration" in event.name:
+        return event.description.split().count("grupp")
+    return utils.needed_TAs(event)
+
+for course, url in COURSES.items():
+    sheets.generate_signup_sheet(course, url, needed_TAs, lambda x: x)
+
+booked = []
+
+for course, url in SIGNUP.items():
+    booked += sheets.read_signup_sheet_from_url(url)
+
+h_per_student = hr.hours_per_student(booked)
+
+print("# dasak")
+
+for event, hours in h_per_student.items():
+    print(f"{event}: {to_hours(hours):.2f} h/student")
+
+print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
+        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+
+
+print("# Amanuenser")
+amanuensis = hr.compute_amanuensis_data(booked,
+        add_prep_time=config.add_prep_time)
+for user, data in amanuensis.items():
+    if not user:
+        continue
+    print(f"{user}: {data[2]:.2f} h, "
+          f"{100*hr.compute_percentage(*data):.1f}%: "
+          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
+
+print()
+print("# Hourly")
+for user, hours in hr.hours_per_TA(booked, 
+                                   add_prep_time=config.add_prep_time).items():
+    if not user or user in amanuensis:
+        continue
+    print(f"{user}: {to_hours(hours):.2f} h")
+@
+
+\section{Show schedule with sign-ups}
+
+<<schedule.py.0>>=
 import arrow
 from config import COURSES, SIGNUP
 import ics.icalendar
@@ -52,3 +307,237 @@ def main():
 
 if __name__ == "__main__":
     main()
+@
+
+
+\section{Booked TAs}
+
+<<booked.py>>=
+import arrow
+from config import COURSES, SIGNUP
+import ics.icalendar
+from nytid.signup import sheets
+import nytid.schedules as sched
+import sys
+
+def events_booked_TAs(csv_rows):
+    """
+    Input: a list of CSV data (tuples)
+
+    Output: a list of CSV data, only containing booked TAs, excluding the 
+    reserves.
+    """
+    for row in csv_rows:
+        booked, _ = sheets.get_booked_TAs_from_csv(row)
+        yield row[:len(sheets.SIGNUP_SHEET_HEADER)] + booked
+
+
+def generate_schedule(csv_rows):
+    """
+    Generates schedule (ICS format) from a list of CSV rows,
+    returns an ics.icalendar.Calendar object.
+    """
+    schedule = ics.icalendar.Calendar()
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+
+    return schedule
+
+
+def format_event(event):
+    """
+    Returns a string representation of the event.
+    """
+    return f"{sched.format_event_short(event)}; " + \
+            ", ".join([attendee.email for attendee in event.attendees])
+
+
+def main():
+    """Main program"""
+    booking_data = []
+    for _, url in SIGNUP.items():
+        booking_data += sheets.read_signup_sheet_from_url(url)
+
+    schedule = generate_schedule(events_booked_TAs(booking_data))
+    now = arrow.get(2022, 8, 29)
+    if now < arrow.now():
+        now = arrow.now()
+
+    if len(sys.argv) > 1:
+        try:
+            time_limit = now.shift(weeks=+int(sys.argv[1]))
+        except ValueError as err:
+            print(f"{sys.argv[0]}: {err}: "
+                  f"first argument must be the number of weeks to print",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    first = True
+    for event in schedule.timeline:
+        try:
+            if event.begin < now:
+                continue
+            elif event.begin > time_limit:
+                break
+        except NameError:
+            pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
+
+        print(format_event(event))
+
+
+if __name__ == "__main__":
+    main()
+@
+
+\section{Lacking sign-ups}
+
+<<missing.py>>=
+import arrow
+from config import COURSES, SIGNUP
+import ics.icalendar
+from nytid.signup import sheets
+import nytid.schedules as sched
+import sys
+
+def events_missing_TAs(csv_rows, missing_factor=0.5):
+    """
+    Input: a list of CSV data (tuples)
+
+    Output: a list of CSV data, only those rows where there are fewer TAs 
+    booked than the number of needed TAs.
+    """
+    needed_TAs_index = sheets.SIGNUP_SHEET_HEADER.index("#Needed TAs")
+
+    for row in csv_rows:
+        num_TAs = len(sheets.get_TAs_from_csv(row))
+        needed_TAs = int(row[needed_TAs_index])
+
+        if num_TAs < missing_factor * needed_TAs:
+            yield row
+
+
+def generate_schedule(csv_rows):
+    """
+    Generates schedule (ICS format) from a list of CSV rows,
+    returns an ics.icalendar.Calendar object.
+    """
+    schedule = ics.icalendar.Calendar()
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+
+    return schedule
+
+
+def format_event(event):
+    """
+    Returns a string representation of the event.
+    """
+    return f"{sched.format_event_short(event)}; " + \
+            ", ".join([attendee.email for attendee in event.attendees])
+
+
+def main():
+    """Main program"""
+    booking_data = []
+    for _, url in SIGNUP.items():
+        booking_data += sheets.read_signup_sheet_from_url(url)
+
+    schedule = generate_schedule(events_missing_TAs(booking_data))
+    now = arrow.get(2022, 8, 29)
+    if now < arrow.now():
+        now = arrow.now()
+
+    if len(sys.argv) > 1:
+        try:
+            time_limit = now.shift(weeks=+int(sys.argv[1]))
+        except ValueError as err:
+            print(f"{sys.argv[0]}: {err}: "
+                  f"first argument must be the number of weeks to print",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    first = True
+    for event in schedule.timeline:
+        try:
+            if event.begin < now:
+                continue
+            elif event.begin > time_limit:
+                break
+        except NameError:
+            pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
+
+        print(format_event(event))
+
+
+if __name__ == "__main__":
+    main()
+@
+
+
+\section{My ICS}
+
+<<myics.py>>=
+import arrow
+from config import COURSES, SIGNUP
+import functools
+import ics.icalendar
+from nytid.signup import sheets
+import os
+import sys
+
+def add_reserve_to_title(ta, event):
+    """
+    Input: an event in CSV form.
+    Ouput: the same CSV data, but with title prepended "RESERVE: " if TA is 
+    among the reserves.
+    """
+    _, reserves = sheets.get_booked_TAs_from_csv(event)
+    if ta in reserves:
+        event[0] = "RESERVE: " + event[0]
+
+    return event
+
+def generate_schedule():
+    """Generates schedule, uses sys.args or USER environment variable, returns 
+    schedule as ics.icalendar.Calendar object"""
+
+    schedule_csv = []
+
+    for course, url in SIGNUP.items():
+        schedule_csv += sheets.read_signup_sheet_from_url(url)
+
+    if len(sys.argv) < 2:
+        user = os.environ["USER"]
+    else:
+        user = sys.argv[1]
+
+    schedule_csv = sheets.filter_events_by_TA(user, schedule_csv)
+    schedule_csv = map(functools.partial(add_reserve_to_title, user), 
+            schedule_csv)
+
+    schedule = ics.icalendar.Calendar()
+    schedule.events |= set(map(sheets.EventFromCSV, schedule_csv))
+
+    return schedule
+
+
+def main():
+    """Main program"""
+    print(generate_schedule())
+
+
+if __name__ == "__main__":
+    main()
+@

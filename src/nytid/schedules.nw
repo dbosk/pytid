@@ -140,10 +140,13 @@ def event_filter(events):
   (generator). The events to include are the teaching events.
   """
   events_whitelist = [
-    "Datorlaboration", "Laboration",
-    "Övning",
-    "Seminarium", "Redovisning", "Examination",
-    "Föreläsning"
+    "Datorlaboration", "Computer lab",
+    "Laboration", "Lab",
+    "Övning", "Exercise", "Tutorial",
+    "Seminarium", "Seminar",
+    "Redovisning", "Presentation",
+    "Examination",
+    "Föreläsning", "Lecture"
   ]
 
   for event in events:

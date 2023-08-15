@@ -173,14 +173,14 @@ Finally, to remove an entry, we simply need the name.
 In this case it makes sense to autocomplete, since this is an existing 
 register.
 <<registry rm args>>=
-name: Annotated[str, register_name_arg]
+name: Annotated[str, register_arg]
 <<argument and option definitions>>=
-register_name_arg = typer.Argument(help="The name of the register.",
+register_arg = typer.Argument(help="The name of the register.",
                                    autocompletion=complete_register_arg)
 @
 
 To complete the register name, we provide the 
-function~[[complete_register_name]].
+function~[[complete_register]].
 This function simply lists all registers ([[registry.ls()]]) and filters based 
 on what the user has provided ([[incomplete]]).
 <<helper functions>>=
@@ -239,13 +239,13 @@ register_name: Annotated[str, register_option] = None,
 register_option = typer.Option(help="Name of register to use. "
                                     "Must be used if there are more than "
                                     "one register in the config.",
-                               shell_complete=complete_register_name)
+                               shell_complete=complete_register)
 @
 
 We also want to have a function for autocompletion in the shell.
 We simply filter out the matching names available in the registry.
 <<helper functions>>=
-def complete_register_name(ctx, param, incomplete: str):
+def complete_register(ctx, param, incomplete: str):
   """
   Returns list of matching register names available.
   """
@@ -454,7 +454,7 @@ def complete_course_name(ctx: typer.Context, incomplete: str):
   Returns a list of course names matching `incomplete`.
   """
   <<populate [[registers]] with the registers to use>>
-  for register_name, register_path in registers:
+  for register, register_path in registers:
     <<yield (course name, register name) tuples that matches [[incomplete]]>>
 @
 
@@ -464,30 +464,30 @@ Remember that we want the name--path tuple for each register.
 <<populate [[registers]] with the registers to use>>=
 registers = register_pairs(ctx.params.get("register"))
 <<helper functions>>=
-def register_pairs(register_name=None):
+def register_pairs(register=None):
   """
   Returns a list of (name, path)-tuples (pairs) for registers to use.
 
-  If `register_name` is None, we use all existing registers found 
+  If `register` is None, we use all existing registers found 
   in the config. Otherwise, we look up the path of the one specified and return 
   a list containing only that name--path-tuple.
   """
-  if register_name:
-    return [(register_name,
-             registry.get(register_name))]
+  if register:
+    return [(register,
+             registry.get(register))]
   else:
-    return [(register_name,
-             registry.get(register_name))
-            for register_name in registry.ls()]
+    return [(register,
+             registry.get(register))
+            for register in registry.ls()]
 @
 
 In the register, each course has its own subdirectory.
 So we simply need to return the subdirectories of [[register_path]] matching 
-[[incomplete]] together with [[register_name]].
+[[incomplete]] together with [[register]].
 <<yield (course name, register name) tuples that matches [[incomplete]]>>=
 courses_in_reg = courses.all_courses(register_path)
 matching_courses = filter(lambda x: x.startswith(incomplete), courses_in_reg)
-return map(lambda x: (x, f"from {register_name}"),
+return map(lambda x: (x, f"from {register}"),
            matching_courses)
 @
 
@@ -809,7 +809,7 @@ instead of the original course name.
 <<mine subcommands>>=
 @minecli.command(name="add")
 def mine_add(course: Annotated[str, course_arg_autocomplete],
-             register: Annotated[str, register_name_arg] = None,
+             register: Annotated[str, register_arg] = None,
              alias: Annotated[str, alias_opt] = None):
   """
   Adds a course to my courses.
@@ -872,19 +872,19 @@ register_map = {register: registry.get(register)
                 for register in registry.ls()}
 
 <<variables for search for [[course]] in [[register_map]]>>
-for register_name, register_path in register_map.items():
+for register, register_path in register_map.items():
   <<search for matches to [[course]] in [[register_path]]>>
 
 <<check for ending criteria and set [[register]] to [[course]]'s>>
 @
 
-Now, we just need to check if [[course]] is part of [[register_name]].
-If so, we add [[register_name]] to the list of matches.
+Now, we just need to check if [[course]] is part of [[register]].
+If so, we add [[register]] to the list of matches.
 <<search for matches to [[course]] in [[register_path]]>>=
 matching_courses = filter(lambda x: x == course,
                           courses.all_courses(register_path))
 if len(list(matching_courses)) > 0:
-  matching_registers.append(register_name)
+  matching_registers.append(register)
 <<variables for search for [[course]] in [[register_map]]>>=
 matching_registers = []
 @

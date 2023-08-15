@@ -234,13 +234,13 @@ We would first like to create the course in one of the registers available.
 If there is only one register, we'll create the course there.
 If there are more, however, we need the user to decide which one to use.
 <<new command args>>=
-register_name: Annotated[str, register_option] = None,
+register: Annotated[str, register_option] = MINE,
 <<new arguments and options>>=
 register_option = typer.Option(help="Name of register to use. "
                                     "Must be used if there are more than "
                                     "one register in the config.",
                                shell_complete=complete_register)
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 We also want to have a function for autocompletion in the shell.
 We simply filter out the matching names available in the registry.
@@ -384,7 +384,7 @@ This corresponds to how the [[.set]] method of [[Config]] works.
 
 @cli.command(name="config")
 def config_cmd(course: Annotated[str, course_arg_autocomplete],
-               register: Annotated[str, register_option] = None,
+               register: Annotated[str, register_option] = MINE,
                path: Annotated[str, path_arg] = "",
                values: Annotated[typing.List[str], value_arg] = None):
   """
@@ -401,7 +401,7 @@ def config_cmd(course: Annotated[str, course_arg_autocomplete],
     except KeyError as err:
       logging.error(f"{path} doen't exist in the config: {err}")
       sys.exit(1)
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 We will now cover [[course_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
@@ -665,7 +665,7 @@ We already have the option settings in [[register_option]].
 We also already have a function to list all courses, [[all_courses]].
 <<subcommands>>=
 @cli.command()
-def ls(register: Annotated[str, register_option] = None):
+def ls(register: Annotated[str, register_option] = MINE):
   """
   Lists all available courses in all registers in the registry. Output format: 
 
@@ -686,7 +686,7 @@ def ls(register: Annotated[str, register_option] = None):
 <<list all courses in [[register]]>>=
 for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 
 \section{Accessing the course data}
@@ -716,7 +716,7 @@ The shell we'll use will be the same as the one the user is currently running,
 <<data subcommands>>=
 @datacli.command()
 def shell(course: Annotated[str, course_arg_autocomplete],
-          register: Annotated[str, register_name_arg] = None):
+          register: Annotated[str, register_arg] = MINE):
   """
   Spawns a shell in the data directory of a course.
   """
@@ -732,7 +732,7 @@ def shell(course: Annotated[str, course_arg_autocomplete],
 <<subcommand imports>>=
 import os
 import subprocess
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 The first error to handle is if the given course doesn't exist.
 In that case, we give the error message and exit with a non-zero return code.
@@ -775,7 +775,7 @@ except FileNotFoundError as err:
 @
 
 
-\section{My courses, the [[mine]] subcommands}
+\section{My courses, the [[mine]] subcommands}\label{mine}
 
 We will now create a kind of meta-register called [[mine]] that will include 
 all courses we consider ours.

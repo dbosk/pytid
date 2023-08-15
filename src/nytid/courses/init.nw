@@ -175,21 +175,30 @@ register_path = registry.get(register, config=config)
 
 \subsection{Setting the course settings}
 
-We want to be able to set the course settings at two times:
-first, when we create the course; second, when we want to see or modify the 
-course settings afterwards.
+We want to be able to set the course settings.
+To make it easier, we'll simply accept all settings as a dictionary [[kwdata]] 
+that will be set in the course config.
+However, we want to provide some defaults for some of them if they're not 
+given.
+<<new args>>=
+kwdata: dict = None,
+<<new doc>>=
+- `kwdata` is a dictionary containing key-value pairs for the course 
+  configuration. `kwdata` expect the following:
 
-We will have a similar design as the [[config]] command of the [[typerconf]] 
-package\footnote{%
-  See URL \url{https://pypi.org/project/typerconf/} or
-  the latest PDF from URL \url{https://github.com/dbosk/typerconf/releases}.
-}.
-When we create the course, we will set all options to some value (possibly 
-[[None]]).
-Then we can let the [[config]] command read the available options from the 
-course config.
+    <<kwdata doc>>
 
-Let's add the settings.
+  Any other key--value pairs will simply be written to the course configuration 
+  as is.
+<<add settings to [[course_conf]]>>=
+if not kwdata:
+  kwdata = {}
+
+<<process expected [[key]]s>>
+
+for key, value in kwdata.items():
+  course_conf.set(key, value)
+@
 
 \subsection{Contact information}
 
@@ -199,9 +208,7 @@ course.
 Usually, it's the course responsible who will run the [[courses new]] command.
 We will let the user adjust the default values through the main config file, in 
 the same fashion as Git.
-<<new args>>=
-contact: str = None,
-<<new doc>>=
+<<kwdata doc>>=
 - `contact` contains the contact information for the course responsible, it can 
   be any format, but we recommend "Firstname Lastname <email>". The default 
   value is built from values in the main config file:
@@ -209,7 +216,12 @@ contact: str = None,
     - `me.name` contains the name,
     - `me.email` contains the email address.
 
-<<add settings to [[course_conf]]>>=
+<<process expected [[key]]s>>=
+try:
+  contact = kwdata["contact"]
+except KeyError:
+  contact = None
+
 if not contact:
   try:
     contact = config.get("me.name")
@@ -226,7 +238,7 @@ if not contact:
     else:
       contact = email
 
-course_conf.set("contact", contact)
+kwdata["contact"] = contact
 @
 
 \subsection{Course code}
@@ -236,35 +248,31 @@ We need one to identity the course from year to year and to identify similar
 courses.
 The reason we're interested in this is because then we can recruit TAs from 
 similar enough courses.
-<<new args>>=
-code: str = None,
-<<new doc>>=
+<<kwdata doc>>=
 - `code`, which is the course code. This is to relate the course to other 
   courses through `related_codes`. However, it's not mandatory.
 
-<<new args>>=
-related_codes: typing.List[str] = None,
-<<new doc>>=
 - `related_codes`, a list of related course codes. Courses with one of these 
   course codes can share TAs.
 
-<<add settings to [[course_conf]]>>=
-course_conf.set("code", code)
-course_conf.set("related_codes", related_codes)
+<<process expected [[key]]s>>=
+if "code" not in kwdata:
+  kwdata["code"] = None
+if "related_codes" not in kwdata:
+  kwdata["related_codes"] = None
 @
 
 \subsection{The schedule}
 
 All courses need a schedule for their teaching.
 We add a URL to the ICS file, \eg TimeEdit.
-<<new args>>=
-ics: str = None,
-<<new doc>>=
+<<kwdata doc>>=
 - `ics` (optional, default None), a URL to an ICS file with the schedule of the 
   course. E.g. a URL to a TimeEdit export/subscription.
 
-<<add settings to [[course_conf]]>>=
-course_conf.set("ics", ics)
+<<process expected [[key]]s>>=
+if "ics" not in kwdata:
+  kwdata["ics"] = None
 @
 
 \subsection{The data directory}
@@ -273,23 +281,27 @@ Each course also needs a data directory.
 The data directory is a directory that only members can access.
 It can contain a more detailed config or TA bookings.
 The default path is simply to append [[data]] to the course's config path.
-<<new args>>=
-data_path: str = None,
-<<new doc>>=
-- `data_path` is the path to the course's data directory. The default value is 
-  `None`, that means append `/data` to the course's config directory.
+<<kwdata doc>>=
+- `data_path` is the path to the course's data directory. If not supplied,
+  we append `/data` to the course's config directory.
 
 @
 
 If the user didn't specify a data directory, then [[data_path]] will be 
-[[None]].
+[[None]] or not exist.
 In this case, we should update it with the default value.
 We get the default value from [[root.path]] (see
 [[<<new body>>]]).
-<<add settings to [[course_conf]]>>=
+<<process expected [[key]]s>>=
+try:
+  data_path = kwdata["data_path"]
+except KeyError:
+  data_path = None
+
 if not data_path:
   data_path = str(root.path / "data")
-course_conf.set("data_path", data_path)
+
+kwdata["data_path"] = data_path
 @
 
 \subsection{Testing the [[new]] function}

@@ -271,6 +271,14 @@ Then we can let the [[courses config]] command read the available options from
 the course config.
 
 Let's add the settings.
+We'll add them to a dictionary~[[kwdata]] that we'll later pass to the function 
+that creates the course.
+<<new command body>>=
+kwdata = {
+  <<course settings>>
+}
+courses.new(name, register, kwdata)
+@
 
 \subsection{Contact information}
 
@@ -288,6 +296,8 @@ contact_opt = typer.Option(help="The course responsible's contact info. "
                                 "`nytid config me.name --set 'First Last'"
                                 " and "
                                 "`nytid config me.email --set x@y.z.")
+<<course settings>>=
+"contact": contact,
 @
 
 Note that we don't have to set those values to anything but [[None]] here, the 
@@ -305,13 +315,17 @@ code: Annotated[str, code_opt] = None,
 <<new arguments and options>>=
 code_opt = typer.Option(help="The course code, "
                              "to relate it to similar courses using "
-                             "`related_codes`.")
+                             "`related`.")
+<<course settings>>=
+"code": code,
 <<new command args>>=
-related_codes: Annotated[typing.List[str], related_opt] = [],
+related: Annotated[typing.List[str], related_opt] = [],
 <<new arguments and options>>=
 related_opt = typer.Option(help="List of related course codes, "
                                 "courses with any of these codes can "
                                 "share TAs.")
+<<course settings>>=
+"related_codes": related,
 @
 
 \subsection{The schedule}
@@ -324,6 +338,8 @@ ics: Annotated[str, ics_opt] = None,
 ics_opt = typer.Option(help="A URL to an ICS file containing the "
                             "schedule. E.g. an export/subscription from "
                             "TimeEdit.")
+<<course settings>>=
+"ics": ics,
 @
 
 \subsection{The data directory}
@@ -338,21 +354,15 @@ data_path: Annotated[pathlib.Path, data_path_opt] = None,
 data_path_opt = typer.Option(help="Path to the course's data directory, "
                                   "default is to append `/data` to the "
                                   "course's config directory.")
+<<course settings>>=
+"data_path": data_path,
 @
 
 If the user didn't specify a data directory, then [[data_path]] will be 
 [[None]].
 The [[courses.new]] function will set the default.
 
-\subsection{Finally creating the course}
 
-Now that we have all the arguments, we can simply make the call to 
-[[courses.new]].
-<<new command body>>=
-courses.new(name, register_name, contact,
-            code, related_codes,
-            ics, data_path)
-@
 
 
 \section{Revising the config of a course, the [[courses config]] command}

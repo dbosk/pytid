@@ -362,7 +362,24 @@ If the user didn't specify a data directory, then [[data_path]] will be
 [[None]].
 The [[courses.new]] function will set the default.
 
+\subsection{The number of students and groups}
 
+When we create the course we'd like to know the number of students and the 
+number of groups.
+These are the same numbers as used when scheduling the course.
+We will use them to compute the number of needed TAs etc.
+<<new command args>>=
+num_students: Annotated[int, num_students_opt] = None,
+num_groups: Annotated[int, num_groups_opt] = None,
+<<new arguments and options>>=
+num_students_opt = typer.Option(help="The total number of students "
+                                     "in the course.")
+num_groups_opt = typer.Option(help="The number of groups that the class "
+                                   "will be divided into.")
+<<course settings>>=
+"num_students": num_students,
+"num_groups": num_groups,
+@
 
 
 \section{Revising the config of a course, the [[courses config]] command}

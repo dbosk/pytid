@@ -15,6 +15,8 @@ from nytid.cli import courses as coursescli
 from nytid import courses as courseutils
 from nytid import schedules as schedutils
 
+<<imports>>
+
 cli = typer.Typer(name="schedule",
                   help="Working with course schedules")
 
@@ -195,25 +197,43 @@ print(schedutils.format_event_short(event))
 
 \section{Generate sign-up sheet}
 
+<<subcommands>>=
+@cli.command()
+def generate_signup_sheet(<<default arguments for matching courses>>,
+                          <<default options for teaching specifics>>):
+  """
+  Generates a sign-up sheet to be used with Google Sheets for TAs to sign up.
+  """
+  pass
+
+<<default options for teaching specifics>>=
+<<imports>>=
+from nytid.signup import utils
+from nytid.signup import sheets
+@
+
+<<foobar>>=
+def needed_TAs(event):
+    if "Övning" in event.name and event.begin.weekday() in [3, 4]:
+        return 1
+    elif "laboration" in event.name or "Laboration" in event.name:
+        return 3*event.description.split().count("grupp")
+    return utils.needed_TAs(event)
+
+courses = {course: nytid.courses.get_course_config(course).get("ics")
+           for course in sys.argv[1:]}
+
+for course, url in courses.items():
+    sheets.generate_signup_sheet(course, url, needed_TAs, lambda x: x)
 <<time.py>>=
-from config import COURSES, SIGNUP
-import config
+import typerconf
+
 from nytid.signup import utils
 from nytid.signup import sheets
 from nytid.signup import hr
 
 def to_hours(td):
     return td.total_seconds()/60/60
-
-def needed_TAs(event):
-    if "Övning" in event.name and event.begin.weekday() in [3, 4]:
-        return 1
-    elif "laboration" in event.name or "Laboration" in event.name:
-        return event.description.split().count("grupp")
-    return utils.needed_TAs(event)
-
-for course, url in COURSES.items():
-    sheets.generate_signup_sheet(course, url, needed_TAs, lambda x: x)
 
 booked = []
 

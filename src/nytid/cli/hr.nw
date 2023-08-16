@@ -37,52 +37,6 @@ course: Annotated[str, coursescli.course_arg_regex] = ".*",
 register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
 @
 
-\section{Generating the schedule}
-
-We want to generate a schedule containing the schedules of all matching 
-courses.
-<<generate [[schedule]]>>=
-<<let [[the_courses]] be a list of (course, register)-pairs>>
-
-schedule = ics.icalendar.Calendar()
-
-for a_course, a_register in the_courses:
-  <<add schedule of [[a_course]] to [[schedule]]>>
-@
-
-\subsubsection{Find the courses}
-
-We can easily find the courses using the helper functions from the [[coursescli]] 
-module.
-<<let [[the_courses]] be a list of (course, register)-pairs>>=
-registers = coursescli.registers_regex(register)
-the_courses = list(coursescli.courses_regex(course, registers))
-@
-
-\subsubsection{Merge the schedules}
-
-To create one schedule, we simply merge the events from the different 
-schedules.
-We simply fetch the course's ICS calendar from the course configuration.
-Then we can simply get a calendar object from that URL.
-<<add schedule of [[a_course]] to [[schedule]]>>=
-try:
-  course_conf = courseutils.get_course_config(a_course, a_register)
-except KeyError as err:
-  logging.error(f"Can't find {a_course} in {a_register}: {err}")
-  continue
-
-try:
-  course_ics_url = course_conf.get("ics")
-except KeyError as err:
-  logging.error(f"Can't find schedule URL for {a_course}: {err}")
-  continue
-
-course_schedule = schedutils.read_calendar(course_ics_url)
-
-schedule.events |= course_schedule.events
-@
-
 
 \section{Generate sign-up sheet}
 

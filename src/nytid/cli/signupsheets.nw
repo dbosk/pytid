@@ -151,6 +151,27 @@ if edit:
 import os, platform, subprocess
 @
 
+\section{Setting the sign-up sheet URL}
+
+We need a command to set the URL to the CSV for the sign-up sheet used.
+<<subcommands>>=
+@cli.command()
+def set_url(<<argument for matching courses>>,
+            url: Annotated[str, url_arg],
+            <<option for matching registers, default to mine>>):
+  """
+  Sets the URL of the sign-up sheet for the course(s).
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+  for _, conf in courses.items():
+    conf.set("signupsheet.url", url)
+<<argument and option definitions>>=
+url_arg = typer.Argument(help="The URL for the sign-up sheet, "
+                              "it's the same URL as the one shared with "
+                              "TAs to sign up.")
+@
+
+
 \section{Teaching time totals for a course}
 
 <<time.py>>=

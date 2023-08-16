@@ -8,6 +8,7 @@ import datetime
 from enum import Enum
 import ics.icalendar
 import logging
+import pathlib
 import typer
 from typing_extensions import Annotated
 
@@ -20,7 +21,6 @@ from nytid import schedules as schedutils
 cli = typer.Typer(name="hr",
                   help="Managing time for teaching")
 
-<<helper functions>>
 <<argument and option definitions>>
 <<subcommands>>
 @
@@ -105,11 +105,11 @@ Then we can get the list of courses and their ICS URLs.
 We then iterate through them and generate a sign-up sheet for each.
 <<generate sign-up sheet>>=
 registers = coursescli.registers_regex(register)
-courses = {course_reg: nytid.courses.get_course_config(*course_reg).get("ics")
+courses = {course_reg: courseutils.get_course_config(*course_reg)
            for course_reg in coursescli.courses_regex(course, registers)}
 
 <<compute [[timestamp]]>>
-for (course, register), url in courses.items():
+for (course, register), course_conf in courses.items():
   <<compute [[group_size]] for [[course]]>>
 
   def needed_TAs(event):
@@ -117,6 +117,7 @@ for (course, register), url in courses.items():
 
   <<set [[outfile]] based on [[timestamp]] for [[course]]>>
 
+  url = course_conf.get("ics")
   sheets.generate_signup_sheet(outfile, url, needed_TAs)
 <<imports>>=
 from nytid.signup import sheets
@@ -126,8 +127,6 @@ from nytid.signup import utils
 By default, [[utils.needed_TAs]] uses the 12 as the group size.
 This is the optimal group size, but we might now have exactly that.
 <<compute [[group_size]] for [[course]]>>=
-course_conf = courseutils.get_course_config(course)
-
 num_students = course_conf.get("num_students")
 num_groups = course_conf.get("num_groups")
 
@@ -147,7 +146,7 @@ outpath_opt = typer.Option(help="Path where to write the sign-up sheet "
 <<set [[outfile]] based on [[timestamp]] for [[course]]>>=
 if not outpath:
   data_root = courseutils.get_course_data(course, register)
-  outfile = data_root.path / f"signup-{timestamp}.csv"
+  outfile = data_root.path / f"signup-{timestamp}"
 else:
   outfile = outpath / f"signup-{course}-{timestamp}.csv"
 @

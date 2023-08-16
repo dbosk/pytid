@@ -3,7 +3,7 @@
 
 In this chapter we introduce the subommands found under [[nytid hr]],
 it's the [[cli.hr]] module.
-<<schedule.py>>=
+<<hr.py>>=
 import datetime
 from enum import Enum
 import ics.icalendar

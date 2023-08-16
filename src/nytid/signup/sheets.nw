@@ -42,7 +42,7 @@ def generate_signup_sheet(outfile, url,
   Output:
   Returns nothing. Writes output to {outfile}.csv.
   """
-  with open(f"{outfile}.csv", "w") as out:
+  with open(outfile, "w") as out:
     csvout = csv.writer(out, delimiter="\t")
     calendar = nytid.schedules.read_calendar(url)
 

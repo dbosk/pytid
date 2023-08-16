@@ -45,12 +45,15 @@ TAs sign up using Google Sheets.
 <<subcommands>>=
 @cli.command()
 def generate_signup_sheet(<<default arguments for matching courses>>,
-                          <<output options>>):
+                          <<output options>>,
+                          <<editing options>>):
   """
   Generates a sign-up sheet to be used with Google Sheets for TAs to sign up.
   """
   <<generate sign-up sheet>>
 @
+
+\subsection{Generating the sheets}
 
 We have that [[<<default arguments for matching courses>>]] is the same as 
 above, we get [[course]] and [[register]].
@@ -62,17 +65,18 @@ registers = coursescli.registers_regex(register)
 courses = {course_reg: courseutils.get_course_config(*course_reg)
            for course_reg in coursescli.courses_regex(course, registers)}
 
-<<compute [[timestamp]]>>
+<<iteration variables>>
 for (course, register), course_conf in courses.items():
   <<compute [[group_size]] for [[course]]>>
 
   def needed_TAs(event):
     return utils.needed_TAs(event, group_size=group_size)
 
-  <<set [[outfile]] based on [[timestamp]] for [[course]]>>
+  <<set [[outfile]] for [[course]]>>
 
   url = course_conf.get("ics")
   sheets.generate_signup_sheet(outfile, url, needed_TAs)
+  <<open [[outfile]] for editing if requested>>
 <<imports>>=
 from nytid.signup import sheets
 from nytid.signup import utils
@@ -92,24 +96,53 @@ By default we want to store them in each course's data directory.
 We'd like to keep track of the ones generated, so we'll include a timestamp as 
 part of the name.
 <<output options>>=
-outpath: Annotated[pathlib.Path, outpath_opt] = None,
+outpath: Annotated[pathlib.Path, outpath_opt] = None
 <<argument and option definitions>>=
 outpath_opt = typer.Option(help="Path where to write the sign-up sheet "
                                 "files. Default is in each course's "
                                 "data path.")
-<<set [[outfile]] based on [[timestamp]] for [[course]]>>=
+<<set [[outfile]] for [[course]]>>=
 if not outpath:
   data_root = courseutils.get_course_data(course, register)
-  outfile = data_root.path / f"signup-{timestamp}"
+  outfile = data_root.path / f"signup-{course}-{timestamp}.csv"
 else:
   outfile = outpath / f"signup-{course}-{timestamp}.csv"
 @
 
-Now, to compute the timestamp we'll need the current time and then we simply 
+Now, to compute [[timestamp]] we'll need the current time and then we simply 
 turn it into a string.
-<<compute [[timestamp]]>>=
+<<iteration variables>>=
 now = datetime.datetime.now()
 timestamp = now.strftime("%Y%m%d-%H%M")
+@
+
+\subsection{Editing the sign-up sheet}
+
+We want to provide an option for the user to edit the generated sign-up sheet 
+directly after it has been generated.
+<<editing options>>=
+edit: Annotated[bool, edit_opt] = False
+<<argument and option definitions>>=
+edit_opt = typer.Option(help="If specified, opens each generated sheet "
+                             "for editing.")
+@
+
+To open the file for editing, we simply use the default of the OS to edit it.
+There is no uniform way of doing this in Python (yet).
+We adapted a snippet suggested on StackOverflow\footnote{%
+  URL: \url{https://stackoverflow.com/a/435669/1305099}
+}
+<<open [[outfile]] for editing if requested>>=
+if edit:
+  the_os = platform.system()
+  if the_os == "Darwin":
+    subprocess.call(["open", outfile])
+  elif the_os == "Windows":
+    os.startfile(outfile)
+  else:
+    subprocess.call(["xdg-open", outfile])
+<<imports>>=
+import os, platform, subprocess
 @
 
 \section{Teaching time totals for a course}

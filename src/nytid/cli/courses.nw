@@ -974,7 +974,7 @@ def complete_my_course_arg(incomplete: str) -> typing.List[str]:
   Returns a list of courses in my courses that match `incomplete`.
   """
   mine_path = registry.get(MINE)
-  for course in mine_path.iterdir():
+  for course in courses.all_courses(mine_path):
     if course.startswith(incomplete):
       yield course
 @
@@ -1052,9 +1052,9 @@ To separate courses from different registers we must return a tuples of
 course--register pairs.
 <<helper functions>>=
 def courses_regex(regex: str, registers: typing.List[str] = None) \
-    -> typing.List[str]:
+    -> typing.List[typing.Tuple[str, str]]:
   """
-  Returns a list of courses matching the `regex`.
+  Returns a list of course--register pairs matching the `regex`.
 
   Matching is done `re.match`.
   """

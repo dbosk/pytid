@@ -32,11 +32,18 @@ The first argument we need is to identify a set of courses.
 For this we might also have to identify a set of registers.
 We'll use the argument and option defined in the [[cli.courses]] module.
 We'll default to all courses ([[.*]]) in the register of the [[mine]] command.
-<<default arguments for matching courses>>=
-course: Annotated[str, coursescli.course_arg_regex] = ".*",
+<<argument for matching courses>>=
+course: Annotated[str, coursescli.course_arg_regex]
+<<option for matching registers, default to mine>>=
 register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
 @
 
+Then we can create a list of course--configuration pairs like this.
+<<set list [[courses]] to ((course, register), config)-pairs>>=
+registers = coursescli.registers_regex(register)
+courses = {course_reg: courseutils.get_course_config(*course_reg)
+           for course_reg in coursescli.courses_regex(course, registers)}
+@
 
 \section{Generate sign-up sheet}
 
@@ -44,7 +51,8 @@ We want a command that can generate a sign-up sheet that can be used to let the
 TAs sign up using Google Sheets.
 <<subcommands>>=
 @cli.command(name="generate")
-def generate_signup_sheet(<<default arguments for matching courses>>,
+def generate_signup_sheet(<<argument for matching courses>>,
+                          <<option for matching registers, default to mine>>,
                           <<output options>>,
                           <<editing options>>):
   """
@@ -61,9 +69,7 @@ above, we get [[course]] and [[register]].
 Then we can get the list of courses and their ICS URLs.
 We then iterate through them and generate a sign-up sheet for each.
 <<generate sign-up sheet>>=
-registers = coursescli.registers_regex(register)
-courses = {course_reg: courseutils.get_course_config(*course_reg)
-           for course_reg in coursescli.courses_regex(course, registers)}
+<<set list [[courses]] to ((course, register), config)-pairs>>
 
 <<iteration variables>>
 for (course, register), course_conf in courses.items():

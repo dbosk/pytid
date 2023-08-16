@@ -173,14 +173,14 @@ Finally, to remove an entry, we simply need the name.
 In this case it makes sense to autocomplete, since this is an existing 
 register.
 <<registry rm args>>=
-name: Annotated[str, register_name_arg]
+name: Annotated[str, register_arg]
 <<argument and option definitions>>=
-register_name_arg = typer.Argument(help="The name of the register.",
+register_arg = typer.Argument(help="The name of the register.",
                                    autocompletion=complete_register_arg)
 @
 
 To complete the register name, we provide the 
-function~[[complete_register_name]].
+function~[[complete_register]].
 This function simply lists all registers ([[registry.ls()]]) and filters based 
 on what the user has provided ([[incomplete]]).
 <<helper functions>>=
@@ -234,18 +234,18 @@ We would first like to create the course in one of the registers available.
 If there is only one register, we'll create the course there.
 If there are more, however, we need the user to decide which one to use.
 <<new command args>>=
-register_name: Annotated[str, register_option] = None,
+register: Annotated[str, register_option] = MINE,
 <<new arguments and options>>=
 register_option = typer.Option(help="Name of register to use. "
                                     "Must be used if there are more than "
                                     "one register in the config.",
-                               shell_complete=complete_register_name)
-@
+                               shell_complete=complete_register)
+@ See \cref{mine} for the [[MINE]] constant.
 
 We also want to have a function for autocompletion in the shell.
 We simply filter out the matching names available in the registry.
 <<helper functions>>=
-def complete_register_name(ctx, param, incomplete: str):
+def complete_register(ctx, param, incomplete: str):
   """
   Returns list of matching register names available.
   """
@@ -271,6 +271,14 @@ Then we can let the [[courses config]] command read the available options from
 the course config.
 
 Let's add the settings.
+We'll add them to a dictionary~[[kwdata]] that we'll later pass to the function 
+that creates the course.
+<<new command body>>=
+kwdata = {
+  <<course settings>>
+}
+courses.new(name, register, kwdata)
+@
 
 \subsection{Contact information}
 
@@ -288,6 +296,8 @@ contact_opt = typer.Option(help="The course responsible's contact info. "
                                 "`nytid config me.name --set 'First Last'"
                                 " and "
                                 "`nytid config me.email --set x@y.z.")
+<<course settings>>=
+"contact": contact,
 @
 
 Note that we don't have to set those values to anything but [[None]] here, the 
@@ -305,13 +315,17 @@ code: Annotated[str, code_opt] = None,
 <<new arguments and options>>=
 code_opt = typer.Option(help="The course code, "
                              "to relate it to similar courses using "
-                             "`related_codes`.")
+                             "`related`.")
+<<course settings>>=
+"code": code,
 <<new command args>>=
-related_codes: Annotated[typing.List[str], related_opt] = [],
+related: Annotated[typing.List[str], related_opt] = [],
 <<new arguments and options>>=
 related_opt = typer.Option(help="List of related course codes, "
                                 "courses with any of these codes can "
                                 "share TAs.")
+<<course settings>>=
+"related_codes": related,
 @
 
 \subsection{The schedule}
@@ -324,6 +338,8 @@ ics: Annotated[str, ics_opt] = None,
 ics_opt = typer.Option(help="A URL to an ICS file containing the "
                             "schedule. E.g. an export/subscription from "
                             "TimeEdit.")
+<<course settings>>=
+"ics": ics,
 @
 
 \subsection{The data directory}
@@ -338,20 +354,31 @@ data_path: Annotated[pathlib.Path, data_path_opt] = None,
 data_path_opt = typer.Option(help="Path to the course's data directory, "
                                   "default is to append `/data` to the "
                                   "course's config directory.")
+<<course settings>>=
+"data_path": data_path,
 @
 
 If the user didn't specify a data directory, then [[data_path]] will be 
 [[None]].
 The [[courses.new]] function will set the default.
 
-\subsection{Finally creating the course}
+\subsection{The number of students and groups}
 
-Now that we have all the arguments, we can simply make the call to 
-[[courses.new]].
-<<new command body>>=
-courses.new(name, register_name, contact,
-            code, related_codes,
-            ics, data_path)
+When we create the course we'd like to know the number of students and the 
+number of groups.
+These are the same numbers as used when scheduling the course.
+We will use them to compute the number of needed TAs etc.
+<<new command args>>=
+num_students: Annotated[int, num_students_opt] = None,
+num_groups: Annotated[int, num_groups_opt] = None,
+<<new arguments and options>>=
+num_students_opt = typer.Option(help="The total number of students "
+                                     "in the course.")
+num_groups_opt = typer.Option(help="The number of groups that the class "
+                                   "will be divided into.")
+<<course settings>>=
+"num_students": num_students,
+"num_groups": num_groups,
 @
 
 
@@ -384,7 +411,7 @@ This corresponds to how the [[.set]] method of [[Config]] works.
 
 @cli.command(name="config")
 def config_cmd(course: Annotated[str, course_arg_autocomplete],
-               register: Annotated[str, register_option] = None,
+               register: Annotated[str, register_option] = MINE,
                path: Annotated[str, path_arg] = "",
                values: Annotated[typing.List[str], value_arg] = None):
   """
@@ -401,7 +428,7 @@ def config_cmd(course: Annotated[str, course_arg_autocomplete],
     except KeyError as err:
       logging.error(f"{path} doen't exist in the config: {err}")
       sys.exit(1)
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 We will now cover [[course_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
@@ -454,7 +481,7 @@ def complete_course_name(ctx: typer.Context, incomplete: str):
   Returns a list of course names matching `incomplete`.
   """
   <<populate [[registers]] with the registers to use>>
-  for register_name, register_path in registers:
+  for register, register_path in registers:
     <<yield (course name, register name) tuples that matches [[incomplete]]>>
 @
 
@@ -464,30 +491,30 @@ Remember that we want the name--path tuple for each register.
 <<populate [[registers]] with the registers to use>>=
 registers = register_pairs(ctx.params.get("register"))
 <<helper functions>>=
-def register_pairs(register_name=None):
+def register_pairs(register=None):
   """
   Returns a list of (name, path)-tuples (pairs) for registers to use.
 
-  If `register_name` is None, we use all existing registers found 
+  If `register` is None, we use all existing registers found 
   in the config. Otherwise, we look up the path of the one specified and return 
   a list containing only that name--path-tuple.
   """
-  if register_name:
-    return [(register_name,
-             registry.get(register_name))]
+  if register:
+    return [(register,
+             registry.get(register))]
   else:
-    return [(register_name,
-             registry.get(register_name))
-            for register_name in registry.ls()]
+    return [(register,
+             registry.get(register))
+            for register in registry.ls()]
 @
 
 In the register, each course has its own subdirectory.
 So we simply need to return the subdirectories of [[register_path]] matching 
-[[incomplete]] together with [[register_name]].
+[[incomplete]] together with [[register]].
 <<yield (course name, register name) tuples that matches [[incomplete]]>>=
 courses_in_reg = courses.all_courses(register_path)
 matching_courses = filter(lambda x: x.startswith(incomplete), courses_in_reg)
-return map(lambda x: (x, f"from {register_name}"),
+return map(lambda x: (x, f"from {register}"),
            matching_courses)
 @
 
@@ -665,7 +692,7 @@ We already have the option settings in [[register_option]].
 We also already have a function to list all courses, [[all_courses]].
 <<subcommands>>=
 @cli.command()
-def ls(register: Annotated[str, register_option] = None):
+def ls(register: Annotated[str, register_option] = MINE):
   """
   Lists all available courses in all registers in the registry. Output format: 
 
@@ -686,7 +713,7 @@ def ls(register: Annotated[str, register_option] = None):
 <<list all courses in [[register]]>>=
 for course in courses.all_courses(registry.get(register)):
   print(f"{register}\t{course}")
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 
 \section{Accessing the course data}
@@ -716,7 +743,7 @@ The shell we'll use will be the same as the one the user is currently running,
 <<data subcommands>>=
 @datacli.command()
 def shell(course: Annotated[str, course_arg_autocomplete],
-          register: Annotated[str, register_name_arg] = None):
+          register: Annotated[str, register_arg] = MINE):
   """
   Spawns a shell in the data directory of a course.
   """
@@ -732,7 +759,7 @@ def shell(course: Annotated[str, course_arg_autocomplete],
 <<subcommand imports>>=
 import os
 import subprocess
-@
+@ See \cref{mine} for the [[MINE]] constant.
 
 The first error to handle is if the given course doesn't exist.
 In that case, we give the error message and exit with a non-zero return code.
@@ -775,7 +802,7 @@ except FileNotFoundError as err:
 @
 
 
-\section{My courses, the [[mine]] subcommands}
+\section{My courses, the [[mine]] subcommands}\label{mine}
 
 We will now create a kind of meta-register called [[mine]] that will include 
 all courses we consider ours.
@@ -809,7 +836,7 @@ instead of the original course name.
 <<mine subcommands>>=
 @minecli.command(name="add")
 def mine_add(course: Annotated[str, course_arg_autocomplete],
-             register: Annotated[str, register_name_arg] = None,
+             register: Annotated[str, register_arg] = None,
              alias: Annotated[str, alias_opt] = None):
   """
   Adds a course to my courses.
@@ -872,19 +899,19 @@ register_map = {register: registry.get(register)
                 for register in registry.ls()}
 
 <<variables for search for [[course]] in [[register_map]]>>
-for register_name, register_path in register_map.items():
+for register, register_path in register_map.items():
   <<search for matches to [[course]] in [[register_path]]>>
 
 <<check for ending criteria and set [[register]] to [[course]]'s>>
 @
 
-Now, we just need to check if [[course]] is part of [[register_name]].
-If so, we add [[register_name]] to the list of matches.
+Now, we just need to check if [[course]] is part of [[register]].
+If so, we add [[register]] to the list of matches.
 <<search for matches to [[course]] in [[register_path]]>>=
 matching_courses = filter(lambda x: x == course,
                           courses.all_courses(register_path))
 if len(list(matching_courses)) > 0:
-  matching_registers.append(register_name)
+  matching_registers.append(register)
 <<variables for search for [[course]] in [[register_map]]>>=
 matching_registers = []
 @
@@ -947,7 +974,7 @@ def complete_my_course_arg(incomplete: str) -> typing.List[str]:
   Returns a list of courses in my courses that match `incomplete`.
   """
   mine_path = registry.get(MINE)
-  for course in mine_path.iterdir():
+  for course in courses.all_courses(mine_path):
     if course.startswith(incomplete):
       yield course
 @
@@ -1025,9 +1052,9 @@ To separate courses from different registers we must return a tuples of
 course--register pairs.
 <<helper functions>>=
 def courses_regex(regex: str, registers: typing.List[str] = None) \
-    -> typing.List[str]:
+    -> typing.List[typing.Tuple[str, str]]:
   """
-  Returns a list of courses matching the `regex`.
+  Returns a list of course--register pairs matching the `regex`.
 
   Matching is done `re.match`.
   """

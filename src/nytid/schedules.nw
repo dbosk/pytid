@@ -15,6 +15,7 @@ This means that we can use the ICS exports from TimeEdit, Google Calendar etc.
 The module consists only of the file [[schedules.py]].
 <<schedules.py>>=
 <<imports>>
+<<constants>>
 <<functions>>
 @
 
@@ -134,22 +135,55 @@ To filter the list of events, we do the following.
 We want to filter events using a whitelist, this is because otherwise we'll end 
 up with holidays in our sign-up sheet.
 <<functions>>=
-def event_filter(events):
+def event_filter(events, whitelisted=TIMEEDIT_EVENTS):
   """
   Takes a list of events (ics.event.Event), returns a filtered list of events 
   (generator). The events to include are the teaching events.
-  """
-  events_whitelist = [
-    "Datorlaboration", "Laboration",
-    "Övning",
-    "Seminarium", "Redovisning", "Examination",
-    "Föreläsning"
-  ]
 
+  It covers the following events:
+  
+    <<whitelisted events>>
+  """
   for event in events:
-    for event_type in events_whitelist:
+    for event_type in whitelisted:
       if event_type in event.name:
         yield event
         break
 @
- 
+
+The events that we whitelist are taken from TimeEdits activity types\footnote{%
+  URL: 
+  \url{https://intra.kth.se/polopoly_fs/1.932668.1685102637!/Aktivitetstyper.pdf}
+}:
+<<constants>>=
+TIMEEDIT_EVENTS = [
+  <<whitelisted events>>
+]
+<<whitelisted events>>=
+"Datorlaboration", "Computer lab",
+"Examination",
+"Exkursion", "Excursion",
+"Fältövning", "Field exercise",
+"Frågestund", "Question time", "Question Time",
+"Föreläsning", "Lecture",
+"FX-komplettering", "FX-completion",
+"Handledning", "Tutorial",
+"Information",
+"Kontrollskrivning", "Partial Exam/Quiz",
+"Laboration", "Lab",
+"Lektion", "Lesson",
+"Omtenta", "Re-exam", "Re-Exam",
+"Presentation",
+"Projektarbete", "Project work", "Project Work",
+"Redovisning", "Reporting",
+"Räknestuga", "Math work session",
+"Seminarium", "Seminar",
+"Samverkansinlärning", "Supplemental instruction",
+"Supplemental Instruction",
+"Studiebesök", "Study visit",
+"Tentamen", "Exam",
+"Upprop", "Roll-call",
+"Webinarium", "Webinar",
+"Verksamhetsförlagd utbildning", "Pre-service Placement",
+"Workshop",
+"Övning", "Exercise"

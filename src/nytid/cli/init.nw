@@ -154,10 +154,20 @@ config.add_config_cmd(cli)
 
 \subsection{Adding more subcommands}
 
+\paragraph{Schedule} The schedule subcommands.
+
 <<import subcommand modules>>=
 from nytid.cli import schedule
 <<add subcommand typer to cli>>=
 cli.add_typer(schedule.cli, name="schedule")
+@
+
+\paragraph{Sign-up sheets} The sign-up sheets related subcommands.
+
+<<import subcommand modules>>=
+from nytid.cli import signupsheets
+<<add subcommand typer to cli>>=
+cli.add_typer(signupsheets.cli, name="signupsheets")
 @
 
 

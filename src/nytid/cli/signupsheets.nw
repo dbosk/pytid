@@ -1,9 +1,9 @@
-\chapter{The [[cli.hr]] and the [[hr]] subcommands}%
-\label{cli.schedule}
+\chapter{The [[cli.signupsheets]] and the [[signupsheets]] subcommands}%
+\label{cli.signupsheets}
 
-In this chapter we introduce the subommands found under [[nytid hr]],
-it's the [[cli.hr]] module.
-<<hr.py>>=
+In this chapter we introduce the subommands found under [[nytid signupsheets]],
+it's the [[cli.signupsheets]] module.
+<<signupsheets.py>>=
 import datetime
 from enum import Enum
 import ics.icalendar
@@ -18,8 +18,8 @@ from nytid import schedules as schedutils
 
 <<imports>>
 
-cli = typer.Typer(name="hr",
-                  help="Managing time for teaching")
+cli = typer.Typer(name="signupsheets",
+                  help="Manage sign-up sheets for teaching")
 
 <<argument and option definitions>>
 <<subcommands>>
@@ -43,7 +43,7 @@ register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
 We want a command that can generate a sign-up sheet that can be used to let the 
 TAs sign up using Google Sheets.
 <<subcommands>>=
-@cli.command()
+@cli.command(name="generate")
 def generate_signup_sheet(<<default arguments for matching courses>>,
                           <<output options>>,
                           <<editing options>>):

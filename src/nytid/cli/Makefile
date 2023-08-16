@@ -3,7 +3,7 @@ SUBDIR_GOALS=	all clean distclean
 MODULES+=	__init__.py
 MODULES+=	courses.py
 MODULES+=	schedule.py
-MODULES+=	hr.py
+MODULES+=	signupsheets.py
 
 .PHONY: all
 all: ${MODULES}

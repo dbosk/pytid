@@ -162,12 +162,12 @@ from nytid.cli import schedule
 cli.add_typer(schedule.cli, name="schedule")
 @
 
-\paragraph{HR} The HR subcommands.
+\paragraph{Sign-up sheets} The sign-up sheets related subcommands.
 
 <<import subcommand modules>>=
-from nytid.cli import hr
+from nytid.cli import signupsheets
 <<add subcommand typer to cli>>=
-cli.add_typer(hr.cli, name="hr")
+cli.add_typer(signupsheets.cli, name="signupsheets")
 @
 
 

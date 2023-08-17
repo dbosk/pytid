@@ -47,7 +47,11 @@ This is based on what is set in Kopps.
 We'll use 12 as default as we assume people try to get as close as possible to 
 12 students per group in Kopps.
 <<compute [[num_TAs]] for lab>>=
-num_students = num_groups * group_size
+if num_groups:
+  num_students = num_groups * group_size
+else:
+  num_students = group_size
+
 num_TAs = round(num_students / 12)
 <<[[needed_TAs]] args>>=
 group_size=12

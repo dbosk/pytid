@@ -178,24 +178,43 @@ url_arg = typer.Argument(help="The URL for the sign-up sheet, "
 
 \section{Teaching time totals for a course}
 
-<<time.py>>=
-import typerconf
+We provide a command [[time]] that summarizes the time spent on the course.
+<<subcommands>>=
+@cli.command()
+def time(<<argument for matching courses>>,
+         <<option for matching registers, default to mine>>):
+  """
+  Summarizes the time spent on teaching the course(s).
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
 
-from nytid.signup import utils
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  <<print summary of [[booked]]>>
+@
+
+To add the bookings of a course to [[booked]], we simply get the URL of the 
+sign-up sheet and read the bookings.
+<<add to [[booked]] from [[course]] in [[register]] using [[config]]>>=
+url = config.get(SIGNUPSHEET_URL_PATH)
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>
+booked += sheets.read_signup_sheet_from_url(url)
+<<imports>>=
 from nytid.signup import sheets
-from nytid.signup import hr
+@
 
-def to_hours(td):
-    return td.total_seconds()/60/60
+If it's a Google Sheets sharing URL, we want to convert it to the export-CSV 
+URL.
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>=
+if "docs.google.com" in url:
+  url = sheets.google_sheet_to_csv_url(url)
+@
 
-booked = []
-
-for course, url in SIGNUP.items():
-    booked += sheets.read_signup_sheet_from_url(url)
-
+Once we have [[booked]] we can start to compute summaries.
+<<print summary of [[booked]]>>=
 h_per_student = hr.hours_per_student(booked)
-
-print("# dasak")
 
 for event, hours in h_per_student.items():
     print(f"{event}: {to_hours(hours):.2f} h/student")
@@ -203,10 +222,10 @@ for event, hours in h_per_student.items():
 print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
         f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
 
-
 print("# Amanuenser")
-amanuensis = hr.compute_amanuensis_data(booked,
-        add_prep_time=config.add_prep_time)
+
+amanuensis = hr.compute_amanuensis_data(booked)
+
 for user, data in amanuensis.items():
     if not user:
         continue
@@ -216,12 +235,21 @@ for user, data in amanuensis.items():
 
 print()
 print("# Hourly")
-for user, hours in hr.hours_per_TA(booked, 
-                                   add_prep_time=config.add_prep_time).items():
-    if not user or user in amanuensis:
-        continue
-    print(f"{user}: {to_hours(hours):.2f} h")
+
+for user, hours in hr.hours_per_TA(booked).items():
+  if not user or user in amanuensis:
+      continue
+  print(f"{user}: {to_hours(hours):.2f} h")
+<<imports>>=
+from nytid.signup import utils
+from nytid.signup import hr
 @
+
+<<helper functions>>=
+def to_hours(td):
+    return td.total_seconds()/60/60
+@
+
 
 \section{Show schedule with sign-ups}
 

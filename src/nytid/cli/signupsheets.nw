@@ -17,10 +17,12 @@ from nytid import courses as courseutils
 from nytid import schedules as schedutils
 
 <<imports>>
+<<constants>>
 
 cli = typer.Typer(name="signupsheets",
                   help="Manage sign-up sheets for teaching")
 
+<<helper functions>>
 <<argument and option definitions>>
 <<subcommands>>
 @
@@ -71,7 +73,7 @@ We then iterate through them and generate a sign-up sheet for each.
 <<generate sign-up sheet>>=
 <<set list [[courses]] to ((course, register), config)-pairs>>
 
-<<iteration variables>>
+<<generation iteration variables>>
 for (course, register), course_conf in courses.items():
   <<compute [[group_size]] for [[course]]>>
 
@@ -117,7 +119,7 @@ else:
 
 Now, to compute [[timestamp]] we'll need the current time and then we simply 
 turn it into a string.
-<<iteration variables>>=
+<<generation iteration variables>>=
 now = datetime.datetime.now()
 timestamp = now.strftime("%Y%m%d-%H%M")
 @
@@ -164,7 +166,9 @@ def set_url(<<argument for matching courses>>,
   """
   <<set list [[courses]] to ((course, register), config)-pairs>>
   for _, conf in courses.items():
-    conf.set("signupsheet.url", url)
+    conf.set(SIGNUPSHEET_URL_PATH, url)
+<<constants>>=
+SIGNUPSHEET_URL_PATH = "signupsheet.url"
 <<argument and option definitions>>=
 url_arg = typer.Argument(help="The URL for the sign-up sheet, "
                               "it's the same URL as the one shared with "

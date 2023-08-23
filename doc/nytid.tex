@@ -14,7 +14,8 @@
 \input{preamble.tex}
 
 \title{%
-  A schedule management tool for teaching
+  \texttt{nytid}: A schedule and bookings management tool for scalable teachers 
+  coordination
 }
 \author{%
   Daniel Bosk
@@ -41,49 +42,30 @@
 \clearpage
 
 \mainmatter
-\chapter{Introduction}
 
-We want to turn the TimeEdit schedule into a sign-up sheet in Google Sheets 
-that our TAs can use to sign up for teaching slots.
-\begin{minted}{python}
-import nytid.schedules.utils as utils
+\part{The CLI}
 
-COURSES = {
-  "DD1310": 
-  "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=453080.10&e=220609&enol=t&ku=29&k=1B9F3AD696BCA5C434C68950EFD376DD",
-  "DD1317": 
-  "https://cloud.timeedit.net/kth/web/public01/ri.ics?sid=7&p=0.w%2C12.n&objects=455995.10&e=220609&enol=t&ku=29&k=BA4400E3C003685549BC65AD9EAD3DC58E"
-}
+\input{../src/nytid/cli/init.tex}
+\input{../src/nytid/cli/courses.tex}
+\input{../src/nytid/cli/schedule.tex}
+\input{../src/nytid/cli/signupsheets.tex}
 
-for course, url in COURSES.items():
-  utils.generate_signup_sheet(course, url)
-\end{minted}
+\part{Storage}
 
-Now we have two CSV files, `DD1310.csv` and `DD1317.csv`, in the current 
-working directory that we can upload to Google Sheets. Once uploaded, we can 
-use the share URL with the following functions.
-\begin{minted}{python}
-import nytid.schedules.utils as utils
+\input{../src/nytid/storage/init.tex}
+\input{../src/nytid/storage/afs.tex}
 
-dd1317 = utils.read_signup_sheet_from_url(utils.google_sheet_to_csv_url("https://docs.google.com/spreadsheets/d/the-share-url"))
+\part{Managing courses}
 
-dd1310 = utils.read_signup_sheet_from_url(utils.google_sheet_to_csv_url("https://docs.google.com/spreadsheets/d/the-share-url"))
+\input{../src/nytid/courses/init.tex}
+\input{../src/nytid/courses/registry.tex}
 
-ta_time_dd1310 = utils.hours_per_TA(dd1310)
-amanuenses = utils.compute_amanuensis_data(dd1310+dd1317)
-\end{minted}
+\part{Core library}
 
-
-\part{The library}
-
-\input{../src/nytid/schedules/init.tex}
-\input{../src/nytid/schedules/utils.tex}
-
-
-%\part{A command-line interface}
-%
-%\input{../src/nytid/cli/init.tex}
-
+\input{../src/nytid/schedules.tex}
+\input{../src/nytid/signup/hr/hr.tex}
+\input{../src/nytid/signup/sheets.tex}
+\input{../src/nytid/signup/utils.tex}
 
 
 \backmatter

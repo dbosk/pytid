@@ -1,16 +1,17 @@
+MODULES+=	__init__.py
+MODULES+=	afs.py
+
 .PHONY: all
-all: __init__.py utils.py
+all: ${MODULES}
 
 .INTERMEDIATE: init.py
-
 __init__.py: init.py
-	${MV} $^ $@
-
+	${MV} $< $@
 
 .PHONY: clean
 clean:
-	${RM} init.py __init__.py init.tex
-	${RM} utils.py utils.tex
+	${RM} -R ${MODULES} __pycache__
+	${RM} *.tex
 
 
 INCLUDE_MAKEFILES=../../../makefiles

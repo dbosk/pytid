@@ -51,7 +51,7 @@ courses = {course_reg: courseutils.get_course_config(*course_reg)
 \section{Generate sign-up sheet}
 
 We want a command that can generate a sign-up sheet that can be used to let the 
-TAs sign up using Google Sheets.
+TAs sign up using Google Sheets or similar.
 <<subcommands>>=
 @cli.command(name="generate")
 def generate_signup_sheet(<<argument for matching courses>>,
@@ -59,7 +59,8 @@ def generate_signup_sheet(<<argument for matching courses>>,
                           <<output options>>,
                           <<editing options>>):
   """
-  Generates a sign-up sheet to be used with Google Sheets for TAs to sign up.
+  Generates a sign-up sheet to be used with Google Sheets or similar for TAs to 
+  sign up.
   """
   <<generate sign-up sheet>>
 @
@@ -171,9 +172,10 @@ def set_url(<<argument for matching courses>>,
 <<constants>>=
 SIGNUPSHEET_URL_PATH = "signupsheet.url"
 <<argument and option definitions>>=
-url_arg = typer.Argument(help="The URL for the sign-up sheet, "
-                              "it's the same URL as the one shared with "
-                              "TAs to sign up.")
+url_arg = typer.Argument(help="The URL for the sign-up sheet. "
+                              "For Google Sheets, it's the same URL as the "
+                              "one shared with TAs to sign up. "
+                              "For others, it's a URL to a CSV file.")
 @
 
 

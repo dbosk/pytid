@@ -293,21 +293,27 @@ def ics_cmd(<<argument for matching courses>> = ".*",
 We need a username.
 We will default to the username of the logged in user.
 <<option for username to filter for>>=
-user: Annotated[str, username_opt] = os.environ["USER"]
+user: Annotated[str, username_opt] = default_username
 <<argument and option definitions>>=
+try:
+  default_username = os.environ["USER"]
+except KeyError:
+  default_username = None
+
 username_opt = typer.Option(help="Username to filter sign-up sheet for, "
                                  "defaults to logged in user's username.")
 <<imports>>=
 import os
 @
 
-We will filter [[booked]] by the sought-after username.
+We will filter [[booked]] by the sought-after username, if there is one.
 We also want to prefix a "RESERVE:" to the event if the person is a reserve and 
 not booked to work.
 Then we turn it into an ICS calendar object [[schedule]] as desired.
 <<turn [[booked]] into ICS [[schedule]]>>=
-booked = sheets.filter_events_by_TA(user, booked)
-booked = map(functools.partial(add_reserve_to_title, user), booked)
+if user:
+  booked = sheets.filter_events_by_TA(user, booked)
+  booked = map(functools.partial(add_reserve_to_title, user), booked)
 
 schedule = ics.icalendar.Calendar()
 schedule.events.update(set(map(sheets.EventFromCSV, booked)))

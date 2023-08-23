@@ -9,6 +9,7 @@ from enum import Enum
 import ics.icalendar
 import logging
 import pathlib
+import sys
 import typer
 from typing_extensions import Annotated
 
@@ -47,6 +48,13 @@ Then we can create a list of course--configuration pairs like this.
 registers = coursescli.registers_regex(register)
 courses = {course_reg: courseutils.get_course_config(*course_reg)
            for course_reg in coursescli.courses_regex(course, registers)}
+@
+
+Now, if that list is empty, we have no courses, then we exit with a non-zero 
+return code.
+<<set list [[courses]] to ((course, register), config)-pairs>>=
+if not courses:
+  sys.exit(1)
 @
 
 \section{Generate sign-up sheet}

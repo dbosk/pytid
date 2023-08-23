@@ -10,6 +10,7 @@ import ics.attendee
 import ics.event
 import nytid.schedules
 import nytid.signup.utils
+from nytid.signup import sheets
 import re
 import requests
 
@@ -190,57 +191,48 @@ It only contains the event (type), start and end times and the TAs that will
 attend.
 We can put the attributes number of rooms and needed TAs in the description.
 <<process CSV row, initialize attributes>>=
-attribute_map = {
-  SIGNUP_SHEET_HEADER.index("Event"): "name",
-  SIGNUP_SHEET_HEADER.index("Start"): "begin",
-  SIGNUP_SHEET_HEADER.index("End"): "end",
-  SIGNUP_SHEET_HEADER.index("#Rooms"): "description",
-  SIGNUP_SHEET_HEADER.index("#Needed TAs"): "description"
-}
-
-for idx in range(len(SIGNUP_SHEET_HEADER), len(csv_row)):
-  attribute_map[idx] = "attendees"
-
 kwargs = dict()
 
-for column, attribute in attribute_map.items():
-  try:
-    value = csv_row[column]
+kwargs["name"] = csv_row[SIGNUP_SHEET_HEADER.index("Event")]
+kwargs["begin"] = csv_row[SIGNUP_SHEET_HEADER.index("Start")]
+kwargs["end"] = csv_row[SIGNUP_SHEET_HEADER.index("End")]
 
-    if attribute == "description":
-      if attribute in kwargs:
-        value = kwargs[attribute] + "\n" + value
-    elif attribute == "attendees":
-      <<add value as an ics.attendee.Attendee object>>
-    elif attribute in ["begin", "end"]:
-      value = arrow.get(value, tzinfo="local")
+rooms = csv_row[SIGNUP_SHEET_HEADER.index("#Rooms")]
+needed_TAs = csv_row[SIGNUP_SHEET_HEADER.index("#Needed TAs")]
+kwargs["description"] = f"Rooms: {rooms}\nNeeded TAs: {needed_TAs}\n"
 
-    kwargs[attribute] = value
-  except AttributeError:
-    pass
+<<add TAs to [[kwargs["attendees"]]]>>
+<<add attendees to description>>
 
 super().__init__(**kwargs)
 @
 
 If we need to add an attendee, that value is the KTH username.
 The attendee object requires an email, so we can easily form that from the 
-username.
-Then we append the attendee object if there is a list, otherwise we create the 
-list.
+username, which we've done above.
+We might have an empty value, due to empty columns in the CSV, so we must 
+filter those.
+<<add TAs to [[kwargs["attendees"]]]>>=
+kwargs["attendees"] = [ics.attendee.Attendee(f"{user}@kth.se")
+                       for user in csv_row[len(SIGNUP_SHEET_HEADER):]
+                       if user]
+@
 
-Two things to note:
-First, we might have an empty value, due to empty columns in the CSV.
-Second, we must append the list of attendees if there is a list already.
-<<add value as an ics.attendee.Attendee object>>=
-if not value:
-  continue
+When we import this schedule in Google Calendar, we don't get the attendees.
+We also want to add all attendees to the description as well.
+But we'll do a bit better and simply add who is booked and who is reserve.
+<<add attendees to description>>=
+booked, reserves = sheets.get_booked_TAs_from_csv(csv_row)
 
-value = ics.attendee.Attendee(f"{value}@kth.se")
+kwargs["description"] += "Booked TAs:"
+for username in booked:
+  kwargs["description"] += f" {username}"
+kwargs["description"] += "\n"
 
-if attribute not in kwargs:
-  value = [value]
-else:
-  value = kwargs[attribute] + [value]
+kwargs["description"] += "Reserve TAs:"
+for username in reserves:
+  kwargs["description"] += f" {username}"
+kwargs["description"] += "\n"
 @
 
 

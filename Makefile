@@ -1,6 +1,6 @@
 SUBDIR_GOALS=all clean distclean
 
-SUBDIR+=	src/nytid/schedules
+SUBDIR+=	src/nytid
 SUBDIR+=	doc
 
 version=$(shell sed -n 's/^ *version *= *\"\([^\"]\+\)\"/\1/p' pyproject.toml)

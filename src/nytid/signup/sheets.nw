@@ -203,7 +203,7 @@ kwargs["name"] = csv_row[SIGNUP_SHEET_HEADER.index("Event")]
 rooms = csv_row[SIGNUP_SHEET_HEADER.index("Rooms")]
 kwargs["location"] = rooms
 needed_TAs = csv_row[SIGNUP_SHEET_HEADER.index("#Needed TAs")]
-kwargs["description"] = f"Rooms: {rooms}\nNeeded TAs: {needed_TAs}\n"
+kwargs["description"] = f"Needed TAs: {needed_TAs}\n"
 
 <<add TAs to [[kwargs["attendees"]]]>>
 <<add attendees to description>>

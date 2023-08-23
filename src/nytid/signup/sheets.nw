@@ -62,7 +62,7 @@ def generate_signup_sheet(outfile, url,
 The headers that we want are the following.
 <<constants>>=
 SIGNUP_SHEET_HEADER = [
-  "Event", "Start", "End", "#Rooms",
+  "Event", "Start", "End", "Rooms",
   "#Needed TAs"
 ]
 @
@@ -83,7 +83,7 @@ for event in event_filter(calendar.timeline):
     event.name,
     event.begin.to("local").format("YYYY-MM-DD HH:mm"),
     event.end.to("local").format("YYYY-MM-DD HH:mm"),
-    len(event.location.split(",")),
+    event.location,
     num_TAs
   ])
 @
@@ -197,7 +197,8 @@ kwargs["name"] = csv_row[SIGNUP_SHEET_HEADER.index("Event")]
 kwargs["begin"] = csv_row[SIGNUP_SHEET_HEADER.index("Start")]
 kwargs["end"] = csv_row[SIGNUP_SHEET_HEADER.index("End")]
 
-rooms = csv_row[SIGNUP_SHEET_HEADER.index("#Rooms")]
+rooms = csv_row[SIGNUP_SHEET_HEADER.index("Rooms")]
+kwargs["location"] = rooms
 needed_TAs = csv_row[SIGNUP_SHEET_HEADER.index("#Needed TAs")]
 kwargs["description"] = f"Rooms: {rooms}\nNeeded TAs: {needed_TAs}\n"
 

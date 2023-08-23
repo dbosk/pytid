@@ -287,7 +287,7 @@ def ics_cmd(<<argument for matching courses>> = ".*",
     <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
 
   <<turn [[booked]] into ICS [[schedule]]>>
-  print(schedule)
+  print(schedule.serialize())
 @
 
 We need a username.

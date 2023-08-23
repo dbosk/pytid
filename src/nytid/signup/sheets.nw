@@ -3,9 +3,9 @@
 In this chapter we cover the [[nytid.signup.sheets]] module.
 The outline of the module is as follows:
 <<sheets.py>>=
-import arrow
 import csv
-import datetime
+from datetime import datetime
+import dateutil.tz
 import ics.attendee
 import ics.event
 import nytid.schedules
@@ -81,11 +81,14 @@ for event in event_filter(calendar.timeline):
 
   rows.append([
     event.name,
-    event.begin.to("local").format("YYYY-MM-DD HH:mm"),
-    event.end.to("local").format("YYYY-MM-DD HH:mm"),
+    event.begin.to("local").format(DATETIME_FORMAT),
+    event.end.to("local").format(DATETIME_FORMAT),
     event.location,
     num_TAs
   ])
+<<constants>>=
+DATETIME_FORMAT = "YYYY-MM-DD HH:mm"
+STRPTIME_FORMAT = "%Y-%m-%d %H:%M"
 @
 
 
@@ -194,8 +197,8 @@ We can put the attributes number of rooms and needed TAs in the description.
 kwargs = dict()
 
 kwargs["name"] = csv_row[SIGNUP_SHEET_HEADER.index("Event")]
-kwargs["begin"] = csv_row[SIGNUP_SHEET_HEADER.index("Start")]
-kwargs["end"] = csv_row[SIGNUP_SHEET_HEADER.index("End")]
+
+<<add begin and end to [[kwargs]]>>
 
 rooms = csv_row[SIGNUP_SHEET_HEADER.index("Rooms")]
 kwargs["location"] = rooms
@@ -207,6 +210,28 @@ kwargs["description"] = f"Rooms: {rooms}\nNeeded TAs: {needed_TAs}\n"
 
 super().__init__(**kwargs)
 @
+
+\subsection{Reading start and end}
+
+When we read the start and end time, we want to ensure they're interpreted in 
+the local timezone, since that's how they were written.
+However, it seems like we must set the [[begin]] and [[end]] attributes of the 
+event in UTC, hence the [[.astimezone(dateutil.tz.UTC)]].
+<<add begin and end to [[kwargs]]>>=
+tz = dateutil.tz.tzlocal()
+
+begin = datetime.strptime(csv_row[SIGNUP_SHEET_HEADER.index("Start")],
+                          STRPTIME_FORMAT)
+begin.replace(tzinfo=tz)
+kwargs["begin"] = begin.astimezone(dateutil.tz.UTC)
+
+end = datetime.strptime(csv_row[SIGNUP_SHEET_HEADER.index("End")],
+                        STRPTIME_FORMAT)
+end.replace(tzinfo=tz)
+kwargs["end"] = end.astimezone(dateutil.tz.UTC)
+@
+
+\subsection{Attendees}
 
 If we need to add an attendee, that value is the KTH username.
 The attendee object requires an email, so we can easily form that from the 

@@ -15,6 +15,7 @@ from typing_extensions import Annotated
 from nytid.cli import courses as coursescli
 from nytid import courses as courseutils
 from nytid import schedules as schedutils
+from nytid.signup import hr
 
 <<imports>>
 <<constants>>
@@ -541,4 +542,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+@
+
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    print(user)
 @

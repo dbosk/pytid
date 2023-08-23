@@ -128,7 +128,7 @@ except KeyError as err:
 
 course_schedule = schedutils.read_calendar(course_ics_url)
 
-schedule.events |= course_schedule.events
+schedule.events.update(course_schedule.events)
 @
 
 \subsubsection{Filter events based on start--end time}

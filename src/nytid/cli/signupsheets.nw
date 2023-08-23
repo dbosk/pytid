@@ -302,7 +302,7 @@ booked = sheets.filter_events_by_TA(user, booked)
 booked = map(functools.partial(add_reserve_to_title, user), booked)
 
 schedule = ics.icalendar.Calendar()
-schedule.events |= set(map(sheets.EventFromCSV, booked))
+schedule.events.update(set(map(sheets.EventFromCSV, booked)))
 <<imports>>=
 import functools
 import ics.icalendar
@@ -366,7 +366,7 @@ def generate_schedule():
     schedule = ics.icalendar.Calendar()
 
     for course, url in SIGNUP.items():
-        schedule.events |= set(map(sheets.EventFromCSV,
+        schedule.events.update(set(map(sheets.EventFromCSV,)
             sheets.read_signup_sheet_from_url(url)))
 
     return schedule
@@ -437,7 +437,7 @@ def generate_schedule(csv_rows):
     returns an ics.icalendar.Calendar object.
     """
     schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+    schedule.events.update(set(map(sheets.EventFromCSV, csv_rows)))
 
     return schedule
 
@@ -527,7 +527,7 @@ def generate_schedule(csv_rows):
     returns an ics.icalendar.Calendar object.
     """
     schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+    schedule.events.update(set(map(sheets.EventFromCSV, csv_rows)))
 
     return schedule
 

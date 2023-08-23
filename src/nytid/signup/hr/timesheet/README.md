@@ -1,4 +1,4 @@
-# make_excel
+# make_xlsx
 
 Skriptet genererar en excelfil med timrapporter. Om man kör testet får man:
 

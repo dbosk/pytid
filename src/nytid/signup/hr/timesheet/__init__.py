@@ -13,6 +13,7 @@ from openpyxl.styles import Alignment
 
 def test():
     """Tests the module"""
+    personnr = "123456-7890"
     name = "Alexander Baltatzis"
     email = "alba@kth.se"
     hourly_salary = 150
@@ -52,11 +53,8 @@ def test():
                   'omr_tid':2*1.33,
                   'belopp':hourly_salary*2*1.33})
 
-    make_xlsx(name,      
-              email,     
-              events,
-              course_leader,
-              HoD,
+    make_xlsx(personnr, name, email, events,
+              course_leader, HoD,
               course_leader_signature="signature.png")
 
 def fit_image(img, height=None, width=None):

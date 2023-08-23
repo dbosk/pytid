@@ -1,12 +1,12 @@
-SUBDIR_GOALS=	all clean distclean
-SUBDIR+=		hr
-
-MODULES+=	sheets.py
-MODULES+=	utils.py
+MODULES+=	__init__.py
+MODULES+=	afs.py
 
 .PHONY: all
 all: ${MODULES}
 
+.INTERMEDIATE: init.py
+__init__.py: init.py
+	${MV} $< $@
 
 .PHONY: clean
 clean:
@@ -16,4 +16,3 @@ clean:
 
 INCLUDE_MAKEFILES=../../../makefiles
 include ${INCLUDE_MAKEFILES}/noweb.mk
-include ${INCLUDE_MAKEFILES}/subdir.mk

@@ -1,0 +1,588 @@
+\chapter{The [[cli.signupsheets]] and the [[signupsheets]] subcommands}%
+\label{cli.signupsheets}
+
+In this chapter we introduce the subommands found under [[nytid signupsheets]],
+it's the [[cli.signupsheets]] module.
+<<signupsheets.py>>=
+import datetime
+from enum import Enum
+import ics.icalendar
+import logging
+import pathlib
+import typer
+from typing_extensions import Annotated
+
+from nytid.cli import courses as coursescli
+from nytid import courses as courseutils
+from nytid import schedules as schedutils
+from nytid.signup import hr
+from nytid.signup import sheets
+
+<<imports>>
+<<constants>>
+
+cli = typer.Typer(name="signupsheets",
+                  help="Manage sign-up sheets for teaching")
+
+<<helper functions>>
+<<argument and option definitions>>
+<<subcommands>>
+@
+
+
+\section{Default arguments for matching courses}
+
+The first argument we need is to identify a set of courses.
+For this we might also have to identify a set of registers.
+We'll use the argument and option defined in the [[cli.courses]] module.
+We'll default to all courses ([[.*]]) in the register of the [[mine]] command.
+<<argument for matching courses>>=
+course: Annotated[str, coursescli.course_arg_regex]
+<<option for matching registers, default to mine>>=
+register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
+@
+
+Then we can create a list of course--configuration pairs like this.
+<<set list [[courses]] to ((course, register), config)-pairs>>=
+registers = coursescli.registers_regex(register)
+courses = {course_reg: courseutils.get_course_config(*course_reg)
+           for course_reg in coursescli.courses_regex(course, registers)}
+@
+
+\section{Generate sign-up sheet}
+
+We want a command that can generate a sign-up sheet that can be used to let the 
+TAs sign up using Google Sheets or similar.
+<<subcommands>>=
+@cli.command(name="generate")
+def generate_signup_sheet(<<argument for matching courses>>,
+                          <<option for matching registers, default to mine>>,
+                          <<output options>>,
+                          <<editing options>>):
+  """
+  Generates a sign-up sheet to be used with Google Sheets or similar for TAs to 
+  sign up.
+  """
+  <<generate sign-up sheet>>
+@
+
+\subsection{Generating the sheets}
+
+We have that [[<<default arguments for matching courses>>]] is the same as 
+above, we get [[course]] and [[register]].
+
+Then we can get the list of courses and their ICS URLs.
+We then iterate through them and generate a sign-up sheet for each.
+<<generate sign-up sheet>>=
+<<set list [[courses]] to ((course, register), config)-pairs>>
+
+<<generation iteration variables>>
+for (course, register), course_conf in courses.items():
+  <<compute [[group_size]] for [[course]]>>
+
+  def needed_TAs(event):
+    return utils.needed_TAs(event, group_size=group_size)
+
+  <<set [[outfile]] for [[course]]>>
+
+  url = course_conf.get("ics")
+  sheets.generate_signup_sheet(outfile, url, needed_TAs)
+  <<open [[outfile]] for editing if requested>>
+<<imports>>=
+from nytid.signup import sheets
+from nytid.signup import utils
+@
+
+By default, [[utils.needed_TAs]] uses the 12 as the group size.
+This is the optimal group size, but we might now have exactly that.
+<<compute [[group_size]] for [[course]]>>=
+num_students = course_conf.get("num_students")
+num_groups = course_conf.get("num_groups")
+
+group_size = round(num_students / num_groups)
+@
+
+We want to output the signup sheets somewhere.
+By default we want to store them in each course's data directory.
+We'd like to keep track of the ones generated, so we'll include a timestamp as 
+part of the name.
+<<output options>>=
+outpath: Annotated[pathlib.Path, outpath_opt] = None
+<<argument and option definitions>>=
+outpath_opt = typer.Option(help="Path where to write the sign-up sheet "
+                                "files. Default is in each course's "
+                                "data path.")
+<<set [[outfile]] for [[course]]>>=
+if not outpath:
+  data_root = courseutils.get_course_data(course, register)
+  outfile = data_root.path / f"signup-{course}-{timestamp}.csv"
+else:
+  outfile = outpath / f"signup-{course}-{timestamp}.csv"
+@
+
+Now, to compute [[timestamp]] we'll need the current time and then we simply 
+turn it into a string.
+<<generation iteration variables>>=
+now = datetime.datetime.now()
+timestamp = now.strftime("%Y%m%d-%H%M")
+@
+
+\subsection{Editing the sign-up sheet}
+
+We want to provide an option for the user to edit the generated sign-up sheet 
+directly after it has been generated.
+<<editing options>>=
+edit: Annotated[bool, edit_opt] = False
+<<argument and option definitions>>=
+edit_opt = typer.Option(help="If specified, opens each generated sheet "
+                             "for editing.")
+@
+
+To open the file for editing, we simply use the default of the OS to edit it.
+There is no uniform way of doing this in Python (yet).
+We adapted a snippet suggested on StackOverflow\footnote{%
+  URL: \url{https://stackoverflow.com/a/435669/1305099}
+}
+<<open [[outfile]] for editing if requested>>=
+if edit:
+  the_os = platform.system()
+  if the_os == "Darwin":
+    subprocess.call(["open", outfile])
+  elif the_os == "Windows":
+    os.startfile(outfile)
+  else:
+    subprocess.call(["xdg-open", outfile])
+<<imports>>=
+import os, platform, subprocess
+@
+
+\section{Setting the sign-up sheet URL}
+
+We need a command to set the URL to the CSV for the sign-up sheet used.
+<<subcommands>>=
+@cli.command()
+def set_url(<<argument for matching courses>>,
+            url: Annotated[str, url_arg],
+            <<option for matching registers, default to mine>>):
+  """
+  Sets the URL of the sign-up sheet for the course(s).
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+  for _, conf in courses.items():
+    conf.set(SIGNUPSHEET_URL_PATH, url)
+<<constants>>=
+SIGNUPSHEET_URL_PATH = "signupsheet.url"
+<<argument and option definitions>>=
+url_arg = typer.Argument(help="The URL for the sign-up sheet. "
+                              "For Google Sheets, it's the same URL as the "
+                              "one shared with TAs to sign up. "
+                              "For others, it's a URL to a CSV file.")
+@
+
+
+\section{Teaching time totals for a course}
+
+We provide a command [[time]] that summarizes the time spent on the course.
+<<subcommands>>=
+@cli.command()
+def time(<<argument for matching courses>>,
+         <<option for matching registers, default to mine>>):
+  """
+  Summarizes the time spent on teaching the course(s).
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  <<print summary of [[booked]]>>
+@
+
+To add the bookings of a course to [[booked]], we simply get the URL of the 
+sign-up sheet and read the bookings.
+<<add to [[booked]] from [[course]] in [[register]] using [[config]]>>=
+url = config.get(SIGNUPSHEET_URL_PATH)
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>
+booked += sheets.read_signup_sheet_from_url(url)
+<<imports>>=
+from nytid.signup import sheets
+@
+
+If it's a Google Sheets sharing URL, we want to convert it to the export-CSV 
+URL.
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>=
+if "docs.google.com" in url:
+  url = sheets.google_sheet_to_csv_url(url)
+@
+
+Once we have [[booked]] we can start to compute summaries.
+<<print summary of [[booked]]>>=
+h_per_student = hr.hours_per_student(booked)
+
+for event, hours in h_per_student.items():
+    print(f"{event}: {to_hours(hours):.2f} h/student")
+
+print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
+        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+
+print("# Amanuenser")
+
+amanuensis = hr.compute_amanuensis_data(booked)
+
+for user, data in amanuensis.items():
+    if not user:
+        continue
+    print(f"{user}: {data[2]:.2f} h, "
+          f"{100*hr.compute_percentage(*data):.1f}%: "
+          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
+
+print()
+print("# Hourly")
+
+for user, hours in hr.hours_per_TA(booked).items():
+  if not user or user in amanuensis:
+      continue
+  print(f"{user}: {to_hours(hours):.2f} h")
+<<imports>>=
+from nytid.signup import utils
+from nytid.signup import hr
+<<helper functions>>=
+def to_hours(td):
+    return td.total_seconds()/60/60
+@
+
+
+\section{My ICS}
+
+We want a command that outputs an ICS file that can be imported to a calendar, 
+such as Google Calendar or Thunderbird.
+The idea is to have a command such that you run
+\begin{center}
+[[nytid signupsheets ics > ~/public_html/nytid.ics]]
+\end{center}
+and then can import [[nytid.ics]] to the calendar through the public URL.
+That way we can update it easily.
+<<subcommands>>=
+@cli.command(name="ics")
+def ics_cmd(<<argument for matching courses>> = ".*",
+            <<option for matching registers, default to mine>>,
+            <<option for username to filter for>>):
+  """
+  Prints ICS data to stdout. Redirect to a .ics file, preferably in 
+  ~/public_html, and add it to your calendar.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  <<turn [[booked]] into ICS [[schedule]]>>
+  print(schedule)
+@
+
+We need a username.
+We will default to the username of the logged in user.
+<<option for username to filter for>>=
+user: Annotated[str, username_opt] = os.environ["USER"]
+<<argument and option definitions>>=
+username_opt = typer.Option(help="Username to filter sign-up sheet for, "
+                                 "defaults to logged in user's username.")
+<<imports>>=
+import os
+@
+
+We will filter [[booked]] by the sought-after username.
+We also want to prefix a "RESERVE:" to the event if the person is a reserve and 
+not booked to work.
+Then we turn it into an ICS calendar object [[schedule]] as desired.
+<<turn [[booked]] into ICS [[schedule]]>>=
+booked = sheets.filter_events_by_TA(user, booked)
+booked = map(functools.partial(add_reserve_to_title, user), booked)
+
+schedule = ics.icalendar.Calendar()
+schedule.events |= set(map(sheets.EventFromCSV, booked))
+<<imports>>=
+import functools
+import ics.icalendar
+@
+
+Now, only that helper function remains.
+It takes a TA and an event, checks if the TA is in the list of reserves, if so, 
+modifies the event to include "RESERVE:" in the title.
+<<helper functions>>=
+def add_reserve_to_title(ta, event):
+  """
+  Input: an event in CSV form.
+  Ouput: the same CSV data, but with title prepended "RESERVE: " if TA is 
+  among the reserves.
+  """
+  _, reserves = sheets.get_booked_TAs_from_csv(event)
+  if ta in reserves:
+      event[0] = "RESERVE: " + event[0]
+
+  return event
+@
+
+
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    print(user)
+@
+
+\endinput
+
+\section{Show schedule with sign-ups}
+
+<<schedule.py.0>>=
+import arrow
+from config import COURSES, SIGNUP
+import ics.icalendar
+from nytid.signup import sheets
+import nytid.schedules as sched
+import sys
+
+def generate_schedule():
+    """Generates schedule, uses sys.args, returns schedule
+    as ics.icalendar.Calendar object"""
+
+    schedule = ics.icalendar.Calendar()
+
+    for course, url in SIGNUP.items():
+        schedule.events |= set(map(sheets.EventFromCSV,
+            sheets.read_signup_sheet_from_url(url)))
+
+    return schedule
+
+
+def main():
+    """Main program"""
+    schedule = generate_schedule()
+
+    if len(sys.argv) > 1:
+        try:
+            time_limit = arrow.get(2022, 8, 29).shift(weeks=+int(sys.argv[1]))
+        except ValueError as err:
+            print(f"{sys.argv[0]}: {err}: "
+                  f"first argument must be the number of weeks to print",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    first = True
+    for event in schedule.timeline:
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
+
+        try:
+            if event.begin > time_limit:
+                break
+        except NameError:
+            pass
+
+        print(sched.format_event_short(event) + "; " +
+                ", ".join([attendee.email for attendee in event.attendees]))
+
+
+if __name__ == "__main__":
+    main()
+@
+
+
+\section{Booked TAs}
+
+<<booked.py>>=
+import arrow
+from config import COURSES, SIGNUP
+import ics.icalendar
+from nytid.signup import sheets
+import nytid.schedules as sched
+import sys
+
+def events_booked_TAs(csv_rows):
+    """
+    Input: a list of CSV data (tuples)
+
+    Output: a list of CSV data, only containing booked TAs, excluding the 
+    reserves.
+    """
+    for row in csv_rows:
+        booked, _ = sheets.get_booked_TAs_from_csv(row)
+        yield row[:len(sheets.SIGNUP_SHEET_HEADER)] + booked
+
+
+def generate_schedule(csv_rows):
+    """
+    Generates schedule (ICS format) from a list of CSV rows,
+    returns an ics.icalendar.Calendar object.
+    """
+    schedule = ics.icalendar.Calendar()
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+
+    return schedule
+
+
+def format_event(event):
+    """
+    Returns a string representation of the event.
+    """
+    return f"{sched.format_event_short(event)}; " + \
+            ", ".join([attendee.email for attendee in event.attendees])
+
+
+def main():
+    """Main program"""
+    booking_data = []
+    for _, url in SIGNUP.items():
+        booking_data += sheets.read_signup_sheet_from_url(url)
+
+    schedule = generate_schedule(events_booked_TAs(booking_data))
+    now = arrow.get(2022, 8, 29)
+    if now < arrow.now():
+        now = arrow.now()
+
+    if len(sys.argv) > 1:
+        try:
+            time_limit = now.shift(weeks=+int(sys.argv[1]))
+        except ValueError as err:
+            print(f"{sys.argv[0]}: {err}: "
+                  f"first argument must be the number of weeks to print",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    first = True
+    for event in schedule.timeline:
+        try:
+            if event.begin < now:
+                continue
+            elif event.begin > time_limit:
+                break
+        except NameError:
+            pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
+
+        print(format_event(event))
+
+
+if __name__ == "__main__":
+    main()
+@
+
+\section{Lacking sign-ups}
+
+<<missing.py>>=
+import arrow
+from config import COURSES, SIGNUP
+import ics.icalendar
+from nytid.signup import sheets
+import nytid.schedules as sched
+import sys
+
+def events_missing_TAs(csv_rows, missing_factor=0.5):
+    """
+    Input: a list of CSV data (tuples)
+
+    Output: a list of CSV data, only those rows where there are fewer TAs 
+    booked than the number of needed TAs.
+    """
+    needed_TAs_index = sheets.SIGNUP_SHEET_HEADER.index("#Needed TAs")
+
+    for row in csv_rows:
+        num_TAs = len(sheets.get_TAs_from_csv(row))
+        needed_TAs = int(row[needed_TAs_index])
+
+        if num_TAs < missing_factor * needed_TAs:
+            yield row
+
+
+def generate_schedule(csv_rows):
+    """
+    Generates schedule (ICS format) from a list of CSV rows,
+    returns an ics.icalendar.Calendar object.
+    """
+    schedule = ics.icalendar.Calendar()
+    schedule.events |= set(map(sheets.EventFromCSV, csv_rows))
+
+    return schedule
+
+
+def format_event(event):
+    """
+    Returns a string representation of the event.
+    """
+    return f"{sched.format_event_short(event)}; " + \
+            ", ".join([attendee.email for attendee in event.attendees])
+
+
+def main():
+    """Main program"""
+    booking_data = []
+    for _, url in SIGNUP.items():
+        booking_data += sheets.read_signup_sheet_from_url(url)
+
+    schedule = generate_schedule(events_missing_TAs(booking_data))
+    now = arrow.get(2022, 8, 29)
+    if now < arrow.now():
+        now = arrow.now()
+
+    if len(sys.argv) > 1:
+        try:
+            time_limit = now.shift(weeks=+int(sys.argv[1]))
+        except ValueError as err:
+            print(f"{sys.argv[0]}: {err}: "
+                  f"first argument must be the number of weeks to print",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    first = True
+    for event in schedule.timeline:
+        try:
+            if event.begin < now:
+                continue
+            elif event.begin > time_limit:
+                break
+        except NameError:
+            pass
+
+        if first:
+            first = False
+            current_week = event.begin.isocalendar()[1]
+        elif event.begin.isocalendar()[1] != current_week:
+            current_week = event.begin.isocalendar()[1]
+            print(end="\n\n")
+
+        print(format_event(event))
+
+
+if __name__ == "__main__":
+    main()
+@
+
+
+

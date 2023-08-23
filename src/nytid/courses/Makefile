@@ -1,11 +1,14 @@
 SUBDIR_GOALS=	all clean distclean
-SUBDIR+=		hr
 
-MODULES+=	sheets.py
-MODULES+=	utils.py
+MODULES+=	__init__.py
+MODULES+=	registry.py
 
 .PHONY: all
 all: ${MODULES}
+
+.INTERMEDIATE: init.py
+__init__.py: init.py
+	${MV} $< $@
 
 
 .PHONY: clean

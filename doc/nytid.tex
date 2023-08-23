@@ -42,18 +42,30 @@
 \clearpage
 
 \mainmatter
-\part{The library}
+
+\part{The CLI}
+
+\input{../src/nytid/cli/init.tex}
+\input{../src/nytid/cli/courses.tex}
+\input{../src/nytid/cli/schedule.tex}
+\input{../src/nytid/cli/signupsheets.tex}
+
+\part{Storage}
+
+\input{../src/nytid/storage/init.tex}
+\input{../src/nytid/storage/afs.tex}
+
+\part{Managing courses}
+
+\input{../src/nytid/courses/init.tex}
+\input{../src/nytid/courses/registry.tex}
+
+\part{Core library}
 
 \input{../src/nytid/schedules.tex}
-\input{../src/nytid/signup/hr.tex}
+\input{../src/nytid/signup/hr/hr.tex}
 \input{../src/nytid/signup/sheets.tex}
 \input{../src/nytid/signup/utils.tex}
-
-
-%\part{A command-line interface}
-%
-%\input{../src/nytid/cli/init.tex}
-
 
 
 \backmatter

@@ -27,12 +27,12 @@ It takes the course title (used for file name) and a URL to TimeEdit for the
 course schedule.
 It outputs a CSV that can be imported to Google Sheets that the TAs can fill.
 <<functions>>=
-def generate_signup_sheet(course, url,
+def generate_signup_sheet(outfile, url,
                           needed_TAs=nytid.signup.utils.needed_TAs, 
-                          event_filter=nytid.signup.utils.event_filter):
+                          event_filter=nytid.schedules.event_filter):
   """
   Input:
-  - course is a string containing the file name used for output.
+  - outfile is a string containing the file name used for output.
   - url is the URL to the ICS-formatted calendar.
   - needed_TAs is a function computing the number of needed TAs based on the 
     event. The default is the needed_TAs function in this module,
@@ -40,10 +40,10 @@ def generate_signup_sheet(course, url,
     argument and returns a filtered list.
 
   Output:
-  Returns nothing. Writes output to {course}.csv.
+  Returns nothing. Writes output to {outfile}.csv.
   """
-  with open(f"{course}.csv", "w") as out:
-    csvout = csv.writer(out)
+  with open(outfile, "w") as out:
+    csvout = csv.writer(out, delimiter="\t")
     calendar = nytid.schedules.read_calendar(url)
 
     max_num_TAs = 0

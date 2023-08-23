@@ -1,5 +1,8 @@
 SUBDIR_GOALS=	all clean distclean
 
+SUBDIR+=	cli
+SUBDIR+=	storage
+SUBDIR+=	courses
 SUBDIR+=	signup
 
 MODULES+=	schedules.py

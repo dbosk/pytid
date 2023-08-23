@@ -16,6 +16,7 @@ from nytid.cli import courses as coursescli
 from nytid import courses as courseutils
 from nytid import schedules as schedutils
 from nytid.signup import hr
+from nytid.signup import sheets
 
 <<imports>>
 <<constants>>
@@ -246,13 +247,107 @@ for user, hours in hr.hours_per_TA(booked).items():
 <<imports>>=
 from nytid.signup import utils
 from nytid.signup import hr
-@
-
 <<helper functions>>=
 def to_hours(td):
     return td.total_seconds()/60/60
 @
 
+
+\section{My ICS}
+
+We want a command that outputs an ICS file that can be imported to a calendar, 
+such as Google Calendar or Thunderbird.
+The idea is to have a command such that you run
+\begin{center}
+[[nytid signupsheets ics > ~/public_html/nytid.ics]]
+\end{center}
+and then can import [[nytid.ics]] to the calendar through the public URL.
+That way we can update it easily.
+<<subcommands>>=
+@cli.command(name="ics")
+def ics_cmd(<<argument for matching courses>> = ".*",
+            <<option for matching registers, default to mine>>,
+            <<option for username to filter for>>):
+  """
+  Prints ICS data to stdout. Redirect to a .ics file, preferably in 
+  ~/public_html, and add it to your calendar.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  <<turn [[booked]] into ICS [[schedule]]>>
+  print(schedule)
+@
+
+We need a username.
+We will default to the username of the logged in user.
+<<option for username to filter for>>=
+user: Annotated[str, username_opt] = os.environ["USER"]
+<<argument and option definitions>>=
+username_opt = typer.Option(help="Username to filter sign-up sheet for, "
+                                 "defaults to logged in user's username.")
+<<imports>>=
+import os
+@
+
+We will filter [[booked]] by the sought-after username.
+We also want to prefix a "RESERVE:" to the event if the person is a reserve and 
+not booked to work.
+Then we turn it into an ICS calendar object [[schedule]] as desired.
+<<turn [[booked]] into ICS [[schedule]]>>=
+booked = sheets.filter_events_by_TA(user, booked)
+booked = map(functools.partial(add_reserve_to_title, user), booked)
+
+schedule = ics.icalendar.Calendar()
+schedule.events |= set(map(sheets.EventFromCSV, booked))
+<<imports>>=
+import functools
+import ics.icalendar
+@
+
+Now, only that helper function remains.
+It takes a TA and an event, checks if the TA is in the list of reserves, if so, 
+modifies the event to include "RESERVE:" in the title.
+<<helper functions>>=
+def add_reserve_to_title(ta, event):
+  """
+  Input: an event in CSV form.
+  Ouput: the same CSV data, but with title prepended "RESERVE: " if TA is 
+  among the reserves.
+  """
+  _, reserves = sheets.get_booked_TAs_from_csv(event)
+  if ta in reserves:
+      event[0] = "RESERVE: " + event[0]
+
+  return event
+@
+
+
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    print(user)
+@
+
+\endinput
 
 \section{Show schedule with sign-ups}
 
@@ -490,79 +585,4 @@ if __name__ == "__main__":
 @
 
 
-\section{My ICS}
 
-<<myics.py>>=
-import arrow
-from config import COURSES, SIGNUP
-import functools
-import ics.icalendar
-from nytid.signup import sheets
-import os
-import sys
-
-def add_reserve_to_title(ta, event):
-    """
-    Input: an event in CSV form.
-    Ouput: the same CSV data, but with title prepended "RESERVE: " if TA is 
-    among the reserves.
-    """
-    _, reserves = sheets.get_booked_TAs_from_csv(event)
-    if ta in reserves:
-        event[0] = "RESERVE: " + event[0]
-
-    return event
-
-def generate_schedule():
-    """Generates schedule, uses sys.args or USER environment variable, returns 
-    schedule as ics.icalendar.Calendar object"""
-
-    schedule_csv = []
-
-    for course, url in SIGNUP.items():
-        schedule_csv += sheets.read_signup_sheet_from_url(url)
-
-    if len(sys.argv) < 2:
-        user = os.environ["USER"]
-    else:
-        user = sys.argv[1]
-
-    schedule_csv = sheets.filter_events_by_TA(user, schedule_csv)
-    schedule_csv = map(functools.partial(add_reserve_to_title, user), 
-            schedule_csv)
-
-    schedule = ics.icalendar.Calendar()
-    schedule.events |= set(map(sheets.EventFromCSV, schedule_csv))
-
-    return schedule
-
-
-def main():
-    """Main program"""
-    print(generate_schedule())
-
-
-if __name__ == "__main__":
-    main()
-@
-
-\section{Staff booked on course}
-
-We want a list of the usernames of who is booked on the course.
-We'll simply read the sign-up sheet and extract all usernames.
-<<subcommands>>=
-@cli.command()
-def users(<<argument for matching courses>>,
-          <<option for matching registers, default to mine>>):
-  """
-  Prints the list of all usernames booked on the course.
-  """
-  <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
-  for user in hr.hours_per_TA(booked):
-    print(user)
-@

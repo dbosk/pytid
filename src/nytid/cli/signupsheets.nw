@@ -282,12 +282,40 @@ def ics_cmd(<<argument for matching courses>> = ".*",
   """
   <<set list [[courses]] to ((course, register), config)-pairs>>
 
+  schedule = ics.icalendar.Calendar()
+
   booked = []
   for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+    try:
+      <<fill [[booked]] or [[schedule]] for [[course]] with [[config]]>>
+    except Exception as err:
+      logging.error(f"Can't read sign-up sheet nor ICS for "
+                    f"{course} ({register}): {err}")
+      continue
 
-  <<turn [[booked]] into ICS [[schedule]]>>
+  <<add [[booked]] to [[schedule]]>>
   print(schedule.serialize())
+@
+
+When we read in the bookings for a course, unlike before, we want to use the 
+schedule if there is no sign-up sheet available.
+If there is no sign-up sheet, we'll get a [[KeyError]] exception when we try to 
+get its entry from the course's config.
+In that case we use the schedule instead.
+<<fill [[booked]] or [[schedule]] for [[course]] with [[config]]>>=
+try:
+  <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+except KeyError as err_signupsheet:
+  logging.warning(f"Can't read sign-up sheet for {course} ({register}): "
+                  f"{err_signupsheet}")
+  <<read schedule from [[config]], add to [[schedule]]>>
+@
+
+We read the ICS URL from the course's config and then read it in and add it to 
+[[schedule]].
+<<read schedule from [[config]], add to [[schedule]]>>=
+course_schedule = schedutils.read_calendar(config.get("ics"))
+schedule.events.update(course_schedule.events)
 @
 
 We need a username.
@@ -310,12 +338,11 @@ We will filter [[booked]] by the sought-after username, if there is one.
 We also want to prefix a "RESERVE:" to the event if the person is a reserve and 
 not booked to work.
 Then we turn it into an ICS calendar object [[schedule]] as desired.
-<<turn [[booked]] into ICS [[schedule]]>>=
+<<add [[booked]] to [[schedule]]>>=
 if user:
   booked = sheets.filter_events_by_TA(user, booked)
   booked = map(functools.partial(add_reserve_to_title, user), booked)
 
-schedule = ics.icalendar.Calendar()
 schedule.events.update(set(map(sheets.EventFromCSV, booked)))
 <<imports>>=
 import functools

@@ -316,10 +316,21 @@ if user:
   booked = map(functools.partial(add_reserve_to_title, user), booked)
 
 schedule = ics.icalendar.Calendar()
-schedule.events.update(set(map(sheets.EventFromCSV, booked)))
+schedule.events.update(set(map_drop_exceptions(sheets.EventFromCSV, booked)))
 <<imports>>=
 import functools
 import ics.icalendar
+<<helper functions>>=
+def map_drop_exceptions(func, iterable):
+  """
+  Same as map, but ignores exceptions from `func`.
+  Logs a warning when an item is dropped.
+  """
+  for item in iterable:
+    try:
+      yield func(item)
+    except Exception as err:
+      logging.warning(f"Dropped {item}: {err}")
 @
 
 Now, only that helper function remains.

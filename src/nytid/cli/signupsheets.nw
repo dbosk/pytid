@@ -283,6 +283,7 @@ def ics_cmd(<<argument for matching courses>> = ".*",
   <<set list [[courses]] to ((course, register), config)-pairs>>
 
   schedule = ics.icalendar.Calendar()
+  <<set refresh rate for [[schedule]], same as TimeEdit>>
 
   booked = []
   for (course, register), config in courses.items():
@@ -294,6 +295,7 @@ def ics_cmd(<<argument for matching courses>> = ".*",
       continue
 
   <<add [[booked]] to [[schedule]]>>
+  <<set meta data for [[schedule]]>>
   print(schedule.serialize())
 @
 
@@ -375,6 +377,48 @@ def add_reserve_to_title(ta, event):
       event[0] = "RESERVE: " + event[0]
 
   return event
+@
+
+\subsection{Adding refresh interval to ICS output}
+
+ICS supports specifying the refresh interval for a calendar\footnote{%
+  See 
+  \url{https://icalendar.org/New-Properties-for-iCalendar-RFC-7986/5-7-refresh-interval-property.html}.
+  See also
+  \url{https://lauren-c-stephen.medium.com/subscribe-to-an-icalendar-feed-in-google-calendar-and-solve-update-issues-79b4e84b3c64}.
+}.
+However, the ICS library we're using doesn't, but it supports custom properties 
+that we can use.
+We can set custom properties by using the [[.extra]] attribute.
+
+There are seemingly two ways to do this.
+One is to set the [[REFRESH-INTERVAL]] property.
+Another, found by inspecting TimeEdit exports, is to set method to [[PUBLISH]] 
+and then add a property [[X-PUBLISHED-TTL]].
+<<set refresh rate for [[schedule]]>>=
+schedule.extra += [ContentLine("REFRESH-INTERVAL",
+                               {"VALUE": ["DURATION"]},
+                               "PT20M")]
+<<set refresh rate for [[schedule]], same as TimeEdit>>=
+schedule.method = "PUBLISH"
+schedule.extra += [ContentLine("X-PUBLISHED-TTL", {}, "PT20M")]
+<<imports>>=
+from ics.grammar.parse import ContentLine
+@
+
+\subsection{Other metadata for ICS export}
+
+Based on our observations from the TimeEdit exports, we can set other metadata 
+in the calendar export.
+<<set meta data for [[schedule]]>>=
+schedule.name = "Nytid"
+if user:
+  schedule.name = f"{user}'s nytid"
+schedule.extra += [ContentLine("X-WR-CALNAME", {}, schedule.name)]
+schedule.description = "Nytid export"
+if user:
+  schedule.description = f"Nytid export for {user}"
+schedule.extra += [ContentLine("X-WR-CALDESC", {}, schedule.description)]
 @
 
 

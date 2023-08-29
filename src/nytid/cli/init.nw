@@ -24,16 +24,16 @@ Essentially, we just need to provide the URL to the ICS from TimeEdit.
 \begin{description}
 \item[Course responsible] \mintinline{bash}{nytid courses new prgi23 --ics https://...}
 \end{description}
-More specifically, we can add the following info when creating a course, 
-according to the command help:
-\begin{pycode}
-import subprocess
-print(r"\begin{verbatim}")
-result = subprocess.run(["nytid", "courses", "new", "--help"],
-                        capture_output=True)
-print(result.stdout.decode("utf-8"))
-print(r"\end{verbatim}")
-\end{pycode}
+%More specifically, we can add the following info when creating a course, 
+%according to the command help:
+%\begin{pycode}
+%import subprocess
+%print(r"\begin{verbatim}")
+%result = subprocess.run(["nytid", "courses", "new", "--help"],
+%                        capture_output=True)
+%print(result.stdout.decode("utf-8"))
+%print(r"\end{verbatim}")
+%\end{pycode}
 
 \subsection{Adding more teachers to a course}
 

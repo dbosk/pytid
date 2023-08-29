@@ -777,7 +777,11 @@ We also set the current working directory~[[cwd]] to the directory we want to
 be in.
 <<spawn shell in [[data_dir]]>>=
 env = os.environ.copy()
-env["PS1"] = f"{course}/data {env['PS1']}"
+if "PS1" in env:
+  env["PS1"] = f"{course}/data {env['PS1']}"
+else:
+  env["PS1"] = f"{course}/data \w\n$ "
+
 subprocess.run([os.environ["SHELL"]],
                 cwd=data_dir.path, env=env,
                 stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)

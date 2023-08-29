@@ -85,30 +85,37 @@ def add_prep_time(time, event_type,
 @
 
 Now we compute the prep time factor.
-This function must be adapted to current policy.
-Currently, lab session time should increase by 1.5, tutorial session time 
-should double.
+This function must be adapted to current policy\footnote{%
+  See \url{https://www.kth.se/social/group/tcs-teaching/page/assistenter/}.
+}.
+Currently, lab session time should increase by 1.5 online and 1.8 on campus; 
+tutorial session time should double.
 <<functions>>=
 def prep_factor(event_type, date, amanuensis):
+  """
+  """
   if isinstance(date, arrow.Arrow):
     date = date.datetime
   if isinstance(date, datetime.datetime):
     date = date.date()
 
-  if "övning" in event_type.casefold():
+  event_type = event_type.casefold()
+
+  if "övning" in event_type \
+     or "exercise" in event_type:
     return 2
+
+  tutoring = ["laboration", "seminar", "redovisning", "presentation"]
 
   if date < datetime.date(2023, 1, 1) or \
     (date < datetime.date(2022, 10, 1) and not amanuensis):
-    if check_substrings(
-          ["laboration", "seminarium", "redovisning"],
-          event_type.casefold()):
+    if check_substrings(tutoring, event_type):
       return 1.33
   else:
-    if check_substrings(
-          ["laboration", "seminarium", "redovisning"],
-          event_type.casefold()):
-      return 1.5
+    if check_substrings(tutoring, event_type):
+      if "online" in event_type:
+        return 1.5
+      return 1.8
 
   return 1
 

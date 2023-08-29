@@ -1,0 +1,244 @@
+\chapter{The [[cli.hr]] module and the [[hr]] subcommands}%
+\label{cli.signupsheets}
+
+In this chapter we introduce the subommands found under [[nytid signupsheets]],
+it's the [[cli.signupsheets]] module.
+<<hr.py>>=
+import datetime
+from enum import Enum
+import ics.icalendar
+import logging
+import pathlib
+import sys
+import typer
+from typing_extensions import Annotated
+
+from nytid.cli import courses as coursescli
+from nytid.cli.signupsheets import SIGNUPSHEET_URL_PATH
+from nytid import courses as courseutils
+from nytid import schedules as schedutils
+from nytid.signup import hr
+from nytid.signup import sheets
+
+<<imports>>
+
+cli = typer.Typer(name="hr",
+                  help="Manage sign-up sheets for teaching")
+
+<<helper functions>>
+<<argument and option definitions>>
+<<subcommands>>
+@
+
+
+\section{Default arguments for matching courses and users}
+
+The first argument we need is to identify a set of courses.
+For this we might also have to identify a set of registers.
+We'll use the argument and option defined in the [[cli.courses]] module.
+We'll default to all courses ([[.*]]) in the register of the [[mine]] command.
+<<argument for matching courses>>=
+course: Annotated[str, coursescli.course_arg_regex]
+<<option for matching registers, default to mine>>=
+register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
+@
+
+Then we can create a list of course--configuration pairs like this.
+<<set list [[courses]] to ((course, register), config)-pairs>>=
+registers = coursescli.registers_regex(register)
+courses = {course_reg: courseutils.get_course_config(*course_reg)
+           for course_reg in coursescli.courses_regex(course, registers)}
+@
+
+Now, if that list is empty, we have no courses, then we exit with a non-zero 
+return code.
+<<set list [[courses]] to ((course, register), config)-pairs>>=
+if not courses:
+  sys.exit(1)
+@
+
+We also need a username.
+We will default to the username of the logged in user.
+<<option for username to filter for>>=
+user: Annotated[str, username_opt] = default_username
+<<argument and option definitions>>=
+try:
+  default_username = os.environ["USER"]
+except KeyError:
+  default_username = None
+
+username_opt = typer.Option(help="Username to filter sign-up sheet for, "
+                                 "defaults to logged in user's username.")
+<<imports>>=
+import os
+@
+
+
+
+\section{Teaching time totals for a course}
+
+We provide a command [[time]] that summarizes the time spent on the course.
+<<subcommands>>=
+@cli.command()
+def time(<<argument for matching courses>>,
+         <<option for matching registers, default to mine>>):
+  """
+  Summarizes the time spent on teaching the course(s).
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  <<print summary of [[booked]]>>
+@
+
+To add the bookings of a course to [[booked]], we simply get the URL of the 
+sign-up sheet and read the bookings.
+<<add to [[booked]] from [[course]] in [[register]] using [[config]]>>=
+url = config.get(SIGNUPSHEET_URL_PATH)
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>
+booked += sheets.read_signup_sheet_from_url(url)
+<<imports>>=
+from nytid.signup import sheets
+@
+
+If it's a Google Sheets sharing URL, we want to convert it to the export-CSV 
+URL.
+<<convert [[url]] to Google Sheet CSV-export URL if necessary>>=
+if "docs.google.com" in url:
+  url = sheets.google_sheet_to_csv_url(url)
+@
+
+Once we have [[booked]] we can start to compute summaries.
+<<print summary of [[booked]]>>=
+h_per_student = hr.hours_per_student(booked)
+
+for event, hours in h_per_student.items():
+    print(f"{event}: {to_hours(hours):.2f} h/student")
+
+print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
+        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+
+print("# Amanuenser")
+
+amanuensis = hr.compute_amanuensis_data(booked)
+
+for user, data in amanuensis.items():
+    if not user:
+        continue
+    print(f"{user}: {data[2]:.2f} h, "
+          f"{100*hr.compute_percentage(*data):.1f}%: "
+          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
+
+print()
+print("# Hourly")
+
+for user, hours in hr.hours_per_TA(booked).items():
+  if not user or user in amanuensis:
+      continue
+  print(f"{user}: {to_hours(hours):.2f} h")
+<<imports>>=
+from nytid.signup import utils
+from nytid.signup import hr
+<<helper functions>>=
+def to_hours(td):
+    return td.total_seconds()/60/60
+@
+
+
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    print(user)
+@
+
+
+\section{Amanuensis}
+
+<<amanuens.py>>=
+from config import COURSES, SIGNUP
+import arrow
+import csv
+from nytid.signup import hr
+from nytid.signup import sheets
+import operator
+import sys
+
+def to_hours(td):
+    return td.total_seconds()/60/60
+
+def shift_dates_forward(start_date, end_date):
+    """Takes dates and shifts them so that start_date is tomorrow."""
+    now = arrow.now()
+    today = arrow.Arrow(now.year, now.month, now.day,
+                        hour=start_date.hour, minute=start_date.minute,
+                        second=start_date.second)
+
+    if start_date > today:
+        return start_date, end_date
+
+    diff = (today-start_date).days
+    return start_date.shift(days=diff+1), end_date.shift(days=diff+1)
+
+
+if len(sys.argv) < 2:
+    print(f"{sys.argv[0]}: requires argument 'username'",
+          file=sys.stderr)
+    print(f"{sys.argv[0]} <username> [<start date>]")
+    sys.exit(1)
+else:
+    user = sys.argv[1]
+
+if len(sys.argv) > 2:
+    date = arrow.get(sys.argv[2])
+else:
+    date = None
+
+booked = []
+
+for course, url in SIGNUP.items():
+    booked += sheets.read_signup_sheet_from_url(url)
+
+amanuensis = hr.compute_amanuensis_data(booked,
+                                        begin_date=date)
+data = amanuensis[user]
+
+#start, end = shift_dates_forward(data[0], data[1])
+start = data[0]
+end = data[1]
+
+print(f"{user}: {data[2]:.2f} h, "
+      f"{round(100*hr.compute_percentage(*data))}%: "
+      f"{start.format('YYYY-MM-DD')}--{end.format('YYYY-MM-DD')}")
+
+events = sheets.filter_events_by_TA(user, booked)
+events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
+events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
+                  events))
+
+for event, hours in hr.hours_per_event(events).items():
+    print(f"{event}: {to_hours(hours)}")
+
+print()
+
+csvout = csv.writer(sys.stdout)
+
+for event in events:
+    csvout.writerow(event)

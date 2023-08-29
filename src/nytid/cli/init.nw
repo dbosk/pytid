@@ -170,6 +170,14 @@ from nytid.cli import signupsheets
 cli.add_typer(signupsheets.cli, name="signupsheets")
 @
 
+\paragraph{HR} The HR related subcommands.
+
+<<import subcommand modules>>=
+from nytid.cli import hr
+<<add subcommand typer to cli>>=
+cli.add_typer(hr.cli, name="hr")
+@
+
 
 \section{Configure logging}
 

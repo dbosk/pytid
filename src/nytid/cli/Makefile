@@ -4,6 +4,7 @@ MODULES+=	__init__.py
 MODULES+=	courses.py
 MODULES+=	schedule.py
 MODULES+=	signupsheets.py
+MODULES+=	hr.py
 
 .PHONY: all
 all: ${MODULES}

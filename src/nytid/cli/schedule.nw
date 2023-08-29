@@ -242,25 +242,18 @@ It should be able to include several courses.
 We will use regex to match the courses and registers.
 <<subcommands>>=
 @cli.command()
-def show(<<default arguments for matching courses>>,
+def show(<<argument for matching courses>> = ".*",
+         <<option for matching registers, default to mine>>,
+         <<option for username to filter for>>,
          <<default arguments for start and end dates>>,
          <<printing control options>>):
   """
-  Shows schedule for courses in human readable format.
+  Shows schedule for courses in human readable format. If there is a sign-up 
+  sheet for a course, it is used instead of the ICS.
   """
-  <<generate [[schedule]]>>
+  <<double check [[start]] and [[end]] dates>>
+  <<generate [[schedule]] from sign-up sheets for matching courses>>
   <<print [[schedule]]>>
-@
-
-\subsection{Default arguments for matching courses}
-
-The first argument we need is to identify a set of courses.
-For this we might also have to identify a set of registers.
-We'll use the argument and option defined in the [[cli.courses]] module.
-We'll default to all courses ([[.*]]) in the register of the [[mine]] command.
-<<default arguments for matching courses>>=
-course: Annotated[str, coursescli.course_arg_regex] = ".*",
-register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
 @
 
 \subsection{Default arguments for start and end dates}
@@ -292,54 +285,8 @@ def update_end_date(start, end):
   if end < start:
     return start + datetime.timedelta(weeks=1)
   return end
-<<generate [[schedule]]>>=
+<<double check [[start]] and [[end]] dates>>=
 end = update_end_date(start, end)
-@
-
-\subsection{Generating the schedule and printing it}
-
-We want to generate a schedule containing the schedules of all matching 
-courses.
-<<generate [[schedule]]>>=
-<<let [[the_courses]] be a list of (course, register)-pairs>>
-
-schedule = ics.icalendar.Calendar()
-
-for a_course, a_register in the_courses:
-  <<add schedule of [[a_course]] to [[schedule]]>>
-@
-
-\subsubsection{Find the courses}
-
-We can easily find the courses using the helper functions from the [[coursescli]] 
-module.
-<<let [[the_courses]] be a list of (course, register)-pairs>>=
-registers = coursescli.registers_regex(register)
-the_courses = list(coursescli.courses_regex(course, registers))
-@
-
-\subsubsection{Merge the schedules}
-
-To create one schedule, we simply merge the events from the different 
-schedules.
-We simply fetch the course's ICS calendar from the course configuration.
-Then we can simply get a calendar object from that URL.
-<<add schedule of [[a_course]] to [[schedule]]>>=
-try:
-  course_conf = courseutils.get_course_config(a_course, a_register)
-except KeyError as err:
-  logging.error(f"Can't find {a_course} in {a_register}: {err}")
-  continue
-
-try:
-  course_ics_url = course_conf.get("ics")
-except KeyError as err:
-  logging.error(f"Can't find schedule URL for {a_course}: {err}")
-  continue
-
-course_schedule = schedutils.read_calendar(course_ics_url)
-
-schedule.events.update(course_schedule.events)
 @
 
 \subsubsection{Filter events based on start--end time}

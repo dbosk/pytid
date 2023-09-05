@@ -45,8 +45,17 @@ register: Annotated[str, coursescli.register_opt_regex] = coursescli.MINE
 Then we can create a list of course--configuration pairs like this.
 <<set list [[courses]] to ((course, register), config)-pairs>>=
 registers = coursescli.registers_regex(register)
-courses = {course_reg: courseutils.get_course_config(*course_reg)
-           for course_reg in coursescli.courses_regex(course, registers)}
+courses = {}
+for course_reg in coursescli.courses_regex(course, registers):
+  try:
+    courses[course_reg] = courseutils.get_course_config(*course_reg)
+  <<handle errors for accessing course data>>
+<<handle errors for accessing course data>>=
+except KeyError as err:
+  logging.warning(err)
+except PermissionError as err:
+  course, register = course_reg
+  logging.warning(f"You don't have access to {course} in {register}: {err}")
 @
 
 Now, if that list is empty, we have no courses, then we exit with a non-zero 
@@ -121,10 +130,20 @@ outpath_opt = typer.Option(help="Path where to write the sign-up sheet "
                                 "data path.")
 <<set [[outfile]] for [[course]]>>=
 if not outpath:
-  data_root = courseutils.get_course_data(course, register)
-  outfile = data_root.path / f"signup-{course}-{timestamp}.csv"
+  try:
+    data_root = courseutils.get_course_data(course, register)
+  <<handle errors for accessing course data directory>>
+  else:
+    outfile = data_root.path / f"signup-{course}-{timestamp}.csv"
 else:
   outfile = outpath / f"signup-{course}-{timestamp}.csv"
+<<handle errors for accessing course data directory>>=
+except KeyError as err:
+  logging.warning(err)
+except PermissionError as err:
+  logging.warning(f"You don't have access to {course} in {register}: {err}")
+  outfile = f"./signup-{course}-{timestamp}.csv"
+  logging.warning(f"Writing file to current working directory: {outfile}")
 @
 
 Now, to compute [[timestamp]] we'll need the current time and then we simply 

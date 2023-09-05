@@ -4,6 +4,8 @@
 In this chapter we introduce the subommands found under [[nytid signupsheets]],
 it's the [[cli.signupsheets]] module.
 <<hr.py>>=
+import arrow
+import csv
 import datetime
 from enum import Enum
 import ics.icalendar
@@ -12,6 +14,10 @@ import pathlib
 import sys
 import typer
 from typing_extensions import Annotated
+
+from nytid.signup import hr
+from nytid.signup import sheets
+import operator
 
 from nytid.cli import courses as coursescli
 from nytid.cli.signupsheets import SIGNUPSHEET_URL_PATH
@@ -181,31 +187,20 @@ def users(<<argument for matching courses>>,
 
 \section{Amanuensis}
 
+We want the have an amanuensis command that can generate employment info for an 
+amanuensis.
+We also want to automatically store the sessions that are included in that 
+employment.
+This way we can easily calculate what has changed later to track 
+\enquote{\foreignlanguage{swedish}{mertid}}.
 <<amanuens.py>>=
-from config import COURSES, SIGNUP
-import arrow
-import csv
-from nytid.signup import hr
-from nytid.signup import sheets
-import operator
-import sys
-
-def to_hours(td):
-    return td.total_seconds()/60/60
-
-def shift_dates_forward(start_date, end_date):
-    """Takes dates and shifts them so that start_date is tomorrow."""
-    now = arrow.now()
-    today = arrow.Arrow(now.year, now.month, now.day,
-                        hour=start_date.hour, minute=start_date.minute,
-                        second=start_date.second)
-
-    if start_date > today:
-        return start_date, end_date
-
-    diff = (today-start_date).days
-    return start_date.shift(days=diff+1), end_date.shift(days=diff+1)
-
+@cli.comand(name="amanuens")
+def amanuens_cmd(<<option for username to filter for>>,
+                 <<argument for matching courses>> = ".*",
+                 <<option for matching registers, default to mine>>):
+  """
+  Computes amanuensis data for a TA.
+  """
 
 if len(sys.argv) < 2:
     print(f"{sys.argv[0]}: requires argument 'username'",
@@ -251,3 +246,19 @@ csvout = csv.writer(sys.stdout)
 
 for event in events:
     csvout.writerow(event)
+<<helper functions>>=
+def shift_dates_forward(start_date, end_date):
+  """Takes dates and shifts them so that start_date is tomorrow."""
+  now = arrow.now()
+  today = arrow.Arrow(now.year, now.month, now.day,
+                      hour=start_date.hour, minute=start_date.minute,
+                      second=start_date.second)
+
+  if start_date > today:
+      return start_date, end_date
+
+  diff = (today-start_date).days
+  return start_date.shift(days=diff+1), end_date.shift(days=diff+1)
+@
+
+

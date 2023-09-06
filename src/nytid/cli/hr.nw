@@ -11,6 +11,7 @@ from enum import Enum
 import ics.icalendar
 import logging
 import pathlib
+import os
 import sys
 import typer
 from typing_extensions import Annotated
@@ -84,8 +85,6 @@ except KeyError:
 
 username_opt = typer.Option(help="Username to filter sign-up sheet for, "
                                  "defaults to logged in user's username.")
-<<imports>>=
-import os
 @
 
 
@@ -257,6 +256,8 @@ start_date_opt = typer.Option(help="The start date",
 
 \subsection{Print the amanuensis data for a TA}
 
+We may want to print for several users.
+In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
 <<print amanuensis data for [[user]]>>=
@@ -266,23 +267,34 @@ else:
   print("\n")
 
 data = amanuensis[user]
+
+<<print a summary of the hours for [[user]] in [[data]]>>
+
+<<filter out [[events]] for [[user]]>>
+<<print summary for each event type for [[user]]>>
+
+print()
+
+<<print [[events]] in CSV format>>>>
+@
+
+\subsubsection{Print a summary of the hours for a TA}
+
+<<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
-
 print(f"{user}: {data[2]:.2f} h, "
       f"{round(100*hr.compute_percentage(*data))}%: "
       f"{start.format('YYYY-MM-DD')}--{end.format('YYYY-MM-DD')}")
-
+<<filter out [[events]] for [[user]]>>=
 events = sheets.filter_events_by_TA(user, booked)
 events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
 events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
                   events))
-
+<<print summary for each event type for [[user]]>>=
 for event, hours in hr.hours_per_event(events).items():
     print(f"{event}: {to_hours(hours)}")
-
-print()
-
+<<print [[events]] in CSV format>>=
 csvout = csv.writer(sys.stdout)
 
 for event in events:

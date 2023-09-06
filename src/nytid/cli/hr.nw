@@ -275,7 +275,7 @@ data = amanuensis[user]
 
 print()
 
-<<print [[events]] in CSV format>>>>
+<<print [[events]] in CSV format>>
 @
 
 \subsubsection{Print a summary of the hours for a TA}

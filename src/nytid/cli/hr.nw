@@ -193,38 +193,79 @@ We also want to automatically store the sessions that are included in that
 employment.
 This way we can easily calculate what has changed later to track 
 \enquote{\foreignlanguage{swedish}{mertid}}.
-<<amanuens.py>>=
-@cli.comand(name="amanuens")
-def amanuens_cmd(<<option for username to filter for>>,
+<<subcommands>>=
+@cli.command(name="contract")
+def amanuens_cmd(<<option for TAs to filter for>>,
+                 <<default argument for start date>>,
                  <<argument for matching courses>> = ".*",
                  <<option for matching registers, default to mine>>):
   """
   Computes amanuensis data for a TA.
   """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
 
-if len(sys.argv) < 2:
-    print(f"{sys.argv[0]}: requires argument 'username'",
-          file=sys.stderr)
-    print(f"{sys.argv[0]} <username> [<start date>]")
-    sys.exit(1)
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  if start:
+    start = arrow.Arrow(start.year, start.month, start.day)
+    amanuensis = hr.compute_amanuensis_data(booked,
+                                            begin_date=start)
+  else:
+    amanuensis = hr.compute_amanuensis_data(booked)
+
+  <<amanuensis iteration variables>>
+  for user in amanuensis:
+    <<skip if [[user_regex]] doesn't match [[user]]>>
+    <<print amanuensis data for [[user]]>>
+@
+
+\subsection{Default arguments for user regex}
+
+We just set up an option defaulting to match anything.
+<<option for TAs to filter for>>=
+user_regex: Annotated[str, user_regex_opt] = ".*"
+<<argument and option definitions>>=
+user_regex_opt = typer.Option(help="Regex to match TAs' usernames that "
+                                   "should be included.")
+@
+
+This allows us to do the check using regexes.
+We compile the regex since we're going to make several matches.
+<<amanuensis iteration variables>>=
+user_pattern = re.compile(user_regex)
+<<imports>>=
+import re
+<<skip if [[user_regex]] doesn't match [[user]]>>=
+if not user_pattern.match(user):
+  continue
+@
+
+\subsection{Default arguments for start date}
+
+We'd like to force the start date in some situations, for instance, we need a 
+later start date due to the TA not applying for the amanuensis position on 
+time.
+The option simply takes a date, it defaults to [[None]].
+<<default argument for start date>>=
+start: Annotated[datetime.datetime, start_date_opt] = None
+<<argument and option definitions>>=
+start_date_opt = typer.Option(help="The start date",
+                              formats=["%Y-%m-%d"])
+@
+
+\subsection{Print the amanuensis data for a TA}
+
+<<amanuensis iteration variables>>=
+first_print = True
+<<print amanuensis data for [[user]]>>=
+if first_print:
+  first_print = False
 else:
-    user = sys.argv[1]
+  print("\n")
 
-if len(sys.argv) > 2:
-    date = arrow.get(sys.argv[2])
-else:
-    date = None
-
-booked = []
-
-for course, url in SIGNUP.items():
-    booked += sheets.read_signup_sheet_from_url(url)
-
-amanuensis = hr.compute_amanuensis_data(booked,
-                                        begin_date=date)
 data = amanuensis[user]
-
-#start, end = shift_dates_forward(data[0], data[1])
 start = data[0]
 end = data[1]
 
@@ -246,19 +287,3 @@ csvout = csv.writer(sys.stdout)
 
 for event in events:
     csvout.writerow(event)
-<<helper functions>>=
-def shift_dates_forward(start_date, end_date):
-  """Takes dates and shifts them so that start_date is tomorrow."""
-  now = arrow.now()
-  today = arrow.Arrow(now.year, now.month, now.day,
-                      hour=start_date.hour, minute=start_date.minute,
-                      second=start_date.second)
-
-  if start_date > today:
-      return start_date, end_date
-
-  diff = (today-start_date).days
-  return start_date.shift(days=diff+1), end_date.shift(days=diff+1)
-@
-
-

@@ -416,7 +416,6 @@ def to_hours(td):
 @
 
 
-
 \section{Amanuensis}
 
 We want the have an amanuensis command that can generate employment info for an 
@@ -428,7 +427,8 @@ This way we can easily calculate what has changed later to track
 <<subcommands>>=
 @cli.command(name="contract")
 def amanuens_cmd(<<option for TAs to filter for>>,
-                 <<default argument for start date>>,
+                 <<default option for start date>>,
+                 <<option for pushing dates forward>> = None,
                  <<argument for matching courses>> = ".*",
                  <<option for matching registers, default to mine>>):
   """
@@ -480,7 +480,7 @@ We'd like to force the start date in some situations, for instance, we need a
 later start date due to the TA not applying for the amanuensis position on 
 time.
 The option simply takes a date, it defaults to [[None]].
-<<default argument for start date>>=
+<<default option for start date>>=
 start: Annotated[datetime.datetime, start_date_opt] = None
 <<argument and option definitions>>=
 start_date_opt = typer.Option(help="The start date",
@@ -513,9 +513,13 @@ print()
 
 \subsubsection{Print a summary of the hours for a TA}
 
+<<option for pushing dates forward>>=
+@
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
+<<push [[start]] and [[end]] forward if necessary>>
+
 print(f"{user}: {data[2]:.2f} h, "
       f"{round(100*hr.compute_percentage(*data))}%: "
       f"{start.format('YYYY-MM-DD')}--{end.format('YYYY-MM-DD')}")
@@ -533,4 +537,3 @@ csvout = csv.writer(sys.stdout)
 for event in events:
     csvout.writerow(event)
 @
-

@@ -280,13 +280,74 @@ def get_ladok_user(canvas_user):
 @
 
 
-\section{Teaching time totals for a course}
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+However, we'll add an option for detailed information that looks the username up
+in Canvas and LADOK to print more detailed information.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>,
+          <<option to output detailed user data>>):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    <<print detailed or non-detailed data about [[user]]>>
+@
+
+We'll return to
+[[<<set list [[courses]] to ((course, register), config)-pairs>>]] and
+[[<<add to [[booked]] from [[course]] in [[register]] using [[config]]>>]]
+later, in \cref{TeachingTime}.
+
+\subsection{Detailed user data}
+
+We want to have an option, that if specified it toggles that we output the
+user's name and other data in addition to only their username.
+<<option to output detailed user data>>=
+detailed: Annotated[bool, detailed_opt] = False
+<<argument and option definitions>>=
+detailed_opt = typer.Option(help="Output detailed user data.")
+<<print detailed or non-detailed data about [[user]]>>=
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+print(user_obj)
+<<print detailed or non-detailed data about [[user]], no newline>>=
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+print(user_obj, end="")
+<<set [[user_obj]] to most detailed version possible of [[user]]>>=
+user_obj = user
+
+if detailed:
+  try:
+    user_obj = get_canvas_user(user, course_regex)
+  except Exception as err:
+    logging.warning(f"Can't look up {user} in Canvas: {err}")
+  else:
+    try:
+      user_obj = get_ladok_user(user_obj)
+    except Exception as err:
+      logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
+      pass
+@
+
+
+\section{Teaching time totals for a course}\label{TeachingTime}
 
 We provide a command [[time]] that summarizes the time spent on the course.
 <<subcommands>>=
 @cli.command()
 def time(<<argument for matching courses>>,
-         <<option for matching registers, default to mine>>):
+         <<option for matching registers, default to mine>>,
+         <<option to output detailed user data>>):
   """
   Summarizes the time spent on teaching the course(s).
   """
@@ -333,7 +394,8 @@ amanuensis = hr.compute_amanuensis_data(booked)
 for user, data in amanuensis.items():
     if not user:
         continue
-    print(f"{user}: {data[2]:.2f} h, "
+    <<print detailed or non-detailed data about [[user]], no newline>>
+    print(f": {data[2]:.2f} h, "
           f"{100*hr.compute_percentage(*data):.1f}%: "
           f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
 
@@ -343,7 +405,8 @@ print("# Hourly")
 for user, hours in hr.hours_per_TA(booked).items():
   if not user or user in amanuensis:
       continue
-  print(f"{user}: {to_hours(hours):.2f} h")
+  <<print detailed or non-detailed data about [[user]], no newline>>
+  print(f": {to_hours(hours):.2f} h")
 <<imports>>=
 from nytid.signup import utils
 from nytid.signup import hr
@@ -352,54 +415,6 @@ def to_hours(td):
     return td.total_seconds()/60/60
 @
 
-
-\section{Staff booked on course}
-
-We want a list of the usernames of who is booked on the course.
-We'll simply read the sign-up sheet and extract all usernames.
-<<subcommands>>=
-@cli.command()
-def users(<<argument for matching courses>>,
-          <<option for matching registers, default to mine>>,
-          <<option to output detailed user data>>):
-  """
-  Prints the list of all usernames booked on the course.
-  """
-  <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
-  for user in hr.hours_per_TA(booked):
-    <<print detailed or non-detailed data about [[user]]>>
-@
-
-\subsection{Detailed user data}
-
-We want to have an option, that if specified it toggles that we output the
-user's name and other data in addition to only their username.
-<<option to output detailed user data>>=
-detailed: Annotated[bool, detailed_opt] = False
-<<argument and option definitions>>=
-detailed_opt = typer.Option(help="Output detailed user data.")
-<<print detailed or non-detailed data about [[user]]>>=
-user_obj = user
-
-if detailed:
-  try:
-    user_obj = get_canvas_user(user, course_regex)
-  except Exception as err:
-    logging.warning(f"Can't look up {user} in Canvas: {err}")
-  else:
-    try:
-      user_obj = get_ladok_user(user_obj)
-    except Exception as err:
-      logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
-      pass
-  
-print(user_obj)
-@
 
 
 \section{Amanuensis}

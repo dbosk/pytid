@@ -1,5 +1,12 @@
 \chapter{The [[cli.hr]] module and the [[hr]] subcommands}%
 \label{cli.signupsheets}
+%\chnote{%
+%  Part of this chapter was developed in collaboration with GitHub Copilot.
+%  It provided autocompletion of text and code that I intended to write (mostly
+%  even verbatim) anyway.
+%  However, the code is mostly a rewrite (generalisation) of proof-of-concept 
+%  code written by myself last year (2022).
+%}
 
 In this chapter we introduce the subommands found under [[nytid signupsheets]],
 it's the [[cli.signupsheets]] module.

@@ -1,4 +1,4 @@
-\chapter{The [[cli.schedule]] and the [[schedule]] subcommands}%
+\chapter{The [[cli.schedule]] module and the [[schedule]] subcommands}%
 \label{cli.schedule}
 
 In this chapter we introduce the subommands found under [[nytid schedule]],

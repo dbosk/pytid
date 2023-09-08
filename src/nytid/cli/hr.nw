@@ -416,7 +416,6 @@ def to_hours(td):
 @
 
 
-
 \section{Amanuensis}
 
 We want the have an amanuensis command that can generate employment info for an 
@@ -428,7 +427,8 @@ This way we can easily calculate what has changed later to track
 <<subcommands>>=
 @cli.command(name="contract")
 def amanuens_cmd(<<option for TAs to filter for>>,
-                 <<default argument for start date>>,
+                 <<default option for start date>>,
+                 <<default option for pushing dates forward>>,
                  <<argument for matching courses>> = ".*",
                  <<option for matching registers, default to mine>>):
   """
@@ -480,7 +480,7 @@ We'd like to force the start date in some situations, for instance, we need a
 later start date due to the TA not applying for the amanuensis position on 
 time.
 The option simply takes a date, it defaults to [[None]].
-<<default argument for start date>>=
+<<default option for start date>>=
 start: Annotated[datetime.datetime, start_date_opt] = None
 <<argument and option definitions>>=
 start_date_opt = typer.Option(help="The start date",
@@ -513,24 +513,67 @@ print()
 
 \subsubsection{Print a summary of the hours for a TA}
 
+[[data]] contains the start and end date as the first two elements.
+Then comes the hours.
+So we get them out to make the code more readable and to modify them.
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
-print(f"{user}: {data[2]:.2f} h, "
+hours = data[2]
+<<push [[start]] and [[end]] forward if necessary>>
+
+print(f"{user}: {hours:.2f} h, "
       f"{round(100*hr.compute_percentage(*data))}%: "
       f"{start.format('YYYY-MM-DD')}--{end.format('YYYY-MM-DD')}")
+@
+
+Sometimes the start date is too early, so we want to push it forward.
+This happens when the TA doesn't apply for the amanuensis position on time, or
+that we are too late in processing it.
+<<default option for pushing dates forward>>=
+real_start: Annotated[datetime.datetime, real_start_opt] = None
+<<argument and option definitions>>=
+real_start_opt = typer.Option(help="Push the dates so that it "
+                                   "starts at this date.",
+                              formats=["%Y-%m-%d"])
+<<push [[start]] and [[end]] forward if necessary>>=
+if real_start:
+  real_start = arrow.Arrow(real_start.year, real_start.month, real_start.day)
+  start, end = push_forward(start, end, real_start)
+<<helper functions>>=
+def push_forward(start, end, real_start):
+  """
+  Takes a start and end date and pushes them forward so that start becomes
+  real_start.
+  """
+  if real_start > start:
+    end += real_start - start
+    start = real_start
+
+  return start, end
+@
+
+We also want the events that the TA booked to keep a record of how the hours
+were computed, so that we can keep track of changes and how that should affect
+the contract.
 <<filter out [[events]] for [[user]]>>=
 events = sheets.filter_events_by_TA(user, booked)
 events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
 events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
                   events))
+@
+
+Now we want to summarize the hours per event type.
+This helps us to get an overview of the changes.
 <<print summary for each event type for [[user]]>>=
 for event, hours in hr.hours_per_event(events).items():
     print(f"{event}: {to_hours(hours)}")
+@
+
+Finally, we print them in CSV format so that we can easily extract them to make
+computations.
 <<print [[events]] in CSV format>>=
 csvout = csv.writer(sys.stdout)
 
 for event in events:
     csvout.writerow(event)
-@
-

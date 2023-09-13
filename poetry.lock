@@ -1111,14 +1111,14 @@ test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.
 
 [[package]]
 name = "typerconf"
-version = "2.5"
+version = "2.6"
 description = "Library to read and write configs using API and CLI with Typer"
 category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "typerconf-2.5-py3-none-any.whl", hash = "sha256:0eac432c123384154cbd39aac648138ad727f52b8a58c507c0781d29d4cc95a0"},
-    {file = "typerconf-2.5.tar.gz", hash = "sha256:fac1cc7051c5ee18a074ccb5bd39588b102448eff5cda8ac2cc38f4da8d74447"},
+    {file = "typerconf-2.6-py3-none-any.whl", hash = "sha256:54761701cb21609bd0a4bf7a8503b1ca5fac034763f43fd2cff3b4ef702f9961"},
+    {file = "typerconf-2.6.tar.gz", hash = "sha256:789bdb5527f867f22275f8b24da20e26d76e6bcc5941ec4f88adbb23ea8d5eac"},
 ]
 
 [package.dependencies]
@@ -1189,4 +1189,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "350f996e8191952c7e4ad3d1128ff5b2703b21342a7fd451d1ee59ebcf9fb297"
+content-hash = "b5f6a406b35391635c5686b1f23b61531a3d6502e2604885e49c0fcff7da8285"

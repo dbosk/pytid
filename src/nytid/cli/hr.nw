@@ -459,7 +459,8 @@ We just set up an option defaulting to match anything.
 <<option for TAs to filter for>>=
 user_regex: Annotated[str, user_regex_opt] = ".*"
 <<argument and option definitions>>=
-user_regex_opt = typer.Option(help="Regex to match TAs' usernames that "
+user_regex_opt = typer.Option("--user",
+                              help="Regex to match TAs' usernames that "
                                    "should be included.")
 @
 

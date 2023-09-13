@@ -147,9 +147,9 @@ the Typer instance as argument, and uses that when it create the function for
 the command.
 See [[pydoc3 typerconf]] for details.
 <<import subcommand modules>>=
-import typerconf as config
+import typerconf
 <<add subcommand typer to cli>>=
-config.add_config_cmd(cli)
+typerconf.add_config_cmd(cli)
 @
 
 \subsection{Adding more subcommands}

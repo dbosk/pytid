@@ -35,6 +35,7 @@ from nytid.signup import hr
 from nytid.signup import sheets
 
 <<imports>>
+<<constants>>
 
 cli = typer.Typer(name="hr",
                   help="Manage sign-up sheets for teaching")
@@ -515,7 +516,7 @@ data = amanuensis[user]
 
 print()
 
-<<print [[events]] in CSV format>>
+<<store [[events]] in CSV format>>
 @
 
 \subsubsection{Print a summary of the hours for a TA}
@@ -560,6 +561,8 @@ def push_forward(start, end, push_start):
   return start, end
 @
 
+\subsubsection{Keeping a record of bookings}
+
 We also want the events that the TA booked to keep a record of how the hours
 were computed, so that we can keep track of changes and how that should affect
 the contract.
@@ -572,15 +575,40 @@ events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user],
 
 Now we want to summarize the hours per event type.
 This helps us to get an overview of the changes.
+This also helps us to be compatible with the amanuensis spreadsheet used at the 
+department.
 <<print summary for each event type for [[user]]>>=
 for event, hours in hr.hours_per_event(events).items():
     print(f"{event}: {to_hours(hours)}")
 @
 
-Finally, we print them in CSV format so that we can easily extract them to make
-computations.
-<<print [[events]] in CSV format>>=
-csvout = csv.writer(sys.stdout)
+Finally, we also store them in CSV format so that we can easily extract them to 
+make computations later, if needed.
+We'll store the data in a file named after the TA and the current time.
+<<amanuensis iteration variables>>=
+path = pathlib.Path("./")
+<<set [[path]] to configured path for storing contracts>>
+<<store [[events]] in CSV format>>=
+filename = f"{user}.{datetime.datetime.now().isoformat()}.csv"
 
-for event in events:
-    csvout.writerow(event)
+with open(path / filename, "w") as outfile:
+  csvout = csv.writer(outfile)
+  csvout.writerow(sheets.SIGNUP_SHEET_HEADER)
+  csvout.writerows(events)
+@
+
+\subsection{Configuring the path for storing contracts}
+
+We want to store the contracts that we generate somewhere.
+We'll let the user configure this location in the config.
+<<imports>>=
+import typerconf
+<<constants>>=
+AMANUENSIS_CONTRACT_PATH = "amanuensis.contract_path"
+<<set [[path]] to configured path for storing contracts>>=
+try:
+  path = pathlib.Path(typerconf.get(AMANUENSIS_CONTRACT_PATH))
+except KeyError as err:
+  logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
+                  f"storing contract data in `{path}`. Set by running "
+                  f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")

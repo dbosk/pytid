@@ -514,8 +514,6 @@ data = amanuensis[user]
 <<filter out [[events]] for [[user]]>>
 <<print summary for each event type for [[user]]>>
 
-print()
-
 <<store [[events]] in CSV format>>
 @
 
@@ -590,6 +588,8 @@ path = pathlib.Path("./")
 <<set [[path]] to configured path for storing contracts>>
 <<store [[events]] in CSV format>>=
 filename = f"{user}.{datetime.datetime.now().isoformat()}.csv"
+
+path.mkdir(parents=True)
 
 with open(path / filename, "w") as outfile:
   csvout = csv.writer(outfile)

@@ -532,24 +532,24 @@ Sometimes the start date is too early, so we want to push it forward.
 This happens when the TA doesn't apply for the amanuensis position on time, or
 that we are too late in processing it.
 <<default option for pushing dates forward>>=
-real_start: Annotated[datetime.datetime, real_start_opt] = None
+push_start: Annotated[datetime.datetime, push_start_opt] = None
 <<argument and option definitions>>=
-real_start_opt = typer.Option(help="Push the dates so that it "
+push_start_opt = typer.Option(help="Push the dates so that it "
                                    "starts at this date.",
                               formats=["%Y-%m-%d"])
 <<push [[start]] and [[end]] forward if necessary>>=
-if real_start:
-  real_start = arrow.Arrow(real_start.year, real_start.month, real_start.day)
-  start, end = push_forward(start, end, real_start)
+if push_start:
+  push_start = arrow.Arrow(push_start.year, push_start.month, push_start.day)
+  start, end = push_forward(start, end, push_start)
 <<helper functions>>=
-def push_forward(start, end, real_start):
+def push_forward(start, end, push_start):
   """
   Takes a start and end date and pushes them forward so that start becomes
-  real_start.
+  push_start.
   """
-  if real_start > start:
-    end += real_start - start
-    start = real_start
+  if push_start > start:
+    end += push_start - start
+    start = push_start
 
   return start, end
 @

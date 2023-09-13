@@ -418,14 +418,20 @@ def to_hours(td):
 
 \section{Amanuensis}
 
-We want the have an amanuensis command that can generate employment info for an 
-amanuensis.
+We want the have a set of amanuensis commands that can generate employment info
+for an amanuensis.
+<<subcommands>>=
+amanuensis = typer.Typer(name="amanuensis",
+                         help="Manage amanuensis employment")
+cli.add_typer(amanuensis)
+@
+
 We also want to automatically store the sessions that are included in that 
 employment.
 This way we can easily calculate what has changed later to track 
 \enquote{\foreignlanguage{swedish}{mertid}}.
 <<subcommands>>=
-@cli.command(name="contract")
+@amanuensis.command(name="create")
 def amanuens_cmd(<<option for TAs to filter for>>,
                  <<default option for start date>>,
                  <<default option for pushing dates forward>>,

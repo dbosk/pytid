@@ -351,7 +351,7 @@ when it's that short period of time.
 
 This gives us the following function:
 <<functions>>=
-def compute_amanuensis_data(csv_rows, low_percentage=0.04, min_days=25,
+def compute_amanuensis_data(csv_rows, low_percentage=0.05, min_days=25,
     add_prep_time=add_prep_time, round_time=round_time, begin_date=None):
   """
   Input:

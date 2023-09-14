@@ -16,6 +16,7 @@ import csv
 import datetime
 from enum import Enum
 import ics.icalendar
+import json
 import logging
 import pathlib
 import os
@@ -587,14 +588,18 @@ We'll store the data in a file named after the TA and the current time.
 path = pathlib.Path("./")
 <<set [[path]] to configured path for storing contracts>>
 <<store [[events]] in CSV format>>=
-filename = f"{user}.{datetime.datetime.now().isoformat()}.csv"
+filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
 
-path.mkdir(parents=True)
+path.mkdir(parents=True, exist_ok=True)
 
 with open(path / filename, "w") as outfile:
-  csvout = csv.writer(outfile)
-  csvout.writerow(sheets.SIGNUP_SHEET_HEADER)
-  csvout.writerows(events)
+  json.dump({"user": user,
+             "start": start.isoformat(),
+             "push_start": push_start.isoformat(),
+             "end": end.isoformat(),
+             "events": events},
+            outfile,
+            indent=2)
 @
 
 \subsection{Configuring the path for storing contracts}

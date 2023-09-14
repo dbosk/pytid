@@ -352,7 +352,8 @@ when it's that short period of time.
 This gives us the following function:
 <<functions>>=
 def compute_amanuensis_data(csv_rows, low_percentage=0.05, min_days=25,
-    add_prep_time=add_prep_time, round_time=round_time, begin_date=None):
+    add_prep_time=add_prep_time, round_time=round_time,
+    begin_date=None, end_date=None):
   """
   Input:
   - csv_rows, the CSV rows as output from csv.reader.
@@ -433,6 +434,8 @@ latest_month = arrow.get(
 
 if begin_date:
   semester_start = earliest_date = earliest_month = begin_date
+if end_date:
+  semester_end = latest_date = latest_month = end_date
 
 if latest_date > semester_end:
   semester_end = latest_month

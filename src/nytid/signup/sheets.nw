@@ -367,3 +367,32 @@ def filter_events_by_title(event_title, csv_rows):
     csv_rows))
 @
 
+\subsection{Filtering events in CSV by start or end dates}
+
+We want to filter out events that are outside a particular time period.
+<<functions>>=
+def filter_events_by_date(csv_rows, start_date=None, end_date=None):
+  """
+  Input: start_date and end_date are datetime.date objects; csv_rows is a list 
+  of CSV rows, as from csv.reader.
+
+  Output: a list of CSV rows containing only the rows with an event starting 
+  between start_date and end_date.
+  """
+  filtered = csv_rows.copy()
+
+  if start_date:
+    filtered = filter(
+                  lambda x: start_date.date() <=
+                      datetime.strptime(x[SIGNUP_SHEET_HEADER.index("Start")],
+                                        STRPTIME_FORMAT).date(),
+                  csv_rows)
+  if end_date:
+    filtered = filter(
+                  lambda x: end_date.date() >
+                      datetime.strptime(x[SIGNUP_SHEET_HEADER.index("End")],
+                                        STRPTIME_FORMAT).date(),
+                  csv_rows)
+
+  return list(filtered)
+@

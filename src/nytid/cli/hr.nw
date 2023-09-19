@@ -292,7 +292,7 @@ in Canvas and LADOK to print more detailed information.
 @cli.command()
 def users(<<argument for matching courses>>,
           <<option for matching registers, default to mine>>,
-          <<option to output detailed user data>>):
+          <<option to output detailed user data>> = False):
   """
   Prints the list of all usernames booked on the course.
   """
@@ -316,7 +316,7 @@ later, in \cref{TeachingTime}.
 We want to have an option, that if specified it toggles that we output the
 user's name and other data in addition to only their username.
 <<option to output detailed user data>>=
-detailed: Annotated[bool, detailed_opt] = False
+detailed: Annotated[bool, detailed_opt]
 <<argument and option definitions>>=
 detailed_opt = typer.Option(help="Output detailed user data.")
 <<print detailed or non-detailed data about [[user]]>>=
@@ -349,7 +349,7 @@ We provide a command [[time]] that summarizes the time spent on the course.
 @cli.command()
 def time(<<argument for matching courses>>,
          <<option for matching registers, default to mine>>,
-         <<option to output detailed user data>>,
+         <<option to output detailed user data>> = False,
          <<options controlling what to print>>):
   """
   Summarizes the time spent on teaching the course(s).
@@ -493,7 +493,8 @@ def amanuens_cmd(<<option for TAs to filter for>>,
                  <<default option for pushing dates forward>>,
                  <<default options for overriding dates>>,
                  <<argument for matching courses>> = ".*",
-                 <<option for matching registers, default to mine>>):
+                 <<option for matching registers, default to mine>>,
+                 <<option to output detailed user data>> = True):
   """
   Computes amanuensis data for a TA.
   """
@@ -592,13 +593,19 @@ data = amanuensis[user]
 [[data]] contains the start and end date as the first two elements.
 Then comes the hours.
 So we get them out to make the code more readable and to modify them.
+
+Next, this summary is what we want to send to HR.
+So we should not use the username, rather as detailed as possible (name and 
+personnummer).
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
 hours = data[2]
 <<modify [[start]], [[end]] or dates in [[data]] if necessary>>
 
-csvout.writerow([user,
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+
+csvout.writerow([user_obj,
                  f"{hours:.2f} h",
                  f"{round(100*hr.compute_percentage(*data))}%",
                  start.date(),

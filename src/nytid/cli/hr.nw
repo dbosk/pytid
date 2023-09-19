@@ -707,20 +707,20 @@ We'll store the data in a file named after the TA and the current time.
 path = pathlib.Path("./")
 <<set [[path]] to configured path for storing contracts>>
 <<store [[events]] in CSV format>>=
-filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
+filename = f"{user}.{datetime.datetime.now().isoformat()}.csv"
 
 path.mkdir(parents=True, exist_ok=True)
 
 with open(path / filename, "w") as outfile:
-  json.dump({"user": user,
-             "start": start.isoformat() if start else None,
-             "set_start": set_start.isoformat() if set_start else None,
-             "push_start": push_start.isoformat() if push_start else None,
-             "end": end.isoformat() if end else None,
-             "set_end": set_end.isoformat() if set_end else None,
-             "events": events},
-            outfile,
-            indent=2)
+  csvfile = csv.writer(outfile, delimiter="\t")
+  csvfile.writerows(
+    [["user", user],
+     ["start", start.isoformat() if start else None],
+     ["set_start", set_start.isoformat() if set_start else None],
+     ["push_start", push_start.isoformat() if push_start else None],
+     ["end", end.isoformat() if end else None],
+     ["set_end", set_end.isoformat() if set_end else None],
+     []] + events)
 @
 
 \subsection{Configuring the path for storing contracts}

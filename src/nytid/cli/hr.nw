@@ -292,7 +292,7 @@ in Canvas and LADOK to print more detailed information.
 @cli.command()
 def users(<<argument for matching courses>>,
           <<option for matching registers, default to mine>>,
-          <<option to output detailed user data>>):
+          <<option to output detailed user data>> = False):
   """
   Prints the list of all usernames booked on the course.
   """
@@ -316,7 +316,7 @@ later, in \cref{TeachingTime}.
 We want to have an option, that if specified it toggles that we output the
 user's name and other data in addition to only their username.
 <<option to output detailed user data>>=
-detailed: Annotated[bool, detailed_opt] = False
+detailed: Annotated[bool, detailed_opt]
 <<argument and option definitions>>=
 detailed_opt = typer.Option(help="Output detailed user data.")
 <<print detailed or non-detailed data about [[user]]>>=
@@ -349,7 +349,8 @@ We provide a command [[time]] that summarizes the time spent on the course.
 @cli.command()
 def time(<<argument for matching courses>>,
          <<option for matching registers, default to mine>>,
-         <<option to output detailed user data>>):
+         <<option to output detailed user data>> = False,
+         <<options controlling what to print>>):
   """
   Summarizes the time spent on teaching the course(s).
   """
@@ -379,42 +380,95 @@ if "docs.google.com" in url:
   url = sheets.google_sheet_to_csv_url(url)
 @
 
-Once we have [[booked]] we can start to compute summaries.
+\subsection{Printing the summaries}
+
+Once we have [[booked]] we can start to compute summaries and print them.
+We want to print them to screen using CSV format so that we can easily turn it 
+into a spreadsheet and use [[cut]] to get the data we want.
 <<print summary of [[booked]]>>=
-h_per_student = hr.hours_per_student(booked)
+csvout = csv.writer(sys.stdout, delimiter="\t")
+<<print course summary, if desired>>
+<<print amanuensis summary, if desired>>
+<<print hourly summary, if desired>>
+@
 
-for event, hours in h_per_student.items():
-    print(f"{event}: {to_hours(hours):.2f} h/student")
+\subsubsection{Summary of the course}
 
-print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
-        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+We want to print a summary of the course.
+This is so that we can get an overview of the total time spent and how much 
+time can be spent (if the sign-up sheet is booked to maximum).
+<<options controlling what to print>>=
+course_summary: Annotated[bool, course_summary_opt] = True,
+<<argument and option definitions>>=
+course_summary_opt = typer.Option(help="Print a summary of the course.")
+<<print course summary, if desired>>=
+if course_summary:
+  h_per_student = hr.hours_per_student(booked)
 
-print("# Amanuenser")
+  for event, hours in h_per_student.items():
+    csvout.writerow([event, to_hours(hours), "h/student"])
 
-amanuensis = hr.compute_amanuensis_data(booked)
-
-for user, data in amanuensis.items():
-    if not user:
-        continue
-    <<print detailed or non-detailed data about [[user]], no newline>>
-    print(f": {data[2]:.2f} h, "
-          f"{100*hr.compute_percentage(*data):.1f}%: "
-          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
-
-print()
-print("# Hourly")
-
-for user, hours in hr.hours_per_TA(booked).items():
-  if not user or user in amanuensis:
-      continue
-  <<print detailed or non-detailed data about [[user]], no newline>>
-  print(f": {to_hours(hours):.2f} h")
-<<imports>>=
-from nytid.signup import utils
-from nytid.signup import hr
+  csvout.writerow(["Booked (h)",
+                to_hours(hr.total_hours(booked)),
+                to_hours(hr.max_hours(booked))])
 <<helper functions>>=
 def to_hours(td):
     return td.total_seconds()/60/60
+<<imports>>=
+from nytid.signup import hr
+@
+
+\subsubsection{Summary of the amanuensis}
+
+We also want to print a summary of the amanuensis.
+Currently this one computes the hours for the amanuensis and the default dates.
+However, a future version should make use the existing contracts and compute 
+updates.
+<<options controlling what to print>>=
+amanuensis_summary: Annotated[bool, amanuensis_summary_opt] = True,
+<<argument and option definitions>>=
+amanuensis_summary_opt = typer.Option(help="Print a summary of the "
+                                           "amanuensis.")
+<<print amanuensis summary, if desired>>=
+if amanuensis_summary:
+  if course_summary:
+    csvout.writerow([])
+  if hourly_summary:
+    csvout.writerow(["# Amanuensis"])
+
+  amanuensis = hr.compute_amanuensis_data(booked)
+
+  for user, data in amanuensis.items():
+      if not user:
+          continue
+      <<set [[user_obj]] to most detailed version possible of [[user]]>>
+      csvout.writerow([user_obj,
+                    f"{data[2]:.2f} h",
+                    f"{100*hr.compute_percentage(*data):.1f}%",
+                    f"{data[0].format('YYYY-MM-DD')}",
+                    f"{data[1].format('YYYY-MM-DD')}"])
+@
+
+\subsubsection{Summary of the hourly TAs}
+
+We also want to print a summary of the hourly TAs.
+<<options controlling what to print>>=
+hourly_summary: Annotated[bool, hourly_summary_opt] = True,
+<<argument and option definitions>>=
+hourly_summary_opt = typer.Option(help="Print a summary of the hourly TAs.")
+<<print hourly summary, if desired>>=
+if hourly_summary:
+  if amanuensis_summary:
+    csvout.writerow([])
+    csvout.writerow(["# Hourly"])
+  elif course_summary:
+    csvout.writerow([])
+
+  for user, hours in hr.hours_per_TA(booked).items():
+    if not user or user in amanuensis:
+      continue
+    <<set [[user_obj]] to most detailed version possible of [[user]]>>
+    csvout.writerow([user_obj, to_hours(hours), "h"])
 @
 
 
@@ -439,7 +493,8 @@ def amanuens_cmd(<<option for TAs to filter for>>,
                  <<default option for pushing dates forward>>,
                  <<default options for overriding dates>>,
                  <<argument for matching courses>> = ".*",
-                 <<option for matching registers, default to mine>>):
+                 <<option for matching registers, default to mine>>,
+                 <<option to output detailed user data>> = True):
   """
   Computes amanuensis data for a TA.
   """
@@ -516,6 +571,7 @@ We may want to print for several users.
 In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
+csvout = csv.writer(sys.stdout, delimiter="\t")
 <<print amanuensis data for [[user]]>>=
 if first_print:
   first_print = False
@@ -537,15 +593,23 @@ data = amanuensis[user]
 [[data]] contains the start and end date as the first two elements.
 Then comes the hours.
 So we get them out to make the code more readable and to modify them.
+
+Next, this summary is what we want to send to HR.
+So we should not use the username, rather as detailed as possible (name and 
+personnummer).
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
 hours = data[2]
 <<modify [[start]], [[end]] or dates in [[data]] if necessary>>
 
-print(f"{user}: {hours:.2f} h, "
-      f"{round(100*hr.compute_percentage(*data))}%: "
-      f"{start.date()}--{end.date()}")
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+
+csvout.writerow([user_obj,
+                 f"{hours:.2f} h",
+                 f"{round(100*hr.compute_percentage(*data))}%",
+                 start.date(),
+                 end.date()])
 @
 
 \subsubsection{Modifying the contract dates}
@@ -640,7 +704,7 @@ This also helps us to be compatible with the amanuensis spreadsheet used at the
 department.
 <<print summary for each event type for [[user]]>>=
 for event, hours in hr.hours_per_event(events).items():
-    print(f"{event}: {to_hours(hours)}")
+  csvout.writerow([event, to_hours(hours), "h"])
 @
 
 Finally, we also store them in CSV format so that we can easily extract them to 

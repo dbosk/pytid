@@ -570,6 +570,7 @@ We may want to print for several users.
 In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
+csvout = csv.writer(sys.stdout, delimiter="\t")
 <<print amanuensis data for [[user]]>>=
 if first_print:
   first_print = False
@@ -597,9 +598,11 @@ end = data[1]
 hours = data[2]
 <<modify [[start]], [[end]] or dates in [[data]] if necessary>>
 
-print(f"{user}: {hours:.2f} h, "
-      f"{round(100*hr.compute_percentage(*data))}%: "
-      f"{start.date()}--{end.date()}")
+csvout.writerow([user,
+                 f"{hours:.2f} h",
+                 f"{round(100*hr.compute_percentage(*data))}%",
+                 start.date(),
+                 end.date()])
 @
 
 \subsubsection{Modifying the contract dates}
@@ -694,7 +697,7 @@ This also helps us to be compatible with the amanuensis spreadsheet used at the
 department.
 <<print summary for each event type for [[user]]>>=
 for event, hours in hr.hours_per_event(events).items():
-    print(f"{event}: {to_hours(hours)}")
+  csvout.writerow([event, to_hours(hours), "h"])
 @
 
 Finally, we also store them in CSV format so that we can easily extract them to 

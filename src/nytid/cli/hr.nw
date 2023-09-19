@@ -349,7 +349,8 @@ We provide a command [[time]] that summarizes the time spent on the course.
 @cli.command()
 def time(<<argument for matching courses>>,
          <<option for matching registers, default to mine>>,
-         <<option to output detailed user data>>):
+         <<option to output detailed user data>>,
+         <<options controlling what to print>>):
   """
   Summarizes the time spent on teaching the course(s).
   """
@@ -379,42 +380,95 @@ if "docs.google.com" in url:
   url = sheets.google_sheet_to_csv_url(url)
 @
 
-Once we have [[booked]] we can start to compute summaries.
+\subsection{Printing the summaries}
+
+Once we have [[booked]] we can start to compute summaries and print them.
+We want to print them to screen using CSV format so that we can easily turn it 
+into a spreadsheet and use [[cut]] to get the data we want.
 <<print summary of [[booked]]>>=
-h_per_student = hr.hours_per_student(booked)
+csvout = csv.writer(sys.stdout, delimiter="\t")
+<<print course summary, if desired>>
+<<print amanuensis summary, if desired>>
+<<print hourly summary, if desired>>
+@
 
-for event, hours in h_per_student.items():
-    print(f"{event}: {to_hours(hours):.2f} h/student")
+\subsubsection{Summary of the course}
 
-print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
-        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+We want to print a summary of the course.
+This is so that we can get an overview of the total time spent and how much 
+time can be spent (if the sign-up sheet is booked to maximum).
+<<options controlling what to print>>=
+course_summary: Annotated[bool, course_summary_opt] = True,
+<<argument and option definitions>>=
+course_summary_opt = typer.Option(help="Print a summary of the course.")
+<<print course summary, if desired>>=
+if course_summary:
+  h_per_student = hr.hours_per_student(booked)
 
-print("# Amanuenser")
+  for event, hours in h_per_student.items():
+    csvout.writerow([event, to_hours(hours), "h/student"])
 
-amanuensis = hr.compute_amanuensis_data(booked)
-
-for user, data in amanuensis.items():
-    if not user:
-        continue
-    <<print detailed or non-detailed data about [[user]], no newline>>
-    print(f": {data[2]:.2f} h, "
-          f"{100*hr.compute_percentage(*data):.1f}%: "
-          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
-
-print()
-print("# Hourly")
-
-for user, hours in hr.hours_per_TA(booked).items():
-  if not user or user in amanuensis:
-      continue
-  <<print detailed or non-detailed data about [[user]], no newline>>
-  print(f": {to_hours(hours):.2f} h")
-<<imports>>=
-from nytid.signup import utils
-from nytid.signup import hr
+  csvout.writerow(["Booked (h)",
+                to_hours(hr.total_hours(booked)),
+                to_hours(hr.max_hours(booked))])
 <<helper functions>>=
 def to_hours(td):
     return td.total_seconds()/60/60
+<<imports>>=
+from nytid.signup import hr
+@
+
+\subsubsection{Summary of the amanuensis}
+
+We also want to print a summary of the amanuensis.
+Currently this one computes the hours for the amanuensis and the default dates.
+However, a future version should make use the existing contracts and compute 
+updates.
+<<options controlling what to print>>=
+amanuensis_summary: Annotated[bool, amanuensis_summary_opt] = True,
+<<argument and option definitions>>=
+amanuensis_summary_opt = typer.Option(help="Print a summary of the "
+                                           "amanuensis.")
+<<print amanuensis summary, if desired>>=
+if amanuensis_summary:
+  if course_summary:
+    csvout.writerow([])
+  if hourly_summary:
+    csvout.writerow(["# Amanuensis"])
+
+  amanuensis = hr.compute_amanuensis_data(booked)
+
+  for user, data in amanuensis.items():
+      if not user:
+          continue
+      <<set [[user_obj]] to most detailed version possible of [[user]]>>
+      csvout.writerow([user_obj,
+                    f"{data[2]:.2f} h",
+                    f"{100*hr.compute_percentage(*data):.1f}%",
+                    f"{data[0].format('YYYY-MM-DD')}",
+                    f"{data[1].format('YYYY-MM-DD')}"])
+@
+
+\subsubsection{Summary of the hourly TAs}
+
+We also want to print a summary of the hourly TAs.
+<<options controlling what to print>>=
+hourly_summary: Annotated[bool, hourly_summary_opt] = True,
+<<argument and option definitions>>=
+hourly_summary_opt = typer.Option(help="Print a summary of the hourly TAs.")
+<<print hourly summary, if desired>>=
+if hourly_summary:
+  if amanuensis_summary:
+    csvout.writerow([])
+    csvout.writerow(["# Hourly"])
+  elif course_summary:
+    csvout.writerow([])
+
+  for user, hours in hr.hours_per_TA(booked).items():
+    if not user or user in amanuensis:
+      continue
+    <<set [[user_obj]] to most detailed version possible of [[user]]>>
+    csvout.writerow([user_obj, to_hours(hours), "h"])
 @
 
 

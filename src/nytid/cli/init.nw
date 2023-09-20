@@ -16,24 +16,220 @@ Each subcommand is documented in one of the subsequent chapters.
 In this section we describe the workflow of various scenarios.
 We describe them in chronological order.
 So in essence, this section serves as a how-to-use manual.
+We will also create two scripts to use [[nytid]] to automate some tasks.
+<<nytid.hourly.sh>>=
+#!/bin/bash
+
+source ${HOME}/.profile
+
+year=$(date +%y)
+@ We will expand on this as we proceed.
+But we can add the script to Cron to automate some tasks.
+\begin{minted}{text}
+# m h  dom mon dow   command
+  0 *  *   *   *     ${HOME}/bin/nytid.hourly.sh
+\end{minted}
 
 \subsection{Setting up a course}
 
 The course responsible must first set up a course.
-Essentially, we just need to provide the URL to the ICS from TimeEdit.
-\begin{description}
-\item[Course responsible] \mintinline{bash}{nytid courses new prgi23 --ics https://...}
-\end{description}
-%More specifically, we can add the following info when creating a course, 
-%according to the command help:
-%\begin{pycode}
-%import subprocess
-%print(r"\begin{verbatim}")
-%result = subprocess.run(["nytid", "courses", "new", "--help"],
-%                        capture_output=True)
-%print(result.stdout.decode("utf-8"))
-%print(r"\end{verbatim}")
-%\end{pycode}
+Essentially, we just need to provide the URL to the ICS from TimeEdit and the 
+number of students and groups\footnote{%
+  As from planning the schedule in KOPPS.
+}.
+In this series of examples, we'll set up two courses: [[prgi23]] and 
+[[prgm23]].
+\begin{minted}{bash}
+nytid courses new prgi23 \
+  --ics https://cloud.timeedit.net/... \
+  --num-students 160 --num-groups 6
+nytid courses new prgm23 \
+  --ics https://cloud.timeedit.net/... \
+  --num-students 200 --num-groups 6
+\end{minted}
+
+\subsection{Generating the sign-up sheet}
+
+The course responsible must then generate the sign-up sheet.
+This is done by running the following command.
+\begin{minted}{bash}
+nytid signupsheets generate prg[im]23 --edit
+\end{minted}
+The [[--edit]] option opens the generated sign-up sheet (or sheets in our case, 
+since we do this for two courses at the same time) in the default editor 
+(LibreOffice Calc in my case).
+Then we can tweak each sign-up sheet and save it.
+
+The generation will automatically compute the needed number of TAs based on the 
+number of students and groups passed to the [[new]] command above.
+It reads the schedule and the group information to see how many rooms and 
+expected number of students in the rooms.
+
+For this to work, however, we need the Swedish language export of the schedule 
+from TimeEdit.
+The English version does things differently.
+For instance, the Swedish version includes [[grupp A]], [[grupp B]] and [[grupp 
+C]]; whereas the English version includes [[group A-C]].
+That messes with us counting the number of groups.
+
+The default location for the sign-up sheet is in the course's data path.
+We can access this by running
+\begin{minted}{bash}
+nytid courses data shell prgi23
+\end{minted}
+This will spawn a shell in the data directory of [[prgi23]].
+
+Next step is to upload the sign-up sheet to Google Sheets and let [[nytid]] 
+know the URL.
+\begin{minted}{bash}
+nytid signupsheets set-url prgi23 https://docs.google.com/spreadsheets/...
+\end{minted}
+
+\subsection{Tweaking the config}
+
+If we want to tweak the config that we just did, we can read and modify it 
+using config commands.
+\begin{minted}{bash}
+nytid config
+nytid courses config prgi23
+\end{minted}
+The first command will work with the personal config,
+the second with the [[prgi23]]-specific course config.
+
+\subsection{Generating data interesting for HR}
+
+% hr               Manage sign-up sheets for teaching                          
+
+HR wants to know who is working on the course.
+We can list the TAs using the
+\begin{minted}{bash}
+nytid hr users prgi23 --detailed
+\end{minted}
+command.
+
+The [[--detailed]] option will try to look up more detailed data about the TA 
+that HR wants.
+In the best case, we look up each TA in LADOK to find their name and 
+personnummer.
+
+If we don't use [[--detailed]], we'll simply get the TA username.
+This can be useful in other circumstances.
+For instance, we might want to add the TAs to the course in UG.
+<<nytid.hourly.sh>>=
+### Set up TAs in UG ###
+
+COURSES="prgm${year} prgi${year} datintro${year}p1"
+
+for course in ${COURSES}
+do
+  <<look up [[ug_path]]>>
+  <<look up [[TAs]]>>
+  <<add TAs in [[TAs]] to UG at [[ug_path]]>>
+done
+@
+
+We need the UG group for the TAs in the course, in the case of [[prgi23]] it's
+\begin{center}
+[[edu.courses.DD.DD1317.20232.1.assistants]].
+\end{center}
+We store this in the config of [[prgi23]]:
+\begin{minted}{bash}
+nytid courses config prgi23 ug.assistants \
+  -s edu.courses.DD.DD1317.20232.1.assistants
+\end{minted}
+That way, we can read it from the config.
+<<look up [[ug_path]]>>=
+ug_path=$(nytid courses config ${course} ug.assistants | sed "s/.*= //")
+if test "$?" -ne 0; then
+  echo "error: no ${course} in nytid"
+  continue
+fi
+@
+
+Note that we could've named [[ug.assistants]] anything, it's just a name we 
+chose in the config.
+It has no special meaning to [[nytid]], only to our scripts.
+The point is, however, that we can add our own things to the config.
+Same thing with storing files in a course's data directory.
+
+Let's continue.
+We can look up the TAs in the same way as we did above.
+<<look up [[TAs]]>>=
+TAs=$(nytid hr users ${course})
+if test "$?" -ne 0; then
+  echo "error: can\'t read users for ${course} in nytid"
+  continue
+fi
+@
+
+Finally, we can add the TAs to the UG group.
+We add one by one, in case of errors.
+If we set all at once, any error will cause no TA to be added.
+One at a time, then only the TA causing the error will not be added.
+<<add TAs in [[TAs]] to UG at [[ug_path]]>>=
+if test -n "${TAs}"; then
+  for ta in ${TAs}; do
+    kthutils ug members add ${ug_path} ${ta}
+  done
+else
+  echo "warning: no-one signed up for ${course}"
+fi
+@
+
+\subsection{Viewing the schedule}
+
+Next thing we might be interested in is the schedule.
+This can be done using the [[nytid schedule]] subcommands.
+We have two commands:
+\begin{minted}{bash}
+nytid schedule show prgi23
+nytid schedule ics prgi23
+\end{minted}
+
+The first command will show the schedule in the terminal in a readable format.
+By default it will show the schedule for today and a week ahead.
+
+The second command does the same, except the output is in ICS format.
+This allows us to export the schedule to our calendar.
+<<nytid.hourly.sh>>=
+### Generate schedules for TAs ###
+
+ICS_COURSES="(prg[im]${year}|datintro${year}p1)"
+ICS_DIR=/afs/kth.se/home/d/b/dbosk/public_html/nytid
+
+mkdir -p ${ICS_DIR}
+
+for user in $(nytid hr users "${ICS_COURSES}")
+do
+  nytid schedule ics "${ICS_COURSES}" --user ${user} \
+    > ${ICS_DIR}/${user}.ics
+done
+@
+
+Now, I also want to generate a schedule for myself that includes all courses.
+Note that we don't supply any regex for the courses, using the default [[.*]], 
+matching everything.
+<<nytid.hourly.sh>>=
+# Update my schedule again with all courses this time
+nytid schedule ics --user dbosk > ${ICS_DIR}/dbosk.ics 2> >(grep -v WARNING)
+@
+
+When a course has a sign-up sheet, that one will be used.
+Otherwise, the course's schedule will be used.
+This is the ICS-schedule that we supplied to the [[new]] command above.
+If that happens, [[nytid]] will issue warnings.
+Since we want to run this script using Cron, we don't want any output unless a 
+real error occurs, so we filter out all warnings.
+
+
+% courses          Manage courses                                              
+% mine      Manage my courses                                                  
+% registry  Manage course registers                                            
+
+
+\section{Future usage: design plans}
+
+What follows is an outline of the design ideas for the interface and workflow.
 
 \subsection{Adding more teachers to a course}
 

@@ -494,7 +494,8 @@ def amanuens_cmd(<<option for TAs to filter for>>,
                  <<default options for overriding dates>>,
                  <<argument for matching courses>> = ".*",
                  <<option for matching registers, default to mine>>,
-                 <<option to output detailed user data>> = True):
+                 <<option to output detailed user data>> = True,
+                 <<option to include event summary>>):
   """
   Computes amanuensis data for a TA.
   """
@@ -583,9 +584,19 @@ data = amanuensis[user]
 <<print a summary of the hours for [[user]] in [[data]]>>
 
 <<filter out [[events]] for [[user]]>>
-<<print summary for each event type for [[user]]>>
+if event_summary:
+  <<print summary for each event type for [[user]]>>
 
 <<store [[events]] in CSV format>>
+@
+
+Now, we want to have an option to control [[event_summary]].
+We want this option, since HR might not want it, whereas we might.
+<<option to include event summary>>=
+event_summary: Annotated[bool, event_summary_opt] = False
+<<argument and option definitions>>=
+event_summary_opt = typer.Option(help="Print a summary of the hours per event "
+                                      "type.")
 @
 
 \subsubsection{Print a summary of the hours for a TA}
@@ -597,6 +608,10 @@ So we get them out to make the code more readable and to modify them.
 Next, this summary is what we want to send to HR.
 So we should not use the username, rather as detailed as possible (name and 
 personnummer).
+
+Finally, if we use [[event_summary]], we also want to include the total number 
+of hours including prep time.
+In that case, we add that column last.
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
@@ -605,11 +620,15 @@ hours = data[2]
 
 <<set [[user_obj]] to most detailed version possible of [[user]]>>
 
-csvout.writerow([user_obj,
-                 f"{hours:.2f} h",
-                 f"{round(100*hr.compute_percentage(*data))}%",
-                 start.date(),
-                 end.date()])
+row = [user_obj,
+       start.date(),
+       end.date(),
+       f"{round(100*hr.compute_percentage(*data))}%"]
+
+if event_summary:
+  row.append(f"{hours:.2f} h")
+
+csvout.writerow(row)
 @
 
 \subsubsection{Modifying the contract dates}

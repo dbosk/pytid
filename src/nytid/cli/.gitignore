@@ -6,3 +6,5 @@ signupsheets.py
 signupsheets.tex
 hr.py
 hr.tex
+nytid.hourly.sh
+nytid.monthly.sh

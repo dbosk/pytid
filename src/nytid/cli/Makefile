@@ -6,18 +6,23 @@ MODULES+=	schedule.py
 MODULES+=	signupsheets.py
 MODULES+=	hr.py
 
+EXTRAS+=	nytid.hourly.sh
+
 .PHONY: all
-all: ${MODULES}
+all: ${MODULES} ${EXTRAS}
 
 .INTERMEDIATE: init.py
 __init__.py: init.py
 	${MV} $< $@
 
+nytid.hourly.sh: init.nw
+	${NOTANGLE}
 
 .PHONY: clean
 clean:
 	${RM} -R ${MODULES} __pycache__
 	${RM} *.tex
+	${RM} ${EXTRAS}
 
 
 INCLUDE_MAKEFILES=../../../makefiles

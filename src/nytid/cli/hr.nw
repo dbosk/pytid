@@ -16,6 +16,7 @@ import csv
 import datetime
 from enum import Enum
 import ics.icalendar
+import json
 import logging
 import pathlib
 import os
@@ -35,6 +36,7 @@ from nytid.signup import hr
 from nytid.signup import sheets
 
 <<imports>>
+<<constants>>
 
 cli = typer.Typer(name="hr",
                   help="Manage sign-up sheets for teaching")
@@ -280,13 +282,75 @@ def get_ladok_user(canvas_user):
 @
 
 
-\section{Teaching time totals for a course}
+\section{Staff booked on course}
+
+We want a list of the usernames of who is booked on the course.
+We'll simply read the sign-up sheet and extract all usernames.
+However, we'll add an option for detailed information that looks the username up
+in Canvas and LADOK to print more detailed information.
+<<subcommands>>=
+@cli.command()
+def users(<<argument for matching courses>>,
+          <<option for matching registers, default to mine>>,
+          <<option to output detailed user data>> = False):
+  """
+  Prints the list of all usernames booked on the course.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+
+  booked = []
+  for (course, register), config in courses.items():
+    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+
+  for user in hr.hours_per_TA(booked):
+    <<print detailed or non-detailed data about [[user]]>>
+@
+
+We'll return to
+[[<<set list [[courses]] to ((course, register), config)-pairs>>]] and
+[[<<add to [[booked]] from [[course]] in [[register]] using [[config]]>>]]
+later, in \cref{TeachingTime}.
+
+\subsection{Detailed user data}
+
+We want to have an option, that if specified it toggles that we output the
+user's name and other data in addition to only their username.
+<<option to output detailed user data>>=
+detailed: Annotated[bool, detailed_opt]
+<<argument and option definitions>>=
+detailed_opt = typer.Option(help="Output detailed user data.")
+<<print detailed or non-detailed data about [[user]]>>=
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+print(user_obj)
+<<print detailed or non-detailed data about [[user]], no newline>>=
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+print(user_obj, end="")
+<<set [[user_obj]] to most detailed version possible of [[user]]>>=
+user_obj = user
+
+if detailed:
+  try:
+    user_obj = get_canvas_user(user, course_regex)
+  except Exception as err:
+    logging.warning(f"Can't look up {user} in Canvas: {err}")
+  else:
+    try:
+      user_obj = get_ladok_user(user_obj)
+    except Exception as err:
+      logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
+      pass
+@
+
+
+\section{Teaching time totals for a course}\label{TeachingTime}
 
 We provide a command [[time]] that summarizes the time spent on the course.
 <<subcommands>>=
 @cli.command()
 def time(<<argument for matching courses>>,
-         <<option for matching registers, default to mine>>):
+         <<option for matching registers, default to mine>>,
+         <<option to output detailed user data>> = False,
+         <<options controlling what to print>>):
   """
   Summarizes the time spent on teaching the course(s).
   """
@@ -316,89 +380,95 @@ if "docs.google.com" in url:
   url = sheets.google_sheet_to_csv_url(url)
 @
 
-Once we have [[booked]] we can start to compute summaries.
+\subsection{Printing the summaries}
+
+Once we have [[booked]] we can start to compute summaries and print them.
+We want to print them to screen using CSV format so that we can easily turn it 
+into a spreadsheet and use [[cut]] to get the data we want.
 <<print summary of [[booked]]>>=
-h_per_student = hr.hours_per_student(booked)
+csvout = csv.writer(sys.stdout, delimiter="\t")
+<<print course summary, if desired>>
+<<print amanuensis summary, if desired>>
+<<print hourly summary, if desired>>
+@
 
-for event, hours in h_per_student.items():
-    print(f"{event}: {to_hours(hours):.2f} h/student")
+\subsubsection{Summary of the course}
 
-print(f"Booked: {to_hours(hr.total_hours(booked)):.2f} h "
-        f"({to_hours(hr.max_hours(booked)):.2f} h)\n")
+We want to print a summary of the course.
+This is so that we can get an overview of the total time spent and how much 
+time can be spent (if the sign-up sheet is booked to maximum).
+<<options controlling what to print>>=
+course_summary: Annotated[bool, course_summary_opt] = True,
+<<argument and option definitions>>=
+course_summary_opt = typer.Option(help="Print a summary of the course.")
+<<print course summary, if desired>>=
+if course_summary:
+  h_per_student = hr.hours_per_student(booked)
 
-print("# Amanuenser")
+  for event, hours in h_per_student.items():
+    csvout.writerow([event, to_hours(hours), "h/student"])
 
-amanuensis = hr.compute_amanuensis_data(booked)
-
-for user, data in amanuensis.items():
-    if not user:
-        continue
-    print(f"{user}: {data[2]:.2f} h, "
-          f"{100*hr.compute_percentage(*data):.1f}%: "
-          f"{data[0].format('YYYY-MM-DD')}--{data[1].format('YYYY-MM-DD')}")
-
-print()
-print("# Hourly")
-
-for user, hours in hr.hours_per_TA(booked).items():
-  if not user or user in amanuensis:
-      continue
-  print(f"{user}: {to_hours(hours):.2f} h")
-<<imports>>=
-from nytid.signup import utils
-from nytid.signup import hr
+  csvout.writerow(["Booked (h)",
+                to_hours(hr.total_hours(booked)),
+                to_hours(hr.max_hours(booked))])
 <<helper functions>>=
 def to_hours(td):
     return td.total_seconds()/60/60
+<<imports>>=
+from nytid.signup import hr
 @
 
+\subsubsection{Summary of the amanuensis}
 
-\section{Staff booked on course}
-
-We want a list of the usernames of who is booked on the course.
-We'll simply read the sign-up sheet and extract all usernames.
-<<subcommands>>=
-@cli.command()
-def users(<<argument for matching courses>>,
-          <<option for matching registers, default to mine>>,
-          <<option to output detailed user data>>):
-  """
-  Prints the list of all usernames booked on the course.
-  """
-  <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
-  for user in hr.hours_per_TA(booked):
-    <<print detailed or non-detailed data about [[user]]>>
-@
-
-\subsection{Detailed user data}
-
-We want to have an option, that if specified it toggles that we output the
-user's name and other data in addition to only their username.
-<<option to output detailed user data>>=
-detailed: Annotated[bool, detailed_opt] = False
+We also want to print a summary of the amanuensis.
+Currently this one computes the hours for the amanuensis and the default dates.
+However, a future version should make use the existing contracts and compute 
+updates.
+<<options controlling what to print>>=
+amanuensis_summary: Annotated[bool, amanuensis_summary_opt] = True,
 <<argument and option definitions>>=
-detailed_opt = typer.Option(help="Output detailed user data.")
-<<print detailed or non-detailed data about [[user]]>>=
-user_obj = user
+amanuensis_summary_opt = typer.Option(help="Print a summary of the "
+                                           "amanuensis.")
+<<print amanuensis summary, if desired>>=
+if amanuensis_summary:
+  if course_summary:
+    csvout.writerow([])
+  if hourly_summary:
+    csvout.writerow(["# Amanuensis"])
 
-if detailed:
-  try:
-    user_obj = get_canvas_user(user, course_regex)
-  except Exception as err:
-    logging.warning(f"Can't look up {user} in Canvas: {err}")
-  else:
-    try:
-      user_obj = get_ladok_user(user_obj)
-    except Exception as err:
-      logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
-      pass
-  
-print(user_obj)
+  amanuensis = hr.compute_amanuensis_data(booked)
+
+  for user, data in amanuensis.items():
+      if not user:
+          continue
+      <<set [[user_obj]] to most detailed version possible of [[user]]>>
+      csvout.writerow([user_obj,
+                    f"{data[2]:.2f} h",
+                    f"{100*hr.compute_percentage(*data):.1f}%",
+                    f"{data[0].format('YYYY-MM-DD')}",
+                    f"{data[1].format('YYYY-MM-DD')}"])
+@
+
+\subsubsection{Summary of the hourly TAs}
+
+We also want to print a summary of the hourly TAs.
+<<options controlling what to print>>=
+hourly_summary: Annotated[bool, hourly_summary_opt] = True,
+<<argument and option definitions>>=
+hourly_summary_opt = typer.Option(help="Print a summary of the hourly TAs.")
+<<print hourly summary, if desired>>=
+if hourly_summary:
+  if amanuensis_summary:
+    csvout.writerow([])
+    csvout.writerow(["# Hourly"])
+  elif course_summary:
+    csvout.writerow([])
+
+  for user, hours in hr.hours_per_TA(booked).items():
+    if not user or user in amanuensis:
+      continue
+    <<set [[user_obj]] to most detailed version possible of [[user]]>>
+    csvout.writerow([user_obj, to_hours(hours), "h"])
 @
 
 \section{Generate time sheets}
@@ -503,33 +573,42 @@ def summarize_user(user, course, course_events,
 
 \section{Amanuensis}
 
-We want the have an amanuensis command that can generate employment info for an 
-amanuensis.
+We want the have a set of amanuensis commands that can generate employment info
+for an amanuensis.
+<<subcommands>>=
+amanuensis = typer.Typer(name="amanuensis",
+                         help="Manage amanuensis employment")
+cli.add_typer(amanuensis)
+@
+
 We also want to automatically store the sessions that are included in that 
 employment.
 This way we can easily calculate what has changed later to track 
 \enquote{\foreignlanguage{swedish}{mertid}}.
 <<subcommands>>=
-@cli.command(name="contract")
+@amanuensis.command(name="create")
 def amanuens_cmd(<<option for TAs to filter for>>,
-                 <<default argument for start date>>,
+                 <<default options for start, end dates>>,
+                 <<default option for pushing dates forward>>,
+                 <<default options for overriding dates>>,
                  <<argument for matching courses>> = ".*",
-                 <<option for matching registers, default to mine>>):
+                 <<option for matching registers, default to mine>>,
+                 <<option to output detailed user data>> = True):
   """
   Computes amanuensis data for a TA.
   """
+  <<make all dates timezone aware>>
   <<set list [[courses]] to ((course, register), config)-pairs>>
 
   booked = []
   for (course, register), config in courses.items():
     <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
 
-  if start:
-    start = arrow.Arrow(start.year, start.month, start.day)
-    amanuensis = hr.compute_amanuensis_data(booked,
-                                            begin_date=start)
-  else:
-    amanuensis = hr.compute_amanuensis_data(booked)
+  <<filter events from [[booked]] based on start, end dates>>
+
+  amanuensis = hr.compute_amanuensis_data(booked,
+                                          begin_date=start,
+                                          end_date=end)
 
   <<amanuensis iteration variables>>
   for user in amanuensis:
@@ -543,7 +622,8 @@ We just set up an option defaulting to match anything.
 <<option for TAs to filter for>>=
 user_regex: Annotated[str, user_regex_opt] = ".*"
 <<argument and option definitions>>=
-user_regex_opt = typer.Option(help="Regex to match TAs' usernames that "
+user_regex_opt = typer.Option("--user",
+                              help="Regex to match TAs' usernames that "
                                    "should be included.")
 @
 
@@ -558,17 +638,30 @@ if not user_pattern.match(user):
   continue
 @
 
-\subsection{Default arguments for start date}
+\subsection{Start and end dates}
 
 We'd like to force the start date in some situations, for instance, we need a 
 later start date due to the TA not applying for the amanuensis position on 
 time.
 The option simply takes a date, it defaults to [[None]].
-<<default argument for start date>>=
-start: Annotated[datetime.datetime, start_date_opt] = None
+<<default options for start, end dates>>=
+start: Annotated[datetime.datetime, start_date_opt] = None,
+end: Annotated[datetime.datetime, end_date_opt] = None
 <<argument and option definitions>>=
-start_date_opt = typer.Option(help="The start date",
+start_date_opt = typer.Option(help="The start date (inclusive, <=), "
+                                   "when unset includes "
+                                   "everything in the sign-up sheet. "
+                                   "Set this to decide what to include from "
+                                   "the sign-up sheet.",
                               formats=["%Y-%m-%d"])
+end_date_opt = typer.Option(help="The end date (not inclusive, <), "
+                                 "when unset includes "
+                                 "everything in the sign-up sheet. "
+                                 "Set this to decide what to include from "
+                                 "the sign-up sheet.",
+                            formats=["%Y-%m-%d"])
+<<filter events from [[booked]] based on start, end dates>>=
+booked = sheets.filter_events_by_date(booked, start, end)
 @
 
 \subsection{Print the amanuensis data for a TA}
@@ -577,6 +670,7 @@ We may want to print for several users.
 In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
+csvout = csv.writer(sys.stdout, delimiter="\t")
 <<print amanuensis data for [[user]]>>=
 if first_print:
   first_print = False
@@ -590,31 +684,163 @@ data = amanuensis[user]
 <<filter out [[events]] for [[user]]>>
 <<print summary for each event type for [[user]]>>
 
-print()
-
-<<print [[events]] in CSV format>>
+<<store [[events]] in CSV format>>
 @
 
 \subsubsection{Print a summary of the hours for a TA}
 
+[[data]] contains the start and end date as the first two elements.
+Then comes the hours.
+So we get them out to make the code more readable and to modify them.
+
+Next, this summary is what we want to send to HR.
+So we should not use the username, rather as detailed as possible (name and 
+personnummer).
 <<print a summary of the hours for [[user]] in [[data]]>>=
 start = data[0]
 end = data[1]
-print(f"{user}: {data[2]:.2f} h, "
-      f"{round(100*hr.compute_percentage(*data))}%: "
-      f"{start.format('YYYY-MM-DD')}--{end.format('YYYY-MM-DD')}")
+hours = data[2]
+<<modify [[start]], [[end]] or dates in [[data]] if necessary>>
+
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+
+csvout.writerow([user_obj,
+                 f"{hours:.2f} h",
+                 f"{round(100*hr.compute_percentage(*data))}%",
+                 start.date(),
+                 end.date()])
+@
+
+\subsubsection{Modifying the contract dates}
+
+Sometimes the start date is too early, so we want to push it forward together 
+with the end date.
+This happens when the TA doesn't apply for the amanuensis position on time, or
+that we are too late in processing it.
+<<default option for pushing dates forward>>=
+push_start: Annotated[datetime.datetime, push_start_opt] = None
+<<argument and option definitions>>=
+push_start_opt = typer.Option(help="Push the dates of the contract so that it "
+                                   "starts at this date. "
+                                   "This keeps the same percentage.",
+                              formats=["%Y-%m-%d"])
+<<modify [[start]], [[end]] or dates in [[data]] if necessary>>=
+if push_start:
+  push_start = arrow.Arrow(push_start.year, push_start.month, push_start.day)
+  start, end = push_forward(start, end, push_start)
+<<helper functions>>=
+def push_forward(start, end, push_start):
+  """
+  Takes a start and end date and pushes them forward so that start becomes
+  push_start.
+  """
+  if push_start > start:
+    end += push_start - start
+    start = push_start
+
+  return start, end
+@
+
+And sometimes we want to set the start and end dates to specific dates.
+This will affect the percentage computation, so we must modify the dates in 
+[[data[0]]] and [[data[1]]].
+<<default options for overriding dates>>=
+set_start: Annotated[datetime.datetime, set_start_opt] = None,
+set_end: Annotated[datetime.datetime, set_end_opt] = None
+<<argument and option definitions>>=
+set_start_opt = typer.Option(help="Force the start date of the contract to "
+                                  "this date. Might modify percentage.",
+                             formats=["%Y-%m-%d"])
+set_end_opt = typer.Option(help="Force the end date of the contract to "
+                                "this date. Might modify percentage.",
+                           formats=["%Y-%m-%d"])
+@
+
+We note that if we must modify [[data[0]]] or [[data[1]]], we must also modify 
+[[start]] and [[end]] that have already been set.
+<<modify [[start]], [[end]] or dates in [[data]] if necessary>>=
+data = list(data)
+if set_start:
+  start = data[0] = set_start
+if set_end:
+  end = data[1] = set_end
+@
+
+\subsubsection{Make all dates timezone aware}
+
+We must make all these dates timezone aware as they're not created as such.
+According to the documentation, we can use the [[astimezone]] method to do 
+this\footnote{%
+  Thanks to this answer on StackOverflow:
+  \url{https://stackoverflow.com/a/52606421/1305099}.
+}.
+<<make all dates timezone aware>>=
+if start:
+  start = start.astimezone()
+if push_start:
+  push_start = push_start.astimezone()
+if set_start:
+  set_start = set_start.astimezone()
+if set_end:
+  set_end = set_end.astimezone()
+@
+
+\subsubsection{Keeping a record of bookings}
+
+We also want the events that the TA booked to keep a record of how the hours
+were computed, so that we can keep track of changes and how that should affect
+the contract.
 <<filter out [[events]] for [[user]]>>=
 events = sheets.filter_events_by_TA(user, booked)
 events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
 events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
                   events))
-<<print summary for each event type for [[user]]>>=
-for event, hours in hr.hours_per_event(events).items():
-    print(f"{event}: {to_hours(hours)}")
-<<print [[events]] in CSV format>>=
-csvout = csv.writer(sys.stdout)
-
-for event in events:
-    csvout.writerow(event)
 @
 
+Now we want to summarize the hours per event type.
+This helps us to get an overview of the changes.
+This also helps us to be compatible with the amanuensis spreadsheet used at the 
+department.
+<<print summary for each event type for [[user]]>>=
+for event, hours in hr.hours_per_event(events).items():
+  csvout.writerow([event, to_hours(hours), "h"])
+@
+
+Finally, we also store them in CSV format so that we can easily extract them to 
+make computations later, if needed.
+We'll store the data in a file named after the TA and the current time.
+<<amanuensis iteration variables>>=
+path = pathlib.Path("./")
+<<set [[path]] to configured path for storing contracts>>
+<<store [[events]] in CSV format>>=
+filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
+
+path.mkdir(parents=True, exist_ok=True)
+
+with open(path / filename, "w") as outfile:
+  json.dump({"user": user,
+             "start": start.isoformat() if start else None,
+             "set_start": set_start.isoformat() if set_start else None,
+             "push_start": push_start.isoformat() if push_start else None,
+             "end": end.isoformat() if end else None,
+             "set_end": set_end.isoformat() if set_end else None,
+             "events": events},
+            outfile,
+            indent=2)
+@
+
+\subsection{Configuring the path for storing contracts}
+
+We want to store the contracts that we generate somewhere.
+We'll let the user configure this location in the config.
+<<imports>>=
+import typerconf
+<<constants>>=
+AMANUENSIS_CONTRACT_PATH = "amanuensis.contract_path"
+<<set [[path]] to configured path for storing contracts>>=
+try:
+  path = pathlib.Path(typerconf.get(AMANUENSIS_CONTRACT_PATH))
+except KeyError as err:
+  logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
+                  f"storing contract data in `{path}`. Set by running "
+                  f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")

@@ -280,6 +280,19 @@ generate timesheets.)
 
 For this, we just need to take the event (a row of CSV) as input, then cut only 
 the list of TAs.
+
+The TAs have a tendency to add extraneous spaces at the beginning or end, so we 
+want to strip those away.
+They also have a tendency to write their username in different cases, so we 
+want to do a casefold.
+Now that explains the call to [[map]].
+
+We also want to strip away empty slots.
+Since they might contain spaces, we want to strip those away first.
+However, we need a call to [[.strip()]] both in the [[filter]] and the [[map]] 
+calls.
+Since [[filter]] will not modify, it just checks that something was left after 
+the strip and, in that case, passes the string as it was---not stripped!
 <<functions>>=
 def get_TAs_from_csv(csv_row):
   """
@@ -288,7 +301,7 @@ def get_TAs_from_csv(csv_row):
   Output: returns the list of signed TAs. Ensures casefold for TA IDs.
   """
   return list(
-    map(lambda x: x.casefold(),
+    map(lambda x: x.casefold().strip(),
       filter(lambda x: x.strip(),
         csv_row[len(SIGNUP_SHEET_HEADER):]))
     )
@@ -354,3 +367,32 @@ def filter_events_by_title(event_title, csv_rows):
     csv_rows))
 @
 
+\subsection{Filtering events in CSV by start or end dates}
+
+We want to filter out events that are outside a particular time period.
+<<functions>>=
+def filter_events_by_date(csv_rows, start_date=None, end_date=None):
+  """
+  Input: start_date and end_date are datetime.date objects; csv_rows is a list 
+  of CSV rows, as from csv.reader.
+
+  Output: a list of CSV rows containing only the rows with an event starting 
+  between start_date and end_date.
+  """
+  filtered = csv_rows.copy()
+
+  if start_date:
+    filtered = filter(
+                  lambda x: start_date.date() <=
+                      datetime.strptime(x[SIGNUP_SHEET_HEADER.index("Start")],
+                                        STRPTIME_FORMAT).date(),
+                  csv_rows)
+  if end_date:
+    filtered = filter(
+                  lambda x: end_date.date() >
+                      datetime.strptime(x[SIGNUP_SHEET_HEADER.index("End")],
+                                        STRPTIME_FORMAT).date(),
+                  csv_rows)
+
+  return list(filtered)
+@

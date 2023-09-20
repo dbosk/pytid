@@ -18,16 +18,21 @@ We describe them in chronological order.
 So in essence, this section serves as a how-to-use manual.
 We will also create two scripts to use [[nytid]] to automate some tasks.
 <<nytid.hourly.sh>>=
+<<cronjob header>>
+<<nytid.monthly.sh>>=
+<<cronjob header>>
+<<cronjob header>>=
 #!/bin/bash
 
 source ${HOME}/.profile
 
 year=$(date +%y)
-@ We will expand on this as we proceed.
-But we can add the script to Cron to automate some tasks.
+@ We will expand on these as we proceed.
+But we can add them to Cron to automate some tasks.
 \begin{minted}{text}
 # m h  dom mon dow   command
   0 *  *   *   *     ${HOME}/bin/nytid.hourly.sh
+  0 0  1   *   *     ${HOME}/bin/nytid.monthly.sh
 \end{minted}
 
 \subsection{Setting up a course}

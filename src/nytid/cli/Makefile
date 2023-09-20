@@ -7,6 +7,7 @@ MODULES+=	signupsheets.py
 MODULES+=	hr.py
 
 EXTRAS+=	nytid.hourly.sh
+EXTRAS+=	nytid.monthly.sh
 
 .PHONY: all
 all: ${MODULES} ${EXTRAS}
@@ -15,7 +16,7 @@ all: ${MODULES} ${EXTRAS}
 __init__.py: init.py
 	${MV} $< $@
 
-nytid.hourly.sh: init.nw
+nytid.hourly.sh nytid.monthly.sh: init.nw
 	${NOTANGLE}
 
 .PHONY: clean

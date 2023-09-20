@@ -176,6 +176,31 @@ else
 fi
 @
 
+\subsection{Generating amanuensis contracts for HR}
+
+HR also wants data to set up amanuensis contracts for the TAs that qualify.
+We can do this by running the following command.
+\begin{minted}{bash}
+nytid hr amanuensis create prg[im]23 > amanuensis.csv
+\end{minted}
+That command would create the contracts for all the TAs in [[prgi23]] and 
+[[prgm23]] that achieves a minimum workload of 5\% of full time.
+The detailed contracts will be stored on disk\footnote{%
+  The location depends on the personal [[nytid]] config.
+  It will ask you to set it up the first time.
+  Until you've set it up, the detailed contracts will be written to the current 
+  working directory.
+}, a summary for HR will be written to [[amanuensis.csv]] (in the example 
+above).
+
+However, the start date depends on when the TA submitted the application for 
+the position.
+So usually, we must create contracts with specific dates for each TA.
+\begin{minted}{bash}
+nytid hr amanuensis create prg[im]23 \
+  --user dbosk --start 2023-08-27 >> amanuensis.csv
+\end{minted}
+
 \subsection{Viewing the schedule}
 
 Next thing we might be interested in is the schedule.

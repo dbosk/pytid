@@ -205,6 +205,72 @@ The end date will be computed automatically.
 We also keep all events that the TA signed up for, event if those are before 
 the start date of the contract.
 
+\subsection{Generating time sheets for hourly TAs}
+
+The TAs that are paid by the hour must submit time sheets according to HR.
+However, then we must check them.
+It's better that we generate them automatically from the sign-up sheet, then we 
+know they're correct as long as the sign-up sheet is correct.
+
+We can generate time sheets for [[prgi23]] and [[prgm23]] as follows.
+\begin{minted}{bash}
+nytid hr timesheet generate prg[im]23 --end 2023-10-01
+\end{minted}
+That will generate time sheets for all hourly TAs and include events until end 
+of September (it's not inclusive, so \(<\) 2023-10-01).
+
+With this construction, we can automate the generation of time sheets on a 
+monthly basis.
+Now, we assume that the time sheets are generated on the first of each month, 
+that is, that [[nytid.monthly.sh]] is run on the first of every month.
+
+We will create time sheets for [[datintro23]], [[prgi23]] and [[prgm23]].
+We'll send one email per course.
+<<nytid.monthly.sh>>=
+TIMESHEETS_COURSES="datintro${year} prgi${year} prgm${year}"
+TIMESHEETS_MAIL=xxx@kth.se
+TIMESHEETS_MSG="
+Hej, hej!
+
+This months time sheets are attached.
+
+          Daniel
+"
+
+today=$(date +%Y-%m-%d)
+
+for course in ${TIMESHEETS_COURSES}
+do
+  <<generate time sheets for [[course]]>>
+  <<send time sheets for [[course]]>>
+done
+@
+
+Now, generating the time sheets will create a lot of files in the current 
+working directory.
+To keep the courses separate, we'll create a temporary directory for each 
+course and create the files there.
+<<generate time sheets for [[course]]>>=
+tmpdir=$(mktemp -d)
+cd ${tmpdir}
+@
+
+Then we generate the time sheets there.
+That will create a [[.xlsx]] file for each TA.
+We'll then convert all of them to PDF.
+<<generate time sheets for [[course]]>>=
+nytid hr timesheet generate ${course} --end ${today}
+loffice --convert-to pdf *.xlsx
+@
+
+Next step is to send all the PDF time sheets for processing.
+<<send time sheets for [[course]]>>=
+echo ${TIMESHEETS_MSG} | \
+  mail -s "Time sheets for ${course}" \
+       -a "*.pdf" ${TIMESHEETS_MAIL}
+@
+
+
 \subsection{Viewing the schedule}
 
 Next thing we might be interested in is the schedule.

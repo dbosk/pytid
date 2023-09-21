@@ -471,13 +471,21 @@ if hourly_summary:
     csvout.writerow([user_obj, to_hours(hours), "h"])
 @
 
-\section{Generate time sheets}
+\section{Working with time sheets}
+
+We'll create a set of subcommands under [[timesheet]] to manage time sheets.
+<<subcommands>>=
+timesheet = typer.Typer(name="timesheet",
+                        help="Manage timesheets for TAs")
+@
+
+\subsection{Generate time sheets for TAs}
 
 We want to generate time sheets for the TAs.
 <<subcommands>>=
-@cli.command(name="timesheet")
+@timesheet.command(name="generate")
 def generate_timesheets(<<option for TAs to filter for>>,
-                        <<default argument for start date>>,
+                        <<default options for start, end dates>>,
                         <<argument for matching courses>> = ".*",
                         <<option for matching registers, default to mine>>):
   """

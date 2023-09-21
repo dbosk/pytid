@@ -223,19 +223,8 @@ With this construction, we can automate the generation of time sheets on a
 monthly basis.
 Now, we assume that the time sheets are generated on the first of each month, 
 that is, that [[nytid.monthly.sh]] is run on the first of every month.
-
-We will create time sheets for [[datintro23]], [[prgi23]] and [[prgm23]].
-We'll send one email per course.
 <<nytid.monthly.sh>>=
-TIMESHEETS_COURSES="datintro${year} prgi${year} prgm${year}"
-TIMESHEETS_MAIL=xxx@kth.se
-TIMESHEETS_MSG="
-Hej, hej!
-
-This months time sheets are attached.
-
-          Daniel
-"
+<<timesheets variables>>
 
 today=$(date +%Y-%m-%d)
 
@@ -244,6 +233,13 @@ do
   <<generate time sheets for [[course]]>>
   <<send time sheets for [[course]]>>
 done
+@
+
+We will create time sheets for [[datintro23]], [[prgi23]] and [[prgm23]].
+We'll send one email per course.
+We could make it one regex to send time sheets for all courses in one email.
+<<timesheets variables>>=
+TIMESHEETS_COURSES="datintro${year} prgi${year} prgm${year}"
 @
 
 Now, generating the time sheets will create a lot of files in the current 
@@ -266,9 +262,35 @@ loffice --convert-to pdf *.xlsx
 Next step is to send all the PDF time sheets for processing.
 <<send time sheets for [[course]]>>=
 echo ${TIMESHEETS_MSG} | \
-  mail -s "Time sheets for ${course}" \
-       -a "*.pdf" ${TIMESHEETS_MAIL}
+  timesheets_mail "${TIMESHEETS_ADDR}" "${course}"
+<<timesheets variables>>=
+TIMESHEETS_ADDR=xxx@kth.se
+TIMESHEETS_MSG="
+Hej, hej!
+
+This month's time sheets are attached.
+
+          Daniel
+"
 @
+
+Now we'll adapt the [[timesheets_mail]] function to our mail client.
+In my case, I use [[mutt]].
+<<timesheets variables>>=
+timesheets_mail() {
+  addr="$1"
+  course="$2"
+  mutt -s "time sheets for ${course}" \
+       -a "*.pdf" -- ${addr}
+}
+@
+
+However, for [[mail]] the command is slightly different:
+\begin{minted}{bash}
+mail -s "time sheets for ${course}" \
+     $(for f in "*.pdf"; do echo "-A ${f}"; done) \
+     ${addr}
+\end{minted}
 
 
 \subsection{Viewing the schedule}

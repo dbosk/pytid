@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nytid"
-version = "4.2"
+version = "5.0"
 description = "Library to manage teaching schedules"
 authors = ["Daniel Bosk <daniel@bosk.se>"]
 exclude = ["*.csv"]

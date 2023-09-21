@@ -198,8 +198,12 @@ the position.
 So usually, we must create contracts with specific dates for each TA.
 \begin{minted}{bash}
 nytid hr amanuensis create prg[im]23 \
-  --user dbosk --start 2023-08-27 >> amanuensis.csv
+  --user dbosk --set-start 2023-08-27 >> amanuensis.csv
 \end{minted}
+We use [[--set-start]] to force the start date of the contract.
+The end date will be computed automatically.
+We also keep all events that the TA signed up for, event if those are before 
+the start date of the contract.
 
 \subsection{Viewing the schedule}
 
@@ -216,6 +220,14 @@ By default it will show the schedule for today and a week ahead.
 
 The second command does the same, except the output is in ICS format.
 This allows us to export the schedule to our calendar.
+If we write the ICS to a file, say [[dbosk.ics]], in [[~/public_html/nytid]], 
+then we can access it from the web through
+\begin{center}
+[[https://people.kth.se/~dbosk/nytid/dbosk.ics]].
+\end{center}
+
+In [[<<nytid.hourly.sh>>]] we can automate this and do it for all TAs in our 
+courses.
 <<nytid.hourly.sh>>=
 ### Generate schedules for TAs ###
 

@@ -495,7 +495,8 @@ def amanuens_cmd(<<option for TAs to filter for>>,
                  <<argument for matching courses>> = ".*",
                  <<option for matching registers, default to mine>>,
                  <<option to output detailed user data>> = True,
-                 <<option to include event summary>>):
+                 <<option to include event summary>>,
+                 <<option for CSV delimiter>>):
   """
   Computes amanuensis data for a TA.
   """
@@ -572,7 +573,11 @@ We may want to print for several users.
 In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
-csvout = csv.writer(sys.stdout, delimiter="\t")
+csvout = csv.writer(sys.stdout, delimiter=delimiter)
+<<option for CSV delimiter>>=
+delimiter: Annotated[str, delimiter_opt] = "\t"
+<<argument and option definitions>>=
+delimiter_opt = typer.Option(help="Delimiter to use in CSV output.")
 <<print amanuensis data for [[user]]>>=
 if first_print:
   first_print = False

@@ -297,13 +297,14 @@ def users(<<argument for matching courses>>,
   Prints the list of all usernames booked on the course.
   """
   <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
+  <<let [[booked]] be all bookings from [[courses]]>>
 
   for user in hr.hours_per_TA(booked):
     <<print detailed or non-detailed data about [[user]]>>
+<<let [[booked]] be all bookings from [[courses]]>>=
+booked = []
+for (course, register), config in courses.items():
+  <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
 @
 
 We'll return to
@@ -355,11 +356,7 @@ def time(<<argument for matching courses>>,
   Summarizes the time spent on teaching the course(s).
   """
   <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
+  <<let [[booked]] be all bookings from [[courses]]>>
   <<print summary of [[booked]]>>
 @
 
@@ -409,11 +406,11 @@ if course_summary:
     csvout.writerow([event, to_hours(hours), "h/student"])
 
   csvout.writerow(["Booked (h)",
-                to_hours(hr.total_hours(booked)),
-                to_hours(hr.max_hours(booked))])
+                   to_hours(hr.total_hours(booked)),
+                   to_hours(hr.max_hours(booked))])
 <<helper functions>>=
 def to_hours(td):
-    return td.total_seconds()/60/60
+  return td.total_seconds()/60/60
 <<imports>>=
 from nytid.signup import hr
 @
@@ -439,14 +436,14 @@ if amanuensis_summary:
   amanuensis = hr.compute_amanuensis_data(booked)
 
   for user, data in amanuensis.items():
-      if not user:
-          continue
-      <<set [[user_obj]] to most detailed version possible of [[user]]>>
-      csvout.writerow([user_obj,
-                    f"{data[2]:.2f} h",
-                    f"{100*hr.compute_percentage(*data):.1f}%",
-                    f"{data[0].format('YYYY-MM-DD')}",
-                    f"{data[1].format('YYYY-MM-DD')}"])
+    if not user:
+      continue
+    <<set [[user_obj]] to most detailed version possible of [[user]]>>
+    csvout.writerow([user_obj,
+                     f"{data[2]:.2f} h",
+                     f"{100*hr.compute_percentage(*data):.1f}%",
+                     f"{data[0].format('YYYY-MM-DD')}",
+                     f"{data[1].format('YYYY-MM-DD')}"])
 @
 
 \subsubsection{Summary of the hourly TAs}
@@ -470,114 +467,6 @@ if hourly_summary:
     <<set [[user_obj]] to most detailed version possible of [[user]]>>
     csvout.writerow([user_obj, to_hours(hours), "h"])
 @
-
-\section{Working with time sheets}
-
-We'll create a set of subcommands under [[timesheet]] to manage time sheets.
-<<subcommands>>=
-timesheet = typer.Typer(name="timesheet",
-                        help="Manage timesheets for TAs")
-@
-
-\subsection{Generate time sheets for TAs}
-
-We want to generate time sheets for the TAs.
-<<subcommands>>=
-@timesheet.command(name="generate")
-def generate_timesheets(<<option for TAs to filter for>>,
-                        <<default options for start, end dates>>,
-                        <<argument for matching courses>> = ".*",
-                        <<option for matching registers, default to mine>>):
-  """
-  Generates timesheets for TAs in courses.
-  """
-  <<set list [[courses]] to ((course, register), config)-pairs>>
-  <<let [[course_events]] be the list of all bookings>>
-
-  if len(sys.argv) > 1:
-      users = sys.argv[1:]
-  else:
-      users = hr.hours_per_TA(course_events)
-
-  for user in users:
-      try:
-          ta = ls.get_student(get_ladok_id(f"{user}@kth.se", students))
-      except KeyError as err:
-          print(f"can't look up {user} in LADOK: {err}")
-          continue
-
-      ta_events = summarize_user(user, course, course_events)
-      try:
-          timesheet.make_xlsx(ta.personnummer,
-                              f"{ta.first_name} {ta.last_name}",
-                              f"{user}@kth.se",
-                              ta_events,
-                              course_leader=("Daniel Bosk", "dbosk@kth.se"),
-                              HoD="Karl Meinke",
-                              org="JH", project="1102",
-                              course_leader_signature="~/Pictures/signature.png")
-      except AttributeError as err:
-          print(f"can't access {user}'s LADOK data: {err}")
-          continue
-<<imports>>=
-from nytid.signup.hr import timesheet
-<<let [[course_events]] be the list of all bookings>>=
-booked = []
-for (course, register), config in courses.items():
-  <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
-course_events = booked
-@
-
-<<helper functions>>=
-def summarize_user(user, course, course_events,
-                   salary=150):
-    """
-    Returns events where TA worked.
-    - `user` is the TA's username.
-    - `course` is the course code.
-    - `course_events` is a list of events.
-    - Optional `salary` is the hourly salary.
-    """
-    hours = to_hours(hr.hours_per_TA(course_events)[user])
-
-    start_idx = sheets.SIGNUP_SHEET_HEADER.index("Start")
-    end_idx = sheets.SIGNUP_SHEET_HEADER.index("End")
-    type_idx = sheets.SIGNUP_SHEET_HEADER.index("Event")
-
-    events = sheets.filter_events_by_TA(user, sorted(course_events,
-            key=operator.itemgetter(start_idx)))
-    events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], 
-                    events)
-    events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
-                      events))
-
-    xl_events = []
-
-    for event in events:
-        end = arrow.get(event[end_idx])
-        start = arrow.get(event[start_idx])
-        event_type = event[type_idx]
-        time = end-start
-        time_with_prep = to_hours(hr.round_time(
-                                    hr.add_prep_time(time, event_type,
-                                                    date=start.date())))
-
-        xl_events.append({
-                "datum": str(start.date()),
-                "tid": str(start.time()),
-                "kurskod": course,
-                "typ": event_type,
-                "timmar": to_hours(time),
-                "koeff": hr.prep_factor(event_type, date=start.date(),
-                                        amanuensis=False),
-                "omr_tid": time_with_prep,
-                "belopp": time_with_prep * salary
-            })
-
-    return xl_events
-@
-
 
 \section{Amanuensis}
 
@@ -608,11 +497,7 @@ def amanuens_cmd(<<option for TAs to filter for>>,
   """
   <<make all dates timezone aware>>
   <<set list [[courses]] to ((course, register), config)-pairs>>
-
-  booked = []
-  for (course, register), config in courses.items():
-    <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>
-
+  <<let [[booked]] be all bookings from [[courses]]>>
   <<filter events from [[booked]] based on start, end dates>>
 
   amanuensis = hr.compute_amanuensis_data(booked,
@@ -871,3 +756,318 @@ except KeyError as err:
   logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
                   f"storing contract data in `{path}`. Set by running "
                   f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")
+@
+
+
+\section{Working with time sheets}
+
+We'll create a set of subcommands under [[timesheet]] to manage time sheets.
+<<subcommands>>=
+timesheet = typer.Typer(name="timesheet",
+                        help="Manage timesheets for TAs")
+cli.add_typer(timesheet)
+@
+
+\subsection{Generate time sheets for TAs}
+
+We want to generate time sheets for the TAs.
+We have a command [[generate]] that does this.
+We take similar options as the [[amenuensis create]] command, although we don't 
+need all of those options.
+Apart from the courses and users, we need the start and end dates to filter 
+what to include in the time sheet.
+<<subcommands>>=
+@timesheet.command(name="generate")
+def generate_timesheets(<<option for TAs to filter for>>,
+                        <<default options for start, end dates>>,
+                        <<options for time sheet data>>,
+                        <<argument for matching courses>> = ".*",
+                        <<option for matching registers, default to mine>>):
+  """
+  Generates timesheets for TAs in courses.
+  """
+  <<set list [[courses]] to ((course, register), config)-pairs>>
+  <<try to get [[manager]], [[organization]] and [[project]] from [[courses]]>>
+  <<let [[booked]] be all bookings from [[courses]]>>
+  <<filter events from [[booked]] based on start, end dates>>
+
+  users = hr.hours_per_TA(booked)
+  for user in users:
+    <<skip if [[user_regex]] doesn't match [[user]]>>
+    <<skip if [[user]] has a valid amanuensis contract>>
+    <<generate timesheet for [[user]] based on [[booked]]>>
+@
+
+\subsubsection{Check if TA has a valid amanuensis contract}
+
+<<skip if [[user]] has a valid amanuensis contract>>=
+@
+
+\subsubsection{Generate a time sheet for a TA}
+
+To generate the time sheet for a TA we need to do the following:
+\begin{enumerate}
+  \item summarize the events for the TA;
+  \item look up the TA in Canvas and LADOK to get the personnummer;
+  \item put the data in the Excel format.
+\end{enumerate}
+<<generate timesheet for [[user]] based on [[booked]]>>=
+ta_events = summarize_user(user, booked)
+
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
+try:
+  personnummer = user_obj.personnummer
+  name = f"{user_obj.first_name} {user_obj.last_name}"
+except AttributeError as err:
+  logging.warning(f"can't access {user}'s LADOK data: {err}")
+  personnummer = "-"
+  name = str(user_obj)
+
+timesheet.make_xlsx(personnummer,
+                    name,
+                    f"{user}@kth.se",
+                    ta_events,
+                    course_leader=(course_responsible,
+                                    course_responsible_email),
+                    HoD=manager,
+                    org=organization, project=project,
+                    course_leader_signature=course_responsible_signature)
+<<imports>>=
+from nytid.signup.hr import timesheet
+<<options for time sheet data>>=
+course_responsible: Annotated[str, course_responsible_opt]
+  = default_course_responsible,
+course_responsible_email: Annotated[str, course_responsible_email_opt]
+  = default_email,
+course_responsible_signature: Annotated[pathlib.Path,
+                                        course_responsible_signature_opt]
+  = default_signature_file,
+manager: Annotated[str, manager_opt] = default_manager,
+organization: Annotated[str, org_opt] = default_organization,
+project: Annotated[str, project_opt] = default_project
+@
+
+\subsubsection{Default values for the time sheet}
+
+The default values for all those parameters can be set in the configuration.
+We don't want to emit any warnings with hints to set the configuration, because 
+those would be all over the place (when autocompleting, when running the help, 
+etc.).
+So we'll add the hint for configuration to the help texts.
+<<argument and option definitions>>=
+course_responsible_opt = typer.Option(help="The course responsible's name; "
+                                           <<config default name>>)
+<<set [[default_course_responsible]]>>
+course_responsible_email_opt = typer.Option(help="The course responsible's "
+                                                 "email; "
+                                                 <<config default email>>)
+<<set [[default_email]]>>
+course_responsible_signature_opt = typer.Option(help="Path to a picture of "
+                                                     "the course "
+                                                     "responsible's "
+                                                     "signature; "
+                                                     <<config signature>>)
+<<set [[default_signature_file]]>>
+manager_opt = typer.Option(help="The manager's name; "
+                                <<config manager>>)
+<<set [[default_manager]]>>
+org_opt = typer.Option(help="The organization code for accounting; "
+                            <<config organization>>)
+<<set [[default_organization]]>>
+project_opt = typer.Option(help="The project number for accounting; "
+                                <<config project>>)
+<<set [[default_project]]>>
+@
+
+\subsubsection{The course responsible}
+
+It's the role of the course responsible to sign these time sheets.
+So the course responsible will be the current user and that's where we'll want 
+to get this information from: the personal config.
+<<how to set the value>>=
+If no default is set, we try to extract the value from the courses' config. "
+"You can set the default by running `nytid config ...` or "
+"`nytid courses config <course>
+<<config default name>>=
+"<<how to set the value>> me.name -s <name>`."
+<<config default email>>=
+"<<how to set the value>> me.email -s <email>`."
+<<config signature>>=
+"<<how to set the value>> me.signature -s <path>`."
+@
+
+This means that we can set the values by reading those values out of the 
+config, if they exist, otherwise we'll use [[None]].
+<<set [[default_course_responsible]]>>=
+try:
+  default_course_responsible = typerconf.get("me.name")
+except KeyError:
+  default_course_responsible = None
+<<set [[default_email]]>>=
+try:
+  default_email = typerconf.get("me.email")
+except KeyError:
+  default_email = None
+<<set [[default_signature_file]]>>=
+try:
+  default_signature_file = pathlib.Path(typerconf.get("me.signature"))
+except KeyError:
+  default_signature_file = None
+@
+
+\subsubsection{The manager and accounting}
+
+The manager and accounting depends on where the course is given.
+However, it's usually strongly related to where the course responsible works.
+So we can have a default value for the manager and accounting for the user in 
+their personal config.
+<<config manager>>=
+"<<how to set the value>> hr.manager -s <name>`."
+<<set [[default_manager]]>>=
+try:
+  default_manager = typerconf.get("hr.manager")
+except KeyError:
+  default_manager = None
+<<config organization>>=
+"<<how to set the value>> hr.organization -s <code>`."
+<<set [[default_organization]]>>=
+try:
+  default_organization = typerconf.get("hr.organization")
+except KeyError:
+  default_organization = None
+<<config project>>=
+"<<how to set the value>> hr.project -s <code>`."
+<<set [[default_project]]>>=
+try:
+  default_project = typerconf.get("hr.project")
+except KeyError:
+  default_project = None
+@
+
+It doesn't make sense to extract these from the course, since the pattern might 
+match several courses and we can't specify several managers.
+The same for the accounting.
+However, we could extract that and if it turns out to be unique values, we can 
+use them.
+<<try to get [[manager]], [[organization]] and [[project]] from [[courses]]>>=
+managers = []
+orgs = []
+projects = []
+for _, course_config in courses:
+  try:
+    managers.append(course_config.get("hr.manager"))
+  except KeyError:
+    pass
+  try:
+    orgs.append(course_config.get("hr.organization"))
+  except KeyError:
+    pass
+  try:
+    projects.append(course_config.get("hr.project"))
+  except KeyError:
+    pass
+
+if len(set(managers)) == 1:
+  manager = managers[0]
+if len(set(orgs)) == 1:
+  organization = orgs[0]
+if len(set(projects)) == 1:
+  project = projects[0]
+@
+
+\subsubsection{Summarize the events for a TA}
+
+The [[summarize_user]] function will take a user and the course events and 
+return a list that can be put into the time sheet.
+This is essentially the bulk of the time sheet contents.
+<<helper functions>>=
+def summarize_user(user, course_events,
+                   salary=150):
+  """
+  Returns events where TA worked.
+  - `user` is the TA's username.
+  - `course_events` is a list of events.
+  - Optional `salary` is the hourly salary.
+  """
+  <<[[summarize_user]] variables>>
+  <<let [[hours]] be the hours of [[user]]>>
+  <<let [[events]] be a list of events for [[user]], sorted by date>>
+
+  xl_events = []
+
+  for event in events:
+    <<compute [[end]], [[start]], [[event_type]]>>
+    <<compute [[time]] and [[time_with_prep]] from [[start]] and [[end]]>>
+    <<compute [[course]] from [[event_type]]>>
+
+    xl_events.append({
+            "datum": str(start.date()),
+            "tid": str(start.time()),
+            "kurskod": course,
+            "typ": event_type,
+            "timmar": to_hours(time),
+            "koeff": hr.prep_factor(event_type, date=start.date(),
+                                    amanuensis=False),
+            "omr_tid": time_with_prep,
+            "belopp": time_with_prep * salary
+        })
+
+  return xl_events
+@
+
+We can simply compute [[hours]] using the [[hours_per_TA]] function.
+That function returns a dictionary with the TA as key and the total time as 
+value.
+So we just get the hours for the TA in question.
+<<let [[hours]] be the hours of [[user]]>>=
+hours = to_hours(hr.hours_per_TA(course_events)[user])
+<<[[summarize_user]] variables>>=
+start_idx = sheets.SIGNUP_SHEET_HEADER.index("Start")
+@
+
+We want to filter the events for the TA, so we can use [[filter_events_by_TA]].
+We also want to sort them by date, so we sort them according to the start date.
+<<let [[events]] be a list of events for [[user]], sorted by date>>=
+events = sheets.filter_events_by_TA(user,
+                                    sorted(course_events,
+                                            key=operator.itemgetter(start_idx)))
+@
+
+Now, we also only want to include the events for which the TA was booked, not 
+the ones where they were reserve.
+<<let [[events]] be a list of events for [[user]], sorted by date>>=
+events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], 
+                events)
+@
+
+Finally, we want to remove the other TAs and just include this one TA in the 
+list of TAs.
+This allows us to reuse the list of events with all the usual library 
+functions.
+<<let [[events]] be a list of events for [[user]], sorted by date>>=
+events = list(map(lambda x:
+                    x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user],
+                  events))
+@
+
+We also need to extract the end date, start date and event type from the event.
+<<compute [[end]], [[start]], [[event_type]]>>=
+end = arrow.get(event[end_idx])
+start = arrow.get(event[start_idx])
+event_type = event[type_idx]
+<<[[summarize_user]] variables>>=
+end_idx = sheets.SIGNUP_SHEET_HEADER.index("End")
+type_idx = sheets.SIGNUP_SHEET_HEADER.index("Event")
+@
+
+Then we can compute the time spent on the event and the time spent on the event 
+including prep time.
+<<compute [[time]] and [[time_with_prep]] from [[start]] and [[end]]>>=
+time = end-start
+time_with_prep = to_hours(hr.round_time(
+                            hr.add_prep_time(time, event_type,
+                                              date=start.date())))
+@
+
+<<compute [[course]] from [[event_type]]>>=
+@

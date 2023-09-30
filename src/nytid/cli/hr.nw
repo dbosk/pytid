@@ -976,7 +976,7 @@ use them.
 managers = []
 orgs = []
 projects = []
-for _, course_config in courses:
+for _, course_config in courses.items():
   try:
     managers.append(course_config.get("hr.manager"))
   except KeyError:

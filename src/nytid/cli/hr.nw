@@ -1092,5 +1092,13 @@ time_with_prep = to_hours(hr.round_time(
                                               date=start.date())))
 @
 
+The course code is part of the [[event_type]].
+Usually events are named something along the lines of \enquote{Datorlaboration, 
+DD1310}.
+If there are several courses, they are separated by commas.
+So we simply find the start of the course code and extract all of them as 
+[[course]].
 <<compute [[course]] from [[event_type]]>>=
+first_comma = event_type.find(",")
+course = event_type[first_comma+2:]
 @

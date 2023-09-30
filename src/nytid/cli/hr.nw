@@ -769,9 +769,9 @@ except KeyError as err:
 
 We'll create a set of subcommands under [[timesheet]] to manage time sheets.
 <<subcommands>>=
-timesheet = typer.Typer(name="timesheet",
+timesheets = typer.Typer(name="timesheets",
                         help="Manage timesheets for TAs")
-cli.add_typer(timesheet)
+cli.add_typer(timesheets)
 @
 
 \subsection{Generate time sheets for TAs}
@@ -783,7 +783,7 @@ need all of those options.
 Apart from the courses and users, we need the start and end dates to filter 
 what to include in the time sheet.
 <<subcommands>>=
-@timesheet.command(name="generate")
+@timesheets.command(name="generate")
 def generate_timesheets(<<option for TAs to filter for>>,
                         <<default options for start, end dates>>,
                         <<options for time sheet data>>,

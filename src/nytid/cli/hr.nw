@@ -321,25 +321,31 @@ detailed: Annotated[bool, detailed_opt]
 <<argument and option definitions>>=
 detailed_opt = typer.Option(help="Output detailed user data.")
 <<print detailed or non-detailed data about [[user]]>>=
-<<set [[user_obj]] to most detailed version possible of [[user]]>>
+if detailed:
+  <<set [[user_obj]] to most detailed version possible of [[user]]>>
+else:
+  user_obj = user
+
 print(user_obj)
 <<print detailed or non-detailed data about [[user]], no newline>>=
-<<set [[user_obj]] to most detailed version possible of [[user]]>>
+if detailed:
+  <<set [[user_obj]] to most detailed version possible of [[user]]>>
+else:
+  user_obj = user
+
 print(user_obj, end="")
 <<set [[user_obj]] to most detailed version possible of [[user]]>>=
 user_obj = user
-
-if detailed:
+try:
+  user_obj = get_canvas_user(user, course_regex)
+except Exception as err:
+  logging.warning(f"Can't look up {user} in Canvas: {err}")
+else:
   try:
-    user_obj = get_canvas_user(user, course_regex)
+    user_obj = get_ladok_user(user_obj)
   except Exception as err:
-    logging.warning(f"Can't look up {user} in Canvas: {err}")
-  else:
-    try:
-      user_obj = get_ladok_user(user_obj)
-    except Exception as err:
-      logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
-      pass
+    logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
+    pass
 @
 
 

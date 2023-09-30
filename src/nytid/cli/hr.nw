@@ -833,15 +833,18 @@ except AttributeError as err:
   personnummer = "-"
   name = str(user_obj)
 
+<<let [[output_filename]] be the filename for the time sheet>>
+
 timesheet.make_xlsx(personnummer,
                     name,
                     f"{user}@kth.se",
                     ta_events,
                     course_leader=(course_responsible,
-                                    course_responsible_email),
+                                   course_responsible_email),
                     HoD=manager,
                     org=organization, project=project,
-                    course_leader_signature=course_responsible_signature)
+                    course_leader_signature=course_responsible_signature,
+                    output=output_filename)
 <<imports>>=
 from nytid.signup.hr import timesheet
 <<options for time sheet data>>=
@@ -857,7 +860,17 @@ organization: Annotated[str, org_opt] = default_organization,
 project: Annotated[str, project_opt] = default_project
 @
 
-\subsubsection{Default values for the time sheet}
+We construct the filename from the TA's username.
+We don't need to include any date, since we store each generated time sheet.
+(And this makes it easier to reuse
+[[<<generate timesheet for [[user]] based on [[booked]]>>]]
+later.)
+Thus we don't need to store the generated time sheet that we send.
+<<let [[output_filename]] be the filename for the time sheet>>=
+output_filename = f"timesheet-{user}.xlsx"
+@
+
+\subsection{Default values for the time sheet}
 
 The default values for all those parameters can be set in the configuration.
 We don't want to emit any warnings with hints to set the configuration, because 

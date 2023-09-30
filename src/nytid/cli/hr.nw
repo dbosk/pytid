@@ -748,7 +748,7 @@ We'll let the user configure this location in the config.
 <<imports>>=
 import typerconf
 <<constants>>=
-AMANUENSIS_CONTRACT_PATH = "amanuensis.contract_path"
+AMANUENSIS_CONTRACT_PATH = "hr.amanuensis.contract_path"
 <<set [[path]] to configured path for storing contracts>>=
 try:
   path = pathlib.Path(typerconf.get(AMANUENSIS_CONTRACT_PATH))

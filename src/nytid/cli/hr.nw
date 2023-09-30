@@ -908,12 +908,12 @@ config, if they exist, otherwise we'll use [[None]].
 try:
   default_course_responsible = typerconf.get("me.name")
 except KeyError:
-  default_course_responsible = None
+  default_course_responsible = ""
 <<set [[default_email]]>>=
 try:
   default_email = typerconf.get("me.email")
 except KeyError:
-  default_email = None
+  default_email = ""
 <<set [[default_signature_file]]>>=
 try:
   default_signature_file = pathlib.Path(typerconf.get("me.signature"))
@@ -933,21 +933,21 @@ their personal config.
 try:
   default_manager = typerconf.get("hr.manager")
 except KeyError:
-  default_manager = None
+  default_manager = ""
 <<config organization>>=
 "<<how to set the value>> hr.organization -s <code>`."
 <<set [[default_organization]]>>=
 try:
   default_organization = typerconf.get("hr.organization")
 except KeyError:
-  default_organization = None
+  default_organization = ""
 <<config project>>=
 "<<how to set the value>> hr.project -s <code>`."
 <<set [[default_project]]>>=
 try:
   default_project = typerconf.get("hr.project")
 except KeyError:
-  default_project = None
+  default_project = ""
 @
 
 It doesn't make sense to extract these from the course, since the pattern might 

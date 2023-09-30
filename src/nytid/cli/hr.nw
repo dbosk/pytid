@@ -804,12 +804,16 @@ def generate_timesheets(<<option for TAs to filter for>>,
     <<generate timesheet for [[user]] based on [[booked]]>>
 @
 
-\subsubsection{Check if TA has a valid amanuensis contract}
+\subsection{Check if TA has a valid amanuensis contract}
 
+We want to check if the TA has a valid amanuensis contract that overlaps the 
+period.
+If they have that, they should report this as 
+\enquote{\foreignlanguage{swedish}{mertid}} instead.
 <<skip if [[user]] has a valid amanuensis contract>>=
 @
 
-\subsubsection{Generate a time sheet for a TA}
+\subsection{Generate a time sheet for a TA}
 
 To generate the time sheet for a TA we need to do the following:
 \begin{enumerate}
@@ -981,7 +985,7 @@ if len(set(projects)) == 1:
   project = projects[0]
 @
 
-\subsubsection{Summarize the events for a TA}
+\subsection{Summarize the events for a TA}
 
 The [[summarize_user]] function will take a user and the course events and 
 return a list that can be put into the time sheet.

@@ -1,14 +1,21 @@
 \chapter{CLI design overview, the [[cli]] module}\label{CLIoverview}
 
+In this chapter we outline the design of the CLI.
+<<nytid description>>=
+f"""
+A CLI for managing TAs and courses.
+"""
+@
+
 The [[nytid]] CLI has a similar design as Git, it consists of various 
 subcommands with different options.
-For instance, [[nytid timesheet -h]] will print the help of the [[timesheet]] 
-command.
+For instance, [[nytid hr timesheets --help]] will print the help of the 
+[[timesheets]] command.
 In this chapter, we outline the design and document the base of the CLI.
 At the end of the chapter, in \cref{climodule}, we outline the code itself of 
 the [[nytid.cli]] module.
 Each subcommand is a submodule of [[nytid.cli]], for instance the [[timesheet]] 
-command above is located in [[nytid.cli.timesheet]].
+command above is located in [[nytid.cli.hr]].
 Each subcommand is documented in one of the subsequent chapters.
 
 \section{Usage: what problems we can solve and how}
@@ -441,7 +448,9 @@ import typer
 
 <<configure logging>>
 
-cli = typer.Typer()
+cli = typer.Typer(help=<<nytid description>>,
+                  epilog="Copyright (c) 2022--2023 Daniel Bosk, "
+                         "2022 Alexander Baltatzis.")
 
 <<add subcommand typer to cli>>
 

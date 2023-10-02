@@ -480,10 +480,10 @@ if hourly_summary:
     csvout.writerow([user_obj, to_hours(hours), "h"])
 @
 
-\section{Amanuensis}
+\section{Creating amanuensis contracts}
 
-We want the have a set of amanuensis commands that can generate employment info
-for an amanuensis.
+We want the have a set of amanuensis commands that can generate, show and 
+update employment info for an amanuensis.
 <<subcommands>>=
 amanuensis = typer.Typer(name="amanuensis",
                          help="Manage amanuensis employment")
@@ -494,16 +494,18 @@ We also want to automatically store the sessions that are included in that
 employment.
 This way we can easily calculate what has changed later to track 
 \enquote{\foreignlanguage{swedish}{mertid}}.
+
+We let the [[create]] command generate a contract for an amanuensis.
 <<subcommands>>=
 @amanuensis.command(name="create")
-def amanuens_cmd(<<option for TAs to filter for>>,
-                 <<default options for start, end dates>>,
-                 <<default option for pushing dates forward>>,
-                 <<default options for overriding dates>>,
-                 <<argument for matching courses>> = ".*",
-                 <<option for matching registers, default to mine>>,
-                 <<option to output detailed user data>> = True,
-                 <<option to include event summary>>):
+def cli_amanuens_create(<<option for TAs to filter for>>,
+                        <<default options for start, end dates>>,
+                        <<default option for pushing dates forward>>,
+                        <<default options for overriding dates>>,
+                        <<argument for matching courses>> = ".*",
+                        <<option for matching registers, default to mine>>,
+                        <<option to output detailed user data>> = True,
+                        <<option to include event summary>> = False):
   """
   Computes amanuensis data for a TA.
   """
@@ -519,7 +521,8 @@ def amanuens_cmd(<<option for TAs to filter for>>,
   <<amanuensis iteration variables>>
   for user in amanuensis:
     <<skip if [[user_regex]] doesn't match [[user]]>>
-    <<print amanuensis data for [[user]]>>
+    <<print [[amanuensis]] data for [[user]]>>
+    <<store [[events]] in CSV format>>
 @
 
 \subsection{Default arguments for user regex}
@@ -577,7 +580,7 @@ In that case, we want to separate the output with a newline.
 <<amanuensis iteration variables>>=
 first_print = True
 csvout = csv.writer(sys.stdout, delimiter="\t")
-<<print amanuensis data for [[user]]>>=
+<<print [[amanuensis]] data for [[user]]>>=
 if first_print:
   first_print = False
 else:
@@ -590,14 +593,12 @@ data = amanuensis[user]
 <<filter out [[events]] for [[user]]>>
 if event_summary:
   <<print summary for each event type for [[user]]>>
-
-<<store [[events]] in CSV format>>
 @
 
 Now, we want to have an option to control [[event_summary]].
 We want this option, since HR might not want it, whereas we might.
 <<option to include event summary>>=
-event_summary: Annotated[bool, event_summary_opt] = False
+event_summary: Annotated[bool, event_summary_opt]
 <<argument and option definitions>>=
 event_summary_opt = typer.Option(help="Print a summary of the hours per event "
                                       "type.")
@@ -712,7 +713,7 @@ if set_end:
   set_end = set_end.astimezone()
 @
 
-\subsubsection{Keeping a record of bookings}
+\subsection{Keeping a record of bookings}
 
 We also want the events that the TA booked to keep a record of how the hours
 were computed, so that we can keep track of changes and how that should affect
@@ -751,6 +752,7 @@ with open(path / filename, "w") as outfile:
              "push_start": push_start.isoformat() if push_start else None,
              "end": end.isoformat() if end else None,
              "set_end": set_end.isoformat() if set_end else None,
+             "course_regex": course_regex,
              "events": events},
             outfile,
             indent=2)
@@ -771,6 +773,183 @@ except KeyError as err:
   logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
                   f"storing contract data in `{path}`. Set by running "
                   f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")
+@
+
+
+\section{Showing amanuensis contracts}
+
+Once we've generated the contracts, we want to be able to show them.
+Particularly, we might have generated several versions, we want to show the 
+currently valid one for each TA.
+<<subcommands>>=
+@amanuensis.command(name="show")
+def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
+                      <<option to output detailed user data>> = False,
+                      <<option to include event summary>> = True):
+  """
+  Shows stored amanuesis contracts for TAs.
+  """
+  <<let [[contracts_path]] be the configured path for storing contracts>>
+  <<let [[contracts]] be the valid contracts matching [[user_regex]]>>
+
+  <<amanuensis iteration variables>>
+  for contract in contracts:
+    <<print [[contract]]>>
+<<argument [[user_regex]] to match TAs>>=
+user_regex: Annotated[str, user_regex_arg]
+<<argument and option definitions>>=
+user_regex_arg = typer.Argument(help="Regex to match TAs' usernames that "
+                                     "should be included.")
+@
+
+This is similar as above, we just give a different warning message.
+<<let [[contracts_path]] be the configured path for storing contracts>>=
+try:
+  contracts_path = pathlib.Path(typerconf.get(AMANUENSIS_CONTRACT_PATH))
+except KeyError as err:
+  logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
+                  f"looking for contract data in `./`. Set by running "
+                  f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")
+  contracts_path = pathlib.Path("./")
+@
+
+\subsection{Finding the valid contracts}
+
+<<let [[contracts]] be the valid contracts matching [[user_regex]]>>=
+contracts = get_valid_contracts(user_regex)
+<<helper functions>>=
+def get_valid_contracts(user_regex):
+  """
+  Returns a list of valid contracts matching `user_regex`.
+  """
+  contracts = []
+
+  <<let [[contracts_path]] be the configured path for storing contracts>>
+  <<let [[users]] be the set of users with contracts matching [[user_regex]]>>
+  for user in users:
+    <<add the valid contracts for [[user]] to [[contracts]]>>
+
+  return contracts
+@
+
+The contracts are named after the TA and the time they were generated, 
+[[user.time.json]].
+This way, we can filter out all users with contracts only by looking at the 
+filenames.
+<<let [[users]] be the set of users with contracts matching [[user_regex]]>>=
+users = set()
+user_pattern = re.compile(user_regex)
+for contract in contracts_path.glob("*.json"):
+  username = contract.name.split(".")[0]
+  if user_pattern.match(username):
+    users.add(username)
+@
+
+The valid contract is the latest contract in a series of overlapping contracts.
+This means that we can simply sort the contracts by name (as the sorted ISO 
+time is the same as alphabetical order) and go through them.
+As soon as we find a contract that doesn't overlap with the previous one, we 
+know that the previous one is the latest valid contract.
+Remember that a TA can have several valid contracts:
+they might have had a contract for the autumn semester and then got a new one 
+for the spring semester, both of those contracts are considered valid.
+<<add the valid contracts for [[user]] to [[contracts]]>>=
+user_contracts = []
+
+contract_files = sorted(contracts_path.glob(f"{user}.*.json"),
+                        key=lambda x: x.name)
+prev_contract = None
+for contract_file in contract_files:
+  try:
+    with open(contract_file) as infile:
+      contract = json.load(infile)
+  except Exception as err:
+    logging.warning(f"Can't read {contract_file}, skipping: {err}")
+    continue
+
+  if prev_contract:
+    if not contract_overlap(prev_contract, contract):
+      user_contracts.append(prev_contract)
+
+  prev_contract = contract
+
+user_contracts.append(contract)
+
+contracts += user_contracts
+<<helper functions>>=
+def contract_overlap(contract1, contract2):
+  """
+  Returns True if the contracts overlap, False otherwise.
+
+  We define overlap as having at least one event in common.
+  """
+  for event1 in contract1["events"]:
+    for event2 in contract2["events"]:
+      if event_overlap(event1, event2):
+        return True
+  return False
+@
+
+To compare the events, we need to compare the times of the events only.
+If they overlap in time, we consider them to be the same event.
+<<helper functions>>=
+def event_overlap(event1, event2):
+  """
+  Returns True if the events overlap, False otherwise.
+
+  We define overlap as overlapping in time.
+  """
+  start1 = datetime.datetime.fromisoformat(event1[1])
+  end1 = datetime.datetime.fromisoformat(event1[2])
+  start2 = datetime.datetime.fromisoformat(event2[1])
+  end2 = datetime.datetime.fromisoformat(event2[2])
+
+  return start1 < end2 and start2 < end1
+@
+
+\subsection{Printing the contract}
+
+To print the data, we can do the same as when we generated the contract.
+We just need to set up the same variables and then do
+[[<<print [[amanuesis]] data for [[user]]>>]].
+<<print [[contract]]>>=
+user = contract["user"]
+
+booked = contract["events"]
+amanuensis = hr.compute_amanuensis_data(booked)
+
+start = datetime.datetime.fromisoformat(contract["start"]) \
+          if contract["start"] else None
+set_start = datetime.datetime.fromisoformat(contract["set_start"]) \
+              if contract["set_start"] else None
+push_start = datetime.datetime.fromisoformat(contract["push_start"]) \
+                if contract["push_start"] else None
+end = datetime.datetime.fromisoformat(contract["end"]) \
+        if contract["end"] else None
+set_end = datetime.datetime.fromisoformat(contract["set_end"]) \
+            if contract["set_end"] else None
+
+try:
+  course_regex = contract["course_regex"]
+except KeyError:
+  <<find [[course_regex]] from [[contract]]>>
+
+<<print [[amanuensis]] data for [[user]]>>
+@
+
+We need [[course_regex]] to be able to look up the TA's details in Canvas and 
+LADOK.
+We can simply go through the events and find the first one that seems to 
+contain a course code.
+<<find [[course_regex]] from [[contract]]>>=
+code_pattern = re.compile(r"[A-Z]{2,4}\d{3,4}[A-Z]?")
+for event in booked:
+  match = code_pattern.search(event[0])
+  if match:
+    course_regex = match.group(0)
+    break
+else:
+  course_regex = ".*"
 @
 
 

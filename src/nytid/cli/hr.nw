@@ -1010,10 +1010,7 @@ To generate the time sheet for a TA we need to do the following:
   \item put the data in the Excel format.
 \end{enumerate}
 <<generate timesheet for [[user]] based on [[ta_events]]>>=
-if detailed:
-  <<set [[user_obj]] to most detailed version possible of [[user]]>>
-else:
-  user_obj = user
+<<set [[user_obj]] to most detailed version possible of [[user]]>>
 try:
   personnummer = user_obj.personnummer
   name = f"{user_obj.first_name} {user_obj.last_name}"

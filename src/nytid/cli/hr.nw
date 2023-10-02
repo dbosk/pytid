@@ -999,6 +999,8 @@ period.
 If they have that, they should report this as 
 \enquote{\foreignlanguage{swedish}{mertid}} instead.
 <<skip if [[user]] has a valid amanuensis contract>>=
+if get_valid_contracts(user):
+  continue
 @
 
 \subsection{Generate a time sheet for a TA}

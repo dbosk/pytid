@@ -241,6 +241,7 @@ COURSES="prgm${year} prgi${year} datintro${year}p1"
 
 for course in ${COURSES}
 do
+  <<skip if [[course]] has no sign-up sheet>>
   <<look up [[ug_path]]>>
   <<look up [[TAs]]>>
   <<add TAs in [[TAs]] to UG at [[ug_path]]>>
@@ -257,12 +258,10 @@ nytid courses config prgi23 ug.assistants \
   -s edu.courses.DD.DD1317.20232.1.assistants
 \end{minted}
 That way, we can read it from the config.
+If there is no UG group specified in the cours config, we skip the course.
 <<look up [[ug_path]]>>=
 ug_path=$(nytid courses config ${course} ug.assistants | sed "s/.*= //")
-if test "$?" -ne 0; then
-  echo "error: no ${course} in nytid"
-  continue
-fi
+test "$?" -eq 0 || continue
 @
 
 Note that we could've named [[ug.assistants]] anything, it's just a name we 
@@ -290,8 +289,6 @@ if test -n "${TAs}"; then
   for ta in ${TAs}; do
     kthutils ug members add ${ug_path} ${ta}
   done
-else
-  echo "warning: no-one signed up for ${course}"
 fi
 @
 

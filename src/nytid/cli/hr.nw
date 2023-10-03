@@ -1412,7 +1412,8 @@ We let this command just print a summary of each time sheet.
 @timesheets.command(name="show")
 def cli_show_timesheets(<<argument [[user_regex]] to match TAs>> = ".*",
                         <<option [[reverse]] to adjust sort order>>,
-                        <<option [[all]] to show all timesheets>>):
+                        <<option [[all]] to show all timesheets>>,
+                        <<option for CSV delimiter>>):
   """
   Shows stored time sheets for TAs.
   """
@@ -1475,7 +1476,7 @@ Now, to print the time sheet, we simply print the name of the file and the
 added and removed events.
 We'll print it in CSV format.
 <<timesheets iteration variables>>=
-csvout = csv.writer(sys.stdout, delimiter="\t")
+csvout = csv.writer(sys.stdout, delimiter=delimiter)
 first_print = True
 <<print [[timesheet]]>>=
 if first_print:

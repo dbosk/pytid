@@ -369,7 +369,12 @@ def time(<<argument for matching courses>>,
 To add the bookings of a course to [[booked]], we simply get the URL of the 
 sign-up sheet and read the bookings.
 <<add to [[booked]] from [[course]] in [[register]] using [[config]]>>=
-url = config.get(SIGNUPSHEET_URL_PATH)
+try:
+  url = config.get(SIGNUPSHEET_URL_PATH)
+except KeyError as err:
+  logging.warning(f"Can't find sign-up sheet URL for {course} in {register}: "
+                  f"{err}")
+  continue
 <<convert [[url]] to Google Sheet CSV-export URL if necessary>>
 booked += sheets.read_signup_sheet_from_url(url)
 <<imports>>=

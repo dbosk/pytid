@@ -216,7 +216,7 @@ We should add them manually first to be ignored in the automation.
 <<nytid-ignore.sh>>=
 #!/bin/bash
 # Ignore TAs in HR reporting
-# Usage: ignore.sh <course> <user> [<user> ...]
+# Usage: nytid-ignore.sh <course> <user> [<user> ...]
 
 course="$1"
 users="$2"

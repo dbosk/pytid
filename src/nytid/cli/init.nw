@@ -219,7 +219,8 @@ We should add them manually first to be ignored in the automation.
 # Usage: nytid-ignore.sh <course> <user> [<user> ...]
 
 course="$1"
-users="$2"
+shift
+users="$*"
 
 reported_TAs=$(nytid courses config $course data_path | \
                sed "s/data_path = //")/reported_TAs

@@ -230,7 +230,8 @@ def make_xlsx(personnummer, name, email, events,
 
         rad = incr(rad)
 
-    ark['E'+sist].value = tidsumma + ')'
+    if events:
+        ark['E'+sist].value = tidsumma + ')'
 
             
     #############################################################

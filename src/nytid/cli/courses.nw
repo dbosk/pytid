@@ -853,10 +853,20 @@ def mine_add(course: Annotated[str, course_arg_autocomplete],
   <<exit if [[alias]] is already in [[mine_path]]>>
 
   <<set [[course_path]] to [[course]]'s path>>
-  os.symlink(course_path, mine_path / alias)
+  try:
+    os.symlink(course_path, mine_path / alias)
+  <<handle errors for adding a course to mine>>
 <<argument and option definitions>>=
 alias_opt = typer.Option(help="Alias to use instead of "
                               "the original course name")
+@
+
+If we try to add a course that we've already added to [[mine]], then we'll get 
+a [[FileExistsError]].
+<<handle errors for adding a course to mine>>=
+except FileExistsError:
+  logging.error(f"{alias} is already in {MINE}")
+  sys.exit(1)
 @
 
 \subsection{Create the default mine register if it doesn't exist}
@@ -964,9 +974,7 @@ def mine_rm(course: Annotated[str, my_course_arg]):
   mine_path = registry.get(MINE)
   try:
     os.unlink(mine_path / course)
-  except FileNotFoundError as err:
-    logging.error(f"Couldn't find {course}: {err}")
-    sys.exit(1)
+  <<handle errors for trying to remove a course from mine>>
 <<argument and option definitions>>=
 my_course_arg = typer.Argument(help="The course in my courses.",
                                autocompletion=complete_my_course_arg)
@@ -981,6 +989,31 @@ def complete_my_course_arg(incomplete: str) -> typing.List[str]:
       yield course
 @
 
+There are several errors that can occur.
+The first one is that the user typed in a course that doesn't exist.
+Then we won't be able to find the file.
+<<handle errors for trying to remove a course from mine>>=
+except FileNotFoundError as err:
+  logging.error(f"Couldn't find {course}: {err}")
+  sys.exit(1)
+@
+
+The second error is that there is a directory, not a symlink.
+In [[mine]], all courses should be symlinks pointing to the course data in 
+their respective register.
+However, if the course is created with [[mine]] as the default register, it's 
+directory will be created in the [[mine]] directory.
+Then we can't unlink it.
+This is actually a feature.
+<<handle errors for trying to remove a course from mine>>=
+except IsADirectoryError as err:
+  logging.error(f"{course} is a directory, not a symlink: "
+                f"We can't remove the directory without permanent data loss; "
+                f"this seems to be actual course data, not just a link to it! "
+                f"So you'll have to remove it manually to proceed. "
+                f"The directory you want to remove is {mine_path / course}.")
+  sys.exit(1)
+@
 
 \section{Matching courses and register using regex}
 

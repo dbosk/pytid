@@ -80,17 +80,27 @@ for event in event_filter(calendar.timeline):
     max_num_TAs = num_TAs
 
   rows.append([
+    *event_to_CSV(event),
+    num_TAs
+  ])
+<<helper functions>>=
+def event_to_CSV(event):
+  """
+  Input: event is an ics.event.Event object.
+
+  Output: a list of strings containing the event's attributes in the order 
+  specified in SIGNUP_SHEET_HEADER.
+  """
+  return [
     event.name,
     event.begin.to("local").format(DATETIME_FORMAT),
     event.end.to("local").format(DATETIME_FORMAT),
-    event.location,
-    num_TAs
-  ])
+    event.location
+  ]
 <<constants>>=
 DATETIME_FORMAT = "YYYY-MM-DD HH:mm"
 STRPTIME_FORMAT = "%Y-%m-%d %H:%M"
 @
-
 
 Finally, we can use the function as follows.
 <<usage examples>>=

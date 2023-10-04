@@ -52,10 +52,20 @@ def test():
                   'koeff':1.33,
                   'omr_tid':2*1.33,
                   'belopp':hourly_salary*2*1.33})
+    removed_events = []
+    removed_events.append({"datum":"2022-12-06",
+                           'tid':"8-10",
+                           'kurskod':'DD1321',
+                           'typ':"handl",
+                           'timmar':2,
+                           'koeff':1.33,
+                           'omr_tid':2*1.33,
+                           'belopp':hourly_salary*2*1.33})
 
     make_xlsx(personnr, name, email, events,
               course_leader, HoD,
-              course_leader_signature="signature.png")
+              course_leader_signature="signature.png",
+              removed_events=removed_events)
 
 def fit_image(img, height=None, width=None):
     """
@@ -84,7 +94,8 @@ def make_xlsx(personnummer, name, email, events,
               output = None,
               course_leader_signature = None,
               HoD_signature = None,
-              logo = "kth.png"):
+              logo = "kth.png",
+              removed_events=None):
     """
     Generates a time report for a TA:
     - `name` and `email` are name and email for the TA.
@@ -232,6 +243,53 @@ def make_xlsx(personnummer, name, email, events,
 
     if events:
         ark['E'+sist].value = tidsumma + ')'
+
+    if removed_events:
+        #############################################################
+        # Borttagna tillfällen
+        # Summering på sista raden 
+        rad = incr(sist, 2)
+        ark['A'+rad].value = "Felaktigt rapporterade tillfällen"
+        ark['A'+rad].font = Font(bold=True)
+        rad = incr(rad)
+        ark['A'+rad].value = "Dessa tillfällen har rapporterats felaktigt " \
+                             "på tidigare tidrapporter"
+        rad = incr(rad)
+        ark['A'+rad].value = "och ska därför tas bort."
+        rad = incr(rad, 2)
+        sist = incr(rad, len(removed_events))
+        ark['E'+sist].font = Font(bold=True)  
+        ark['G'+sist].font = Font(bold=True)  
+        ark['E'+sist].fill = PatternFill(start_color="00EEECE1", end_color="00EEECE1", fill_type="solid")
+        #ark['G'+sist].fill = PatternFill(start_color="00C0C0C0", end_color="00C0C0C0", fill_type="solid")
+
+        #############################################################
+        # Matris med timredovisningen
+        for i, kol in enumerate(removed_events):
+            ark['A'+rad].value = kol['datum']
+            ark['B'+rad] = kol['typ']
+            ark['C'+rad] = float(kol['timmar'])
+            ark['D'+rad] = float(kol['koeff'])
+            ark['E'+rad].value = float(kol['omr_tid'])
+            ark['F'+rad].value = float(hourly_salary)
+            ark['G'+rad].value = -float(kol['belopp'])
+
+            if i % 2 == 0:
+                for kol in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
+                    ark[kol+rad].fill = PatternFill(start_color="00E0E0E0", end_color="00E0E0E0", fill_type="solid")
+            
+            if i == 0:
+                tidsumma = "=SUM(E"+rad
+                ark['G'+sist].value = '=G'+rad
+            else:
+                tidsumma += ',E'+rad 
+                ark['G'+sist].value += '+G'+rad
+
+            rad = incr(rad)
+
+        if events:
+            ark['E'+sist].value = tidsumma + ')'
+
 
             
     #############################################################

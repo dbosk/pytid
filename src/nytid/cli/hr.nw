@@ -986,12 +986,13 @@ what to include in the time sheet.
 <<subcommands>>=
 @timesheets.command(name="generate")
 def cli_generate_timesheets(<<option for TAs to filter for>>,
-                        <<default options for start, end dates>>,
-                        <<options for time sheet data>>,
-                        <<argument for matching courses>> = ".*",
-                        <<option for matching registers, default to mine>>,
-                        <<option [[store]] to store the time sheet data>>,
-                        <<option [[amanuensis]] to include amanuensis mertid>>):
+      <<default options for start, end dates>>,
+      <<options for time sheet data>>,
+      <<argument for matching courses>> = ".*",
+      <<option for matching registers, default to mine>>,
+      <<option [[store]] to store the time sheet data>>,
+      <<option [[amanuensis]] to include amanuensis mertid>>,
+      <<option [[diff]] to generate only when there's a difference in salary>>):
   """
   Generates time sheets for TAs in courses.
   """
@@ -1016,10 +1017,12 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
     added_events = remove_events(ta_events, all_prev_events)
     removed_events = remove_events(all_prev_events, ta_events)
 
-    <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
-    for event in removed_events:
-      logging.warning(f"Event {event} was removed, but previously reported "
-                      f"for {user}.")
+    salary_diff = salary_difference(added_events, removed_events)
+    if diff and salary_diff != 0:
+      <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
+    elif not diff:
+      <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
+
     if store:
       <<store [[added_events]], [[removed_events]] for [[user]] as reported>>
 <<option [[store]] to store the time sheet data>>=
@@ -1031,6 +1034,17 @@ amanuensis: Annotated[bool, amanuensis_opt] = False
 <<argument and option definitions>>=
 amanuensis_opt = typer.Option(help="Include amanuensis, i.e. generate "
                                    "mertid time sheets.")
+<<option [[diff]] to generate only when there's a difference in salary>>=
+diff: Annotated[bool, diff_opt] = True
+<<argument and option definitions>>=
+diff_opt = typer.Option(help="diff: Only generate time sheets when there's a "
+                             "difference in salary. "
+                             "no-diff: Always generate time sheets when there "
+                             "are changes, even if there is no change in "
+                             "salary to be paid. "
+                             "(E.g. it's a change of dates.) "
+                             "No time sheets will be generated if there "
+                             "are no new events.")
 @
 
 When we remove the events, we simply filter them.
@@ -1042,6 +1056,17 @@ def remove_events(events, events_to_remove):
   return list(filter(lambda x: x not in events_to_remove, events))
 @
 
+To compute the difference in salary, we can simply sum up the salary in the 
+events.
+The function [[summarize_user]] lets [[belopp]] key of the event be the salary.
+<<helper functions>>=
+def salary_difference(added_events, removed_events):
+  """
+  Returns the difference in salary between the added and removed events.
+  """
+  return sum(map(lambda x: x["belopp"], added_events)) \
+           - sum(map(lambda x: x["belopp"], removed_events))
+@
 
 \subsection{Check if TA has a valid amanuensis contract}
 
@@ -1063,7 +1088,7 @@ To generate the time sheet for a TA we need to do the following:
   \item put the data in the Excel format.
 \end{enumerate}
 <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>=
-if not added_events:
+if not added_events and not removed_events:
   logging.warning(f"No events for {user}, skipping.")
   continue
 
@@ -1364,10 +1389,10 @@ for contract in user_contracts:
 
 When we generate the time sheet, we want to store the events that we used to 
 generate it.
-We will store the diffs ([[added_events]] and [[remove_events]]), that way 
+We will store the diffs ([[added_events]] and [[removed_events]]), that way 
 we'll build up the set of all events by adding them.
 
-For each time sheet we'll store [[added_events]] and [[remove_events]] in a 
+For each time sheet we'll store [[added_events]] and [[removed_events]] in a 
 JSON file.
 This is similar to how we store the amanuensis contracts.
 <<store [[added_events]], [[removed_events]] for [[user]] as reported>>=

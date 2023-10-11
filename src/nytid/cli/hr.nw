@@ -992,6 +992,7 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
       <<option for matching registers, default to mine>>,
       <<option [[store]] to store the time sheet data>>,
       <<option [[amanuensis]] to include amanuensis mertid>>,
+      <<option [[sign]] to include a signature>>,
       <<option [[diff]] to generate only when there's a difference in salary>>):
   """
   Generates time sheets for TAs in courses.
@@ -1112,7 +1113,8 @@ timesheet.make_xlsx(personnummer,
                                    course_responsible_email),
                     HoD=manager,
                     org=organization, project=project,
-                    course_leader_signature=course_responsible_signature,
+                    course_leader_signature=course_responsible_signature \
+                      if sign else None,
                     output=output_filename)
 <<imports>>=
 from nytid.signup.hr import timesheet
@@ -1127,6 +1129,10 @@ course_responsible_signature: Annotated[pathlib.Path,
 manager: Annotated[str, manager_opt] = default_manager,
 organization: Annotated[str, org_opt] = default_organization,
 project: Annotated[str, project_opt] = default_project
+<<option [[sign]] to include a signature>>=
+sign: Annotated[bool, sign_opt] = True
+<<argument and option definitions>>=
+sign_opt = typer.Option(help="Include the course responsible's signature.")
 @
 
 We construct the filename from the TA's username.

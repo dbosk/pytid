@@ -53,7 +53,7 @@ def test():
                   'omr_tid':2*1.33,
                   'belopp':hourly_salary*2*1.33})
     removed_events = []
-    removed_events.append({"datum":"2022-12-06",
+    removed_events.append({"datum":"2022-11-06",
                            'tid':"8-10",
                            'kurskod':'DD1321',
                            'typ':"handl",
@@ -268,9 +268,9 @@ def make_xlsx(personnummer, name, email, events,
         for i, kol in enumerate(removed_events):
             ark['A'+rad].value = kol['datum']
             ark['B'+rad] = kol['typ']
-            ark['C'+rad] = float(kol['timmar'])
+            ark['C'+rad] = -float(kol['timmar'])
             ark['D'+rad] = float(kol['koeff'])
-            ark['E'+rad].value = float(kol['omr_tid'])
+            ark['E'+rad].value = -float(kol['omr_tid'])
             ark['F'+rad].value = float(hourly_salary)
             ark['G'+rad].value = -float(kol['belopp'])
 

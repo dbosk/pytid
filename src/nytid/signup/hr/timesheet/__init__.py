@@ -143,8 +143,8 @@ def make_xlsx(personnummer, name, email, events,
 
     #############################################################
     # kolumnstorlekar
-    ark.column_dimensions['A'].width = 15  # 'Schemalagd tid'
-    ark.column_dimensions['B'].width = 9   # 'Typ'           
+    ark.column_dimensions['A'].width = 12  # 'Schemalagd tid'
+    ark.column_dimensions['B'].width = 11  # 'Typ'           
     ark.column_dimensions['C'].width = 7   # 'timmar'      
     ark.column_dimensions['D'].width = 6   # 'koeff'         
     ark.column_dimensions['E'].width = 12  # 'omräknad tid'        

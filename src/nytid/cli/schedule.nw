@@ -138,9 +138,13 @@ if "docs.google.com" in url:
 
 We read the ICS URL from the course's config and then read it in and add it to 
 [[schedule]].
+We also run all the events from the schedule through a filter that removes 
+events that are uninteresting.
+For instance, we don't want to include events like holidays, exam weeks or 
+fairs like KTH Global.
 <<read schedule from [[config]], add to [[schedule]]>>=
 course_schedule = schedutils.read_calendar(config.get("ics"))
-schedule.events.update(course_schedule.events)
+schedule.events.update(schedutils.event_filter(course_schedule.events))
 @
 
 We need a username.

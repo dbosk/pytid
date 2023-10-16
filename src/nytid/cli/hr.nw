@@ -796,7 +796,8 @@ currently valid one for each TA.
 @amanuensis.command(name="show")
 def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
                       <<option to output detailed user data>> = False,
-                      <<option to include event summary>> = True):
+                      <<option to include event summary>> = True,
+                      <<option for CSV delimiter>>):
   """
   Shows stored amanuesis contracts for TAs.
   """

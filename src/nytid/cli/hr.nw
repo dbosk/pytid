@@ -994,7 +994,8 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
       <<option [[store]] to store the time sheet data>>,
       <<option [[amanuensis]] to include amanuensis mertid>>,
       <<option [[sign]] to include a signature>>,
-      <<option [[diff]] to generate only when there's a difference in salary>>):
+      <<option [[diff]] to generate only when there's a difference in salary>>,
+      <<option [[draft]] to print draft to stdout>>):
   """
   Generates time sheets for TAs in courses.
   """
@@ -1005,6 +1006,7 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
 
   user_pattern = re.compile(user_regex)
   users = hr.hours_per_TA(booked)
+  <<timesheet generation user iteration variables>>
   for user in users:
     <<skip if [[user_regex]] doesn't match [[user]]>>
     if not amanuensis:
@@ -1019,10 +1021,12 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
     added_events = remove_events(ta_events, all_prev_events)
     removed_events = remove_events(all_prev_events, ta_events)
 
+    if draft:
+      <<output [[added_events]] and [[removed_events]] to stdout>>
+      continue
+
     salary_diff = salary_difference(added_events, removed_events)
-    if diff and salary_diff != 0:
-      <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
-    elif not diff:
+    if (diff and salary_diff != 0) or not diff:
       <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
 
     if store:
@@ -1079,6 +1083,47 @@ If they have that, they should report this as
 <<skip if [[user]] has a valid amanuensis contract>>=
 if get_valid_contracts(user):
   continue
+@
+
+\subsection{Output draft to stdout}
+
+We want to be able to output a draft of the time sheet to stdout.
+This should be similar to what we want to do below in \cref{ShowTimesheet}.
+We should print the username and the added and removed events to stdout in 
+tab-separated CSV format.
+<<option [[draft]] to print draft to stdout>>=
+draft: Annotated[bool, draft_opt] = False
+<<argument and option definitions>>=
+draft_opt = typer.Option(help="Print a draft of the time sheet to stdout. "
+                              "Don't generate any timesheet.")
+<<timesheet generation user iteration variables>>=
+csvout = csv.writer(sys.stdout, delimiter="\t")
+first_print = True
+<<output [[added_events]] and [[removed_events]] to stdout>>=
+if not (added_events or removed_events):
+  continue
+
+if first_print:
+  first_print = False
+else:
+  csvout.writerow([])
+  csvout.writerow([])
+
+if added_events or removed_events:
+  csvout.writerow([user])
+
+if added_events and removed_events:
+  csvout.writerow(["Added events"])
+
+for event in added_events:
+  csvout.writerow(event.values())
+
+if removed_events:
+  csvout.writerow([])
+  csvout.writerow(["Removed events"])
+
+for event in removed_events:
+  csvout.writerow(event.values())
 @
 
 \subsection{Generate a time sheet for a TA}
@@ -1436,7 +1481,7 @@ for timesheet_file in timesheets_dir.glob(f"{user}.*.json"):
 @
 
 
-\section{Show the latest time sheet}
+\section{Show the latest time sheet}\label{ShowTimesheet}
 
 Now that we have \cref{StoreRetrieveTimesheetData}, we can easily show the 
 generated time sheets for a TA.

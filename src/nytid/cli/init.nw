@@ -148,7 +148,6 @@ daily basis.
 <<set up [[ta_mail]] function>>
 
 for course in ${HR_REPORTING_COURSES}; do
-  <<skip if [[course]] has no sign-up sheet>>
   <<report new TAs for [[course]]>>
 done
 <<TA reporting variables>>=
@@ -156,11 +155,16 @@ HR_REPORTING_COURSES="prg[im]${year} datintro${year}p1"
 @
 
 This only makes sense for courses with sign-up sheets.
+One way to check if a course has a sign-up sheet is the following.
 <<skip if [[course]] has no sign-up sheet>>=
 nytid courses config ${course} signupsheet.url 2>/dev/null | \
   grep -q "signupsheet.url = " \
     || continue
-@
+@ However, we can't do this if [[${course}]] is a regex matching several 
+courses.
+The config command must match a course exactly, not by regex.
+But we don't need this check above as we've only entered courses that have 
+sign-up sheets in [[HR_REPORTING_COURSES]].
 
 Now, we must keep track of those we've already reported.
 We'll do this by storing the list of TAs in the course's data directory.
@@ -250,6 +254,10 @@ do
   <<add TAs in [[TAs]] to UG at [[ug_path]]>>
 done
 @
+
+Here it makes sense to use
+[[<<skip if [[course]] has no sign-up sheet>>]]
+from above, since we've only put full course named in [[COURSES]], no regexes.
 
 We need the UG group for the TAs in the course, in the case of [[prgi23]] it's
 \begin{center}
@@ -345,8 +353,6 @@ that is, that [[nytid.monthly.sh]] is run on the first of every month.
 <<nytid.monthly.sh>>=
 <<timesheets variables>>
 
-today=$(date +%Y-%m-%d)
-
 for course in ${TIMESHEETS_COURSES}
 do
   <<generate time sheets for [[course]]>>
@@ -382,8 +388,10 @@ Then we generate the time sheets there.
 That will create a [[.xlsx]] file for each TA.
 We'll then convert all of them to PDF.
 <<generate time sheets for [[course]]>>=
-nytid hr timesheets generate ${course} --end ${today}
+nytid hr timesheets generate ${course} --end ${start_of_month}
 loffice --convert-to pdf *.xlsx
+<<timesheets variables>>=
+start_of_month=$(date +%Y-%m-01)
 @
 
 Next step is to send all the PDF time sheets for processing.
@@ -420,7 +428,7 @@ mail -s "time sheets for ${course}" \
 \end{minted}
 
 
-\subsection{Send a time-sheet drafts to the TAs}
+\subsection{Send time-sheet drafts to the TAs}
 
 We shouldn't send the time sheets to HR before the TAs have had a chance to 
 check them.

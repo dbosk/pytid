@@ -30,6 +30,8 @@ We will also create two scripts to use [[nytid]] to automate some tasks.
 <<cronjob header>>
 <<nytid.weekly.sh>>=
 <<cronjob header>>
+<<nytid.premonthly.sh>>=
+<<cronjob header>>
 <<nytid.monthly.sh>>=
 <<cronjob header>>
 <<cronjob header>>=
@@ -409,6 +411,56 @@ mail -s "time sheets for ${course}" \
      $(for f in "*.pdf"; do echo "-A ${f}"; done) \
      ${addr}
 \end{minted}
+
+
+\subsection{Send a time-sheet drafts to the TAs}
+
+We shouldn't send the time sheets to HR before the TAs have had a chance to 
+check them.
+They will sometimes have things to update due to changes, even though all 
+changes should be made in advance.
+
+The structure of the code is similar to that of
+[[<<nytid.monthly.sh>>]].
+<<nytid.premonthly.sh>>=
+<<timesheet draft variables>>
+
+for course in ${TIMESHEETS_COURSES}
+do
+  <<send draft timesheets for [[course]]>>
+done
+<<timesheet draft variables>>=
+TIMESHEETS_COURSES="datintro${year} prg[im]${year}"
+@
+
+We can send drafts as follows.
+We need to send a draft for each user.
+<<send draft timesheets for [[course]]>>=
+for user in $(nytid hr users ${course}); do
+  report=$(nytid hr timesheets generate ${course} --draft \
+            --user ${user} --end ${next_month})
+  if test -z "${report}"; then
+    continue
+  fi
+  (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
+    | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se
+done
+<<timesheet draft variables>>=
+next_month=$(date +%Y-%m-01 -d "next month")
+TIMESHEETS_DRAFT_MSG="
+Hej!
+
+Den första nästa månad (${next_month}) kommer alla tider i
+bokningsarket att tidrapporteras automatiskt åt dig. För
+tillfället är det tiderna nedan.
+
+Om något är fel, uppdatera bokningsarket eller svara på detta
+mail senast dagen innan!
+
+          Daniel
+
+"
+@
 
 
 \subsection{Viewing the schedule}

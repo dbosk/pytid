@@ -9,6 +9,7 @@ MODULES+=	hr.py
 EXTRAS+=	nytid.hourly.sh
 EXTRAS+=	nytid.daily.sh
 EXTRAS+=	nytid.weekly.sh
+EXTRAS+=	nytid.premonthly.sh
 EXTRAS+=	nytid.monthly.sh
 EXTRAS+=	nytid-ignore.sh
 

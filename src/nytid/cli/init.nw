@@ -349,18 +349,25 @@ today=$(date +%Y-%m-%d)
 
 for course in ${TIMESHEETS_COURSES}
 do
-  <<skip if [[course]] has no sign-up sheet>>
   <<generate time sheets for [[course]]>>
   <<send time sheets for [[course]]>>
 done
 @
 
 We will create time sheets for [[datintro23]], [[prgi23]] and [[prgm23]].
-We'll send one email per course.
-We could make it one regex to send time sheets for all courses in one email.
+We'll send one email for [[datintro23]] and one for [[prgi23]] and [[prgm23]] 
+together (hence the regex for those below).
+We could also make it one regex to send time sheets for all courses in one 
+email.
 <<timesheets variables>>=
-TIMESHEETS_COURSES="datintro${year} prgi${year} prgm${year}"
+TIMESHEETS_COURSES="datintro${year} prg[im]${year}"
 @
+
+We note that, if we use regexes for several courses, then we can't check if the 
+course has any timesheet using
+[[<<skip if [[course]] has no sign-up sheet>>]].
+But on the other hand, if we give such regexes, we'll only include courses for 
+which there are sign-up sheets anyway.
 
 Now, generating the time sheets will create a lot of files in the current 
 working directory.

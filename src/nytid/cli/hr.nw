@@ -1072,11 +1072,10 @@ salary_diff = salary_difference(added_events, removed_events)
 if (diff and salary_diff != 0) or not diff:
   if draft:
     <<output [[added_events]] and [[removed_events]] to stdout>>
-    continue
   else:
     <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
 
-if store:
+if store and not draft:
   <<store [[added_events]], [[removed_events]] for [[user]] as reported>>
 @
 

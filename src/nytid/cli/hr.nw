@@ -1012,34 +1012,37 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
     if not amanuensis:
       <<skip if [[user]] has a valid amanuensis contract>>
 
-    ta_events = summarize_user(user, booked)
-    all_prev_events = []
-
-    <<add [[user]]'s amanuensis contracts to [[all_prev_events]]>>
-    <<add [[user]]'s previously reported events to [[all_prev_events]]>>
-
-    added_events = remove_events(ta_events, all_prev_events)
-    removed_events = remove_events(all_prev_events, ta_events)
-
-    if draft:
-      <<output [[added_events]] and [[removed_events]] to stdout>>
-      continue
-
-    salary_diff = salary_difference(added_events, removed_events)
-    if (diff and salary_diff != 0) or not diff:
-      <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
-
-    if store:
-      <<store [[added_events]], [[removed_events]] for [[user]] as reported>>
-<<option [[store]] to store the time sheet data>>=
-store: Annotated[bool, store_opt] = True
-<<argument and option definitions>>=
-store_opt = typer.Option(help="Store the time sheet data as reported.")
+    <<do timesheet processing for [[user]]>>
 <<option [[amanuensis]] to include amanuensis mertid>>=
 amanuensis: Annotated[bool, amanuensis_opt] = False
 <<argument and option definitions>>=
 amanuensis_opt = typer.Option(help="Include amanuensis, i.e. generate "
                                    "mertid time sheets.")
+@
+
+Now, let's do all the processing for a user.
+We first want to compute [[added_events]] and [[removed_events]].
+<<do timesheet processing for [[user]]>>=
+ta_events = summarize_user(user, booked)
+all_prev_events = []
+
+<<add [[user]]'s amanuensis contracts to [[all_prev_events]]>>
+<<add [[user]]'s previously reported events to [[all_prev_events]]>>
+
+added_events = remove_events(ta_events, all_prev_events)
+removed_events = remove_events(all_prev_events, ta_events)
+@
+
+When we remove the events, we simply filter them.
+<<helper functions>>=
+def remove_events(events, events_to_remove):
+  """
+  Removes the events in `events_to_remove` from `events`.
+  """
+  return list(filter(lambda x: x not in events_to_remove, events))
+@
+
+We want to add different options to affect the rest of the processing.
 <<option [[diff]] to generate only when there's a difference in salary>>=
 diff: Annotated[bool, diff_opt] = True
 <<argument and option definitions>>=
@@ -1051,15 +1054,30 @@ diff_opt = typer.Option(help="diff: Only generate time sheets when there's a "
                              "(E.g. it's a change of dates.) "
                              "No time sheets will be generated if there "
                              "are no new events.")
+<<option [[draft]] to print draft to stdout>>=
+draft: Annotated[bool, draft_opt] = False
+<<argument and option definitions>>=
+draft_opt = typer.Option(help="Print a draft of the time sheet to stdout. "
+                              "Don't generate any timesheet.")
+<<option [[store]] to store the time sheet data>>=
+store: Annotated[bool, store_opt] = True
+<<argument and option definitions>>=
+store_opt = typer.Option(help="Store the time sheet data as reported.")
 @
 
-When we remove the events, we simply filter them.
-<<helper functions>>=
-def remove_events(events, events_to_remove):
-  """
-  Removes the events in `events_to_remove` from `events`.
-  """
-  return list(filter(lambda x: x not in events_to_remove, events))
+This leaves the rest of the processing like this.
+<<do timesheet processing for [[user]]>>=
+salary_diff = salary_difference(added_events, removed_events)
+
+if (diff and salary_diff != 0) or not diff:
+  if draft:
+    <<output [[added_events]] and [[removed_events]] to stdout>>
+    continue
+  else:
+    <<generate [[user]]'s timesheet from [[added_events]], [[removed_events]]>>
+
+if store:
+  <<store [[added_events]], [[removed_events]] for [[user]] as reported>>
 @
 
 To compute the difference in salary, we can simply sum up the salary in the 
@@ -1091,11 +1109,6 @@ We want to be able to output a draft of the time sheet to stdout.
 This should be similar to what we want to do below in \cref{ShowTimesheet}.
 We should print the username and the added and removed events to stdout in 
 tab-separated CSV format.
-<<option [[draft]] to print draft to stdout>>=
-draft: Annotated[bool, draft_opt] = False
-<<argument and option definitions>>=
-draft_opt = typer.Option(help="Print a draft of the time sheet to stdout. "
-                              "Don't generate any timesheet.")
 <<timesheet generation user iteration variables>>=
 csvout = csv.writer(sys.stdout, delimiter="\t")
 first_print = True

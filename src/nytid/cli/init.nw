@@ -428,7 +428,7 @@ mail -s "time sheets for ${course}" \
 \end{minted}
 
 
-\subsection{Send a time-sheet drafts to the TAs}
+\subsection{Send time-sheet drafts to the TAs}
 
 We shouldn't send the time sheets to HR before the TAs have had a chance to 
 check them.

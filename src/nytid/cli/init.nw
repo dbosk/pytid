@@ -353,8 +353,6 @@ that is, that [[nytid.monthly.sh]] is run on the first of every month.
 <<nytid.monthly.sh>>=
 <<timesheets variables>>
 
-today=$(date +%Y-%m-%d)
-
 for course in ${TIMESHEETS_COURSES}
 do
   <<generate time sheets for [[course]]>>
@@ -390,8 +388,10 @@ Then we generate the time sheets there.
 That will create a [[.xlsx]] file for each TA.
 We'll then convert all of them to PDF.
 <<generate time sheets for [[course]]>>=
-nytid hr timesheets generate ${course} --end ${today}
+nytid hr timesheets generate ${course} --end ${start_of_month}
 loffice --convert-to pdf *.xlsx
+<<timesheets variables>>=
+start_of_month=$(date +%Y-%m-01)
 @
 
 Next step is to send all the PDF time sheets for processing.

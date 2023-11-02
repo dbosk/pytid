@@ -531,6 +531,17 @@ If that happens, [[nytid]] will issue warnings.
 Since we want to run this script using Cron, we don't want any output unless a 
 real error occurs, so we filter out all warnings.
 
+Finally, we also want to generate a schedule for the entire course, just to get 
+an overview.
+We don't want to access the sign-up sheet to check all the time.
+Nor do we have terminal access, \eg when we're on our phone.
+<<nytid.hourly.sh>>=
+### Generate schedules for courses ###
+
+for course in ${ICS_COURSES}; do
+  nytid schedule ics ${course} --user "" > ${ICS_DIR}/${course}.ics
+done
+@
 
 % courses          Manage courses                                              
 % mine      Manage my courses                                                  

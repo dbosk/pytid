@@ -334,7 +334,7 @@ If we print a week, we'd might want to have it between days.
 Otherwise, between weeks for longer periods.
 <<printing control options>>=
 group_by: Annotated[GroupByDayOrWeek, group_by_day_or_week]
-  = "week"
+  = "week",
 <<argument and option definitions>>=
 class GroupByDayOrWeek(str, Enum):
   week = "week"
@@ -361,8 +361,13 @@ elif event.begin.isocalendar()[group_by_idx] != current_epoc:
   print("\n")
   current_epoc = event.begin.isocalendar()[group_by_idx]
 
-print(schedutils.format_event_short(event))
+print(schedutils.format_event_short(event, week))
 @
 
-
+We use the [[week]] argument to [[format_event_short]] to indicate whether we 
+want to print the week number and day or not.
+<<printing control options>>=
+week: Annotated[bool, week_opt] = False,
+<<argument and option definitions>>=
+week_opt = typer.Option(help="Print week number and day of week")
 

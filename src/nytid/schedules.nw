@@ -41,26 +41,36 @@ This is useful for creating [[.ics]] files, but not for pretty-printing the
 schedule to the terminal, for instance.
 We introduce the two following functions to handle that.
 <<functions>>=
-def format_header(event):
+def format_header(event, week=True):
     """
     Formats the event header, a one-line representation (week, date, time, 
     event title)
+
+    If the `week` parameter is `True` (default), the week number and weekday 
+    will be included in the header.
     """
-    header = f"Week {event.begin.isocalendar()[1]} " + \
-            calendar.day_name[event.begin.weekday()] + " " + \
-            event.begin.to(dateutil.tz.tzlocal()).format('DD/MM HH:mm')
+    header = ""
+
+    if week:
+      header += f"Week {event.begin.isocalendar()[1]} " \
+                + calendar.day_name[event.begin.weekday()] + " "
+
+    header += event.begin.to(dateutil.tz.tzlocal()).format('DD/MM HH:mm')
 
     header += f" {event.name}"
 
     return header
 
-def format_event(event):
+def format_event(event, week=True):
     """
     Takes event (ics.event.Event) object,
     returns long string representation (header, location, description over 
     several lines)
+
+    The `week` parameter is passed to the `format_header` function, it results 
+    in the week number and day being included in the header. Default is `True`.
     """
-    header = format_header(event)
+    header = format_header(event, week)
     location = event.location
     description = "\n".join(filter(lambda x: "http" not in x,
             event.description.splitlines()))
@@ -96,10 +106,16 @@ def filter_event_description(event_desc, ignore=[
 
     return separator.join(desc_parts_keep)
 
-def format_event_short(event):
-    """Takes event (ics.event.Event) object,
-    returns a short string representation (one line)"""
-    header = format_header(event)
+def format_event_short(event, week=False):
+    """
+    Takes event (ics.event.Event) object,
+    returns a short string representation (one line)
+
+    The `week` parameter is passed to the `format_header` function, it results 
+    in the week number and day being included in the header. Default is 
+    `False`.
+    """
+    header = format_header(event, week)
     description = filter_event_description(event.description)
 
     return f"{header} {description}".strip()

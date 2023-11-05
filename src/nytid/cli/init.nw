@@ -43,17 +43,18 @@ year=$(date +%y)
 @ We will expand on these as we proceed.
 But we can add them to Cron to automate some tasks.
 \begin{minted}{text}
-# m h  dom mon dow   command
-  0 *  *   *   *     ${HOME}/bin/nytid.hourly.sh
-  0 4  *   *   *     ${HOME}/bin/nytid.daily.sh
-  0 5  *   *   1     ${HOME}/bin/nytid.weekly.sh
-  0 6  1   *   *     ${HOME}/bin/nytid.monthly.sh
+# m h  dom   mon dow   command
+  0 *  *     *   *     ${HOME}/bin/nytid.hourly.sh
+  0 4  *     *   *     ${HOME}/bin/nytid.daily.sh
+  0 5  *     *   1     ${HOME}/bin/nytid.weekly.sh
+  0 6  2-5   *   *     ${HOME}/bin/nytid.monthly.sh
 \end{minted}
 So we run
 [[<<nytid.hourly.sh>>]] every hour,
 [[<<nytid.daily.sh>>]] every morning at 4,
 [[<<nytid.weekly.sh>>]] every Monday at 5, and
-[[<<nytid.monthly.sh>>]] on the first of every month at 6 in the morning.
+[[<<nytid.monthly.sh>>]] on the 2nd to 5th of every month at 6 in the morning.
+We do this in case it's on a weekend and the laptop is off.
 
 \subsection{Setting up a course}
 
@@ -348,8 +349,6 @@ of September (it's not inclusive, so \(<\) 2023-10-01).
 
 With this construction, we can automate the generation of time sheets on a 
 monthly basis.
-Now, we assume that the time sheets are generated on the first of each month, 
-that is, that [[nytid.monthly.sh]] is run on the first of every month.
 <<nytid.monthly.sh>>=
 <<timesheets variables>>
 
@@ -387,17 +386,26 @@ cd ${tmpdir}
 Then we generate the time sheets there.
 That will create a [[.xlsx]] file for each TA.
 We'll then convert all of them to PDF.
+However, if now files were generated, we'll skip the rest.
+This fits well since we want to run the script the first few days of the month, 
+to ensure the system is up and running.
+It might be off, since we want to run this on our primary computer, to get the 
+emails sent with our primary email client.
 <<generate time sheets for [[course]]>>=
 nytid hr timesheets generate ${course} --end ${start_of_month}
-loffice --convert-to pdf *.xlsx
+if test -z "$(ls)"; then
+  echo "No time sheets generated for ${course}"
+  continue
+fi
+loffice --headless --convert-to pdf *.xlsx
 <<timesheets variables>>=
 start_of_month=$(date +%Y-%m-01)
 @
 
 Next step is to send all the PDF time sheets for processing.
 <<send time sheets for [[course]]>>=
-echo ${TIMESHEETS_MSG} | \
-  timesheets_mail "${TIMESHEETS_ADDR}" "${course}"
+echo "${TIMESHEETS_MSG}" | \
+  timesheets_mail "${TIMESHEETS_ADDR}" "${course}" *.pdf
 <<timesheets variables>>=
 TIMESHEETS_ADDR=xxx@kth.se
 TIMESHEETS_MSG="
@@ -415,8 +423,11 @@ In my case, I use [[mutt]].
 timesheets_mail() {
   addr="$1"
   course="$2"
+  shift 2
+  files="$*"
+
   mutt -s "time sheets for ${course}" \
-       -a "*.pdf" -- ${addr}
+       -a ${files} -- ${addr}
 }
 @
 
@@ -426,6 +437,11 @@ mail -s "time sheets for ${course}" \
      $(for f in "*.pdf"; do echo "-A ${f}"; done) \
      ${addr}
 \end{minted}
+
+The key thing regarding the email client is to use one that is set up to use 
+our normal email.
+We want this to have the generated timesheets in the sent folder, for future 
+reference.
 
 
 \subsection{Send time-sheet drafts to the TAs}

@@ -407,7 +407,7 @@ Next step is to send all the PDF time sheets for processing.
 echo "${TIMESHEETS_MSG}" | \
   timesheets_mail "${TIMESHEETS_ADDR}" "${course}" *.pdf
 <<timesheets variables>>=
-TIMESHEETS_ADDR=xxx@kth.se
+TIMESHEETS_ADDR=karlm@kth.se
 TIMESHEETS_MSG="
 Hej, hej!
 

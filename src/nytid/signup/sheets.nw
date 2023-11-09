@@ -83,7 +83,7 @@ for event in event_filter(calendar.timeline):
     *event_to_CSV(event),
     num_TAs
   ])
-<<helper functions>>=
+<<functions>>=
 def event_to_CSV(event):
   """
   Input: event is an ics.event.Event object.

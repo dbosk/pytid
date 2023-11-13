@@ -257,6 +257,15 @@ kwargs["attendees"] = [ics.attendee.Attendee(f"{user}@kth.se")
 When we import this schedule in Google Calendar, we don't get the attendees.
 We also want to add all attendees to the description as well.
 But we'll do a bit better and simply add who is booked and who is reserve.
+
+Now, we add them in a particular way.
+The description will also be used by the [[nytid schedule show]] command.
+If there are no booked TAs we add \enquote{Booked TAs: None}.
+This allows us to grep for \enquote{None} to find events that have no booked 
+TAs.
+Similarly, we only add \enquote{Reserve TAs:} if there are reserve TAs.
+This way we can grep for \enquote{Reserve} to find events that have reserve 
+TAs.
 <<add attendees to description>>=
 booked, reserves = sheets.get_booked_TAs_from_csv(csv_row)
 

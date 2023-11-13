@@ -261,14 +261,18 @@ But we'll do a bit better and simply add who is booked and who is reserve.
 booked, reserves = sheets.get_booked_TAs_from_csv(csv_row)
 
 kwargs["description"] += "Booked TAs:"
-for username in booked:
-  kwargs["description"] += f" {username}"
+if booked:
+  for username in booked:
+    kwargs["description"] += f" {username}"
+else:
+  kwargs["description"] += " None"
 kwargs["description"] += "\n"
 
-kwargs["description"] += "Reserve TAs:"
-for username in reserves:
-  kwargs["description"] += f" {username}"
-kwargs["description"] += "\n"
+if reserves:
+  kwargs["description"] += "Reserve TAs:"
+  for username in reserves:
+    kwargs["description"] += f" {username}"
+  kwargs["description"] += "\n"
 @
 
 

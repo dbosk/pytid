@@ -82,20 +82,6 @@ if not courses:
   sys.exit(1)
 @
 
-We also need a username.
-We will default to the username of the logged in user.
-<<option for username to filter for>>=
-user: Annotated[str, username_opt] = default_username
-<<argument and option definitions>>=
-try:
-  default_username = os.environ["USER"]
-except KeyError:
-  default_username = None
-
-username_opt = typer.Option(help="Username to filter sign-up sheet for, "
-                                 "defaults to logged in user's username.")
-@
-
 
 \section{Looking up TA personal data}
 
@@ -327,13 +313,6 @@ else:
   user_obj = user
 
 print(user_obj)
-<<print detailed or non-detailed data about [[user]], no newline>>=
-if detailed:
-  <<set [[user_obj]] to most detailed version possible of [[user]]>>
-else:
-  user_obj = user
-
-print(user_obj, end="")
 <<set [[user_obj]] to most detailed version possible of [[user]]>>=
 user_obj = user
 try:
@@ -511,6 +490,7 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
                         <<option for matching registers, default to mine>>,
                         <<option to output detailed user data>> = True,
                         <<option to include event summary>> = False,
+                        <<option [[draft]] to not store contract>>,
                         <<option for CSV delimiter>>):
   """
   Computes amanuensis data for a TA.
@@ -528,7 +508,13 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
   for user in amanuensis:
     <<skip if [[user_regex]] doesn't match [[user]]>>
     <<print [[amanuensis]] data for [[user]]>>
-    <<store [[events]] in CSV format>>
+    if not draft:
+      <<store [[events]] in CSV format>>
+<<option [[draft]] to not store contract>>=
+draft: Annotated[bool, draft_opt] = False
+<<argument and option definitions>>=
+draft_opt = typer.Option(help="Create a draft, "
+                              "don't store the generated contract.")
 @
 
 \subsection{Default arguments for user regex}

@@ -102,13 +102,13 @@ requests = "*"
 
 [[package]]
 name = "canvaslms"
-version = "2.22"
+version = "2.23"
 description = "Command-line interface to Canvas LMS"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "canvaslms-2.22-py3-none-any.whl", hash = "sha256:7d241560e44314fd17369cc55ec030817974c0413476212068c7123e4beacfef"},
-    {file = "canvaslms-2.22.tar.gz", hash = "sha256:0d8ab383a678123f04840611f03b5e9c4088b22a60ff5ceedd10f4b9b6d27f7e"},
+    {file = "canvaslms-2.23-py3-none-any.whl", hash = "sha256:87ecb35279fed9c08ba091d8735f9dfa7e733af4187a7e9e38ca0de1b68057be"},
+    {file = "canvaslms-2.23.tar.gz", hash = "sha256:1dfab7b5f6df15129f758500b04f03676e25ce0322d46bf11ac49be3abbc6941"},
 ]
 
 [package.dependencies]

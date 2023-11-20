@@ -490,6 +490,7 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
                         <<option for matching registers, default to mine>>,
                         <<option to output detailed user data>> = True,
                         <<option to include event summary>> = False,
+                        <<option [[draft]] to not store contract>>,
                         <<option for CSV delimiter>>):
   """
   Computes amanuensis data for a TA.
@@ -507,7 +508,13 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
   for user in amanuensis:
     <<skip if [[user_regex]] doesn't match [[user]]>>
     <<print [[amanuensis]] data for [[user]]>>
-    <<store [[events]] in CSV format>>
+    if not draft:
+      <<store [[events]] in CSV format>>
+<<option [[draft]] to not store contract>>=
+draft: Annotated[bool, draft_opt] = False
+<<argument and option definitions>>=
+draft_opt = typer.Option(help="Create a draft, "
+                              "don't store the generated contract.")
 @
 
 \subsection{Default arguments for user regex}

@@ -1361,8 +1361,14 @@ We can simply compute [[hours]] using the [[hours_per_TA]] function.
 That function returns a dictionary with the TA as key and the total time as 
 value.
 So we just get the hours for the TA in question.
+However, if the TA doesn't have any hours, we'll get a [[KeyError]] since we 
+can't find any entry for the TA.
+In this case we simply set the hours to 0.
 <<let [[hours]] be the hours of [[user]]>>=
-hours = to_hours(hr.hours_per_TA(course_events)[user])
+try:
+  hours = to_hours(hr.hours_per_TA(course_events)[user])
+except KeyError:
+  hours = 0
 <<[[summarize_user]] variables>>=
 start_idx = sheets.SIGNUP_SHEET_HEADER.index("Start")
 @
@@ -1434,7 +1440,9 @@ all events included there from [[ta_events]].
 <<add [[user]]'s amanuensis contracts to [[all_prev_events]]>>=
 user_contracts = get_valid_contracts(user)
 for contract in user_contracts:
-  contract_events = summarize_user(user, contract["events"])
+  contract_events = summarize_user(user,
+                        sheets.filter_events_by_date(contract["events"],
+                                                     start, end))
   all_prev_events += contract_events
 @
 

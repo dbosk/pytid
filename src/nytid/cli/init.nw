@@ -245,12 +245,10 @@ For instance, we might want to add the TAs to the course in UG.
 <<nytid.hourly.sh>>=
 ### Set up TAs in UG ###
 
-COURSES="prgm${year} prgi${year} datintro${year}p1"
-
-for course in ${COURSES}
+for course in $(nytid courses mine ls)
 do
   <<skip if [[course]] has no sign-up sheet>>
-  <<look up [[ug_path]]>>
+  <<look up [[ug_path]], or skip if none exists>>
   <<look up [[TAs]]>>
   <<add TAs in [[TAs]] to UG at [[ug_path]]>>
 done
@@ -271,7 +269,7 @@ nytid courses config prgi23 ug.assistants \
 \end{minted}
 That way, we can read it from the config.
 If there is no UG group specified in the cours config, we skip the course.
-<<look up [[ug_path]]>>=
+<<look up [[ug_path]], or skip if none exists>>=
 ug_path=$(nytid courses config ${course} ug.assistants | sed "s/.*= //")
 test "$?" -eq 0 || continue
 @

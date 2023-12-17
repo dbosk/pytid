@@ -995,18 +995,11 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
   <<timesheet generation user iteration variables>>
   for user in users:
     <<skip if [[user_regex]] doesn't match [[user]]>>
-    if not amanuensis:
-      <<skip if [[user]] has a valid amanuensis contract>>
-
+    <<skip depending on [[amanuensis]] option>>
     <<do timesheet processing for [[user]]>>
-<<option [[amanuensis]] to include amanuensis mertid>>=
-amanuensis: Annotated[bool, amanuensis_opt] = False
-<<argument and option definitions>>=
-amanuensis_opt = typer.Option(help="Include amanuensis, i.e. generate "
-                                   "mertid time sheets.")
 @
 
-Now, let's do all the processing for a user.
+Let's start with all the processing for a user.
 We first want to compute [[added_events]] and [[removed_events]].
 <<do timesheet processing for [[user]]>>=
 ta_events = summarize_user(user, booked)
@@ -1077,14 +1070,24 @@ def salary_difference(added_events, removed_events):
            - sum(map(lambda x: x["belopp"], removed_events))
 @
 
-\subsection{Check if TA has a valid amanuensis contract}
+\subsection{Work with amanuensis or hourly TAs option}
 
-We want to check if the TA has a valid amanuensis contract that overlaps the 
-period.
-If they have that, they should report this as 
+We want to be able to separate time sheets for amanuensis and hourly TAs.
+We want to check if the TA has a valid amanuensis contract that overlaps with 
+the period.
+If they have that, they should report extra hours as 
 \enquote{\foreignlanguage{swedish}{mertid}} instead.
-<<skip if [[user]] has a valid amanuensis contract>>=
-if get_valid_contracts(user):
+<<option [[amanuensis]] to include amanuensis mertid>>=
+amanuensis: Annotated[bool, amanuensis_opt] = False
+<<argument and option definitions>>=
+amanuensis_opt = typer.Option(help="Include only amanuenses, i.e. generate "
+                                   "mertid time sheets. no-amanuensis "
+                                   "include only hourly TAs.")
+<<skip depending on [[amanuensis]] option>>=
+contracts = get_valid_contracts(user)
+if amanuensis and not contracts:
+  continue
+elif not amanuensis and contracts:
   continue
 @
 

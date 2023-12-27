@@ -271,9 +271,13 @@ nytid courses config prgi23 ug.assistants \
 \end{minted}
 That way, we can read it from the config.
 If there is no UG group specified in the cours config, we skip the course.
+The same if the UG group is empty (since that would regex match any course in 
+UG).
 <<look up [[ug_path]]>>=
-ug_path=$(nytid courses config ${course} ug.assistants | sed "s/.*= //")
+ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
+            | sed "s/.*= //")
 test "$?" -eq 0 || continue
+test -n "${ug_path}" || continue
 @
 
 Note that we could've named [[ug.assistants]] anything, it's just a name we 
@@ -299,7 +303,7 @@ One at a time, then only the TA causing the error will not be added.
 <<add TAs in [[TAs]] to UG at [[ug_path]]>>=
 if test -n "${TAs}"; then
   for ta in ${TAs}; do
-    kthutils ug members add ${ug_path} ${ta}
+    kthutils ug members add "${ug_path}" "${ta}"
   done
 fi
 @

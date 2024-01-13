@@ -1028,7 +1028,7 @@ cli_amanuens_create(
 We'll create a set of subcommands under [[timesheet]] to manage time sheets.
 <<subcommands>>=
 timesheets = typer.Typer(name="timesheets",
-                        help="Manage timesheets for TAs")
+                         help="Manage timesheets for TAs")
 cli.add_typer(timesheets)
 @
 
@@ -1167,6 +1167,8 @@ We want to be able to output a draft of the time sheet to stdout.
 This should be similar to what we want to do below in \cref{ShowTimesheet}.
 We should print the username and the added and removed events to stdout in 
 tab-separated CSV format.
+Note that we want to negate the hours for the removed events, this makes it 
+easier to read it correctly.
 <<timesheet generation user iteration variables>>=
 csvout = csv.writer(sys.stdout, delimiter="\t")
 first_print = True
@@ -1194,6 +1196,9 @@ if removed_events:
   csvout.writerow(["Removed events"])
 
 for event in removed_events:
+  event["timmar"] = -event["timmar"]
+  event["omr_tid"] = -event["omr_tid"]
+  event["belopp"] = -event["belopp"]
   csvout.writerow(event.values())
 @
 

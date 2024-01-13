@@ -783,7 +783,8 @@ currently valid one for each TA.
 def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
                       <<option to output detailed user data>> = False,
                       <<option to include event summary>> = True,
-                      <<option for CSV delimiter>>):
+                      <<option for CSV delimiter>>,
+                      <<option [[updates]] to show updates>>):
   """
   Shows stored amanuesis contracts for TAs.
   """
@@ -793,6 +794,8 @@ def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
   <<amanuensis iteration variables>>
   for contract in contracts:
     <<print [[contract]]>>
+    if updates:
+      <<show draft contract based on [[contract]] with all current hours>>
 <<argument [[user_regex]] to match TAs>>=
 user_regex: Annotated[str, user_regex_arg]
 <<argument and option definitions>>=
@@ -952,13 +955,80 @@ else:
   course_regex = ".*"
 @
 
+\subsection{Showing updated draft contract}
+
+When we show the current contract, we also want to show what the contract would 
+have looked like using the current bookings.
+This way, we can see what has changed and how that affects the contract, for 
+\enquote{mertid} etc.
+
+We have the [[update]] option to control this.
+<<option [[updates]] to show updates>>=
+updates: Annotated[bool, updates_opt] = False
+<<argument and option definitions>>=
+updates_opt = typer.Option(help="Also show a draft contract based on the "
+                                "current bookings.")
+@
+
+We can reuse the [[create]] command ([[cli_amanuens_create]]) to generate the 
+draft contract.
+We start with printing an empty line to get a separation between the contracts.
+Then we use the dates from the contract as arguments to the [[create]] command.
+Finally, we must ensure to set [[draft]] to [[True]] to not store the contract.
+<<show draft contract based on [[contract]] with all current hours>>=
+print()
+
+try:
+  start = datetime.datetime.fromisoformat(contract["start"]) \
+            if contract["start"] else None
+except KeyError:
+  start = None
+
+try:
+  end = datetime.datetime.fromisoformat(contract["end"]) \
+          if contract["end"] else None
+except KeyError:
+  end = None
+
+try:
+  push_start = datetime.datetime.fromisoformat(contract["push_start"]) \
+            if contract["push_start"] else None
+except KeyError:
+  push_start = None
+
+try:
+  set_start = datetime.datetime.fromisoformat(contract["set_start"]) \
+            if contract["set_start"] else None
+except KeyError:
+  set_start = None
+
+try:
+  set_end = datetime.datetime.fromisoformat(contract["set_end"]) \
+            if contract["set_end"] else None
+except KeyError:
+  set_end = None
+
+cli_amanuens_create(
+  user_regex=contract["user"],
+  course_regex=".*",
+  start=start,
+  end=end,
+  push_start=push_start,
+  set_start=set_start,
+  set_end=set_end,
+  detailed=detailed,
+  event_summary=event_summary,
+  draft=True,
+  delimiter=delimiter
+)
+@
 
 \section{Working with time sheets}
 
 We'll create a set of subcommands under [[timesheet]] to manage time sheets.
 <<subcommands>>=
 timesheets = typer.Typer(name="timesheets",
-                        help="Manage timesheets for TAs")
+                         help="Manage timesheets for TAs")
 cli.add_typer(timesheets)
 @
 
@@ -995,18 +1065,11 @@ def cli_generate_timesheets(<<option for TAs to filter for>>,
   <<timesheet generation user iteration variables>>
   for user in users:
     <<skip if [[user_regex]] doesn't match [[user]]>>
-    if not amanuensis:
-      <<skip if [[user]] has a valid amanuensis contract>>
-
+    <<skip depending on [[amanuensis]] option>>
     <<do timesheet processing for [[user]]>>
-<<option [[amanuensis]] to include amanuensis mertid>>=
-amanuensis: Annotated[bool, amanuensis_opt] = False
-<<argument and option definitions>>=
-amanuensis_opt = typer.Option(help="Include amanuensis, i.e. generate "
-                                   "mertid time sheets.")
 @
 
-Now, let's do all the processing for a user.
+Let's start with all the processing for a user.
 We first want to compute [[added_events]] and [[removed_events]].
 <<do timesheet processing for [[user]]>>=
 ta_events = summarize_user(user, booked)
@@ -1077,14 +1140,24 @@ def salary_difference(added_events, removed_events):
            - sum(map(lambda x: x["belopp"], removed_events))
 @
 
-\subsection{Check if TA has a valid amanuensis contract}
+\subsection{Work with amanuensis or hourly TAs option}
 
-We want to check if the TA has a valid amanuensis contract that overlaps the 
-period.
-If they have that, they should report this as 
+We want to be able to separate time sheets for amanuensis and hourly TAs.
+We want to check if the TA has a valid amanuensis contract that overlaps with 
+the period.
+If they have that, they should report extra hours as 
 \enquote{\foreignlanguage{swedish}{mertid}} instead.
-<<skip if [[user]] has a valid amanuensis contract>>=
-if get_valid_contracts(user):
+<<option [[amanuensis]] to include amanuensis mertid>>=
+amanuensis: Annotated[bool, amanuensis_opt] = False
+<<argument and option definitions>>=
+amanuensis_opt = typer.Option(help="Include only amanuenses, i.e. generate "
+                                   "mertid time sheets. no-amanuensis "
+                                   "include only hourly TAs.")
+<<skip depending on [[amanuensis]] option>>=
+contracts = get_valid_contracts(user)
+if amanuensis and not contracts:
+  continue
+elif not amanuensis and contracts:
   continue
 @
 
@@ -1094,6 +1167,8 @@ We want to be able to output a draft of the time sheet to stdout.
 This should be similar to what we want to do below in \cref{ShowTimesheet}.
 We should print the username and the added and removed events to stdout in 
 tab-separated CSV format.
+Note that we want to negate the hours for the removed events, this makes it 
+easier to read it correctly.
 <<timesheet generation user iteration variables>>=
 csvout = csv.writer(sys.stdout, delimiter="\t")
 first_print = True
@@ -1121,6 +1196,9 @@ if removed_events:
   csvout.writerow(["Removed events"])
 
 for event in removed_events:
+  event["timmar"] = -event["timmar"]
+  event["omr_tid"] = -event["omr_tid"]
+  event["belopp"] = -event["belopp"]
   csvout.writerow(event.values())
 @
 

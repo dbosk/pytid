@@ -426,7 +426,7 @@ def config_cmd(course: Annotated[str, course_arg_autocomplete],
     try:
       print_config(conf.get(path), path)
     except KeyError as err:
-      logging.error(f"{path} doen't exist in the config: {err}")
+      logging.error(f"{path} doesn't exist in the config: {err}")
       sys.exit(1)
 @ See \cref{mine} for the [[MINE]] constant.
 

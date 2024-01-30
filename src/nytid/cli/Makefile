@@ -22,6 +22,7 @@ __init__.py: init.py
 
 ${EXTRAS}: init.nw
 	${NOTANGLE}
+	chmod +x $@
 
 .PHONY: clean
 clean:

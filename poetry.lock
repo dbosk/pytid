@@ -88,27 +88,28 @@ files = [
 
 [[package]]
 name = "canvasapi"
-version = "2.2.0"
+version = "3.2.0"
 description = "API wrapper for the Canvas LMS"
 optional = false
 python-versions = "*"
 files = [
-    {file = "canvasapi-2.2.0.tar.gz", hash = "sha256:5087db773cac9d92f4f4609b3c160dbeeceb636801421808afee2d438bc43f62"},
+    {file = "canvasapi-3.2.0.tar.gz", hash = "sha256:7cf97ad1ddc860e250c3453e229897ed1273095ad061c34baf651bf1b0e5a9c7"},
 ]
 
 [package.dependencies]
+arrow = "*"
 pytz = "*"
 requests = "*"
 
 [[package]]
 name = "canvaslms"
-version = "3.0"
+version = "3.7"
 description = "Command-line interface to Canvas LMS"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "canvaslms-3.0-py3-none-any.whl", hash = "sha256:d2cd08147c4267e4ce20c42086fe33f5b24800949df8ecbfdf3d3267dc1cbe57"},
-    {file = "canvaslms-3.0.tar.gz", hash = "sha256:cbee9229f77dfafb3a0efda6606ca5911042d8cc41986ca010841d631b43be5e"},
+    {file = "canvaslms-3.7-py3-none-any.whl", hash = "sha256:b9c46aa84cde3c179ad789fde93cc7f3147071c678596f59e8aa3c9a948043c6"},
+    {file = "canvaslms-3.7.tar.gz", hash = "sha256:5e3b3be6321c3978bfe0e97a24e9cef169d55e4ebe63ed839f8c1c6a44cbba95"},
 ]
 
 [package.dependencies]
@@ -116,7 +117,7 @@ appdirs = ">=1.4.4,<2.0.0"
 argcomplete = ">=2,<4"
 arrow = ">=1.2.3,<2.0.0"
 cachetools = ">=5.3.1,<6.0.0"
-canvasapi = "<3.0.0"
+canvasapi = ">=3.2.0,<4.0.0"
 keyring = ">=24.2.0,<25.0.0"
 pypandoc = ">=1.11,<2.0"
 rich = ">=13.0.0,<14.0.0"

@@ -50,11 +50,17 @@ But we can add them to Cron to automate some tasks.
   0 6  2-5   *   *     ${HOME}/bin/nytid.monthly.sh
 \end{minted}
 So we run
-[[<<nytid.hourly.sh>>]] every hour,
-[[<<nytid.daily.sh>>]] every morning at 4,
-[[<<nytid.weekly.sh>>]] every Monday at 5, and
-[[<<nytid.monthly.sh>>]] on the 2nd to 5th of every month at 6 in the morning.
-We do this in case it's on a weekend and the laptop is off.
+\begin{itemize}
+\item [[<<nytid.hourly.sh>>]] every hour,
+\item [[<<nytid.daily.sh>>]] every morning at 4,
+\item [[<<nytid.weekly.sh>>]] every Monday at 5, and
+\item [[<<nytid.monthly.sh>>]] on the 2nd to 5th of every month at 6 in the 
+morning.
+We do this in case it's on a weekend and the laptop is off\footnote{%
+  If we run it on our laptop.
+  Optimally, we could run it on a Raspberry Pi or a server.
+}.
+\end{itemize}
 
 \subsection{Setting up a course}
 

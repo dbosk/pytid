@@ -784,7 +784,8 @@ def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
                       <<option to output detailed user data>> = False,
                       <<option to include event summary>> = True,
                       <<option for CSV delimiter>>,
-                      <<option [[updates]] to show updates>>):
+                      <<option [[updates]] to show updates>>,
+                      <<option [[events]] to include events>>):
   """
   Shows stored amanuesis contracts for TAs.
   """
@@ -794,7 +795,11 @@ def cli_amanuens_show(<<argument [[user_regex]] to match TAs>> = ".*",
   <<amanuensis iteration variables>>
   for contract in contracts:
     <<print [[contract]]>>
+    if events:
+      print()
+      <<print events in [[contract]]>>
     if updates:
+      print()
       <<show draft contract based on [[contract]] with all current hours>>
 <<argument [[user_regex]] to match TAs>>=
 user_regex: Annotated[str, user_regex_arg]
@@ -955,6 +960,23 @@ else:
   course_regex = ".*"
 @
 
+\subsection{Printing the events}
+
+In some cases we also want to print the events that were used to compute the 
+contract.
+We simply get the list of events from [[contract]] and print them as tab 
+separated CSV to stdout.
+<<print events in [[contract]]>>=
+csvout = csv.writer(sys.stdout, delimiter="\t")
+for event in contract["events"]:
+  csvout.writerow(event)
+<<option [[events]] to include events>>=
+events: Annotated[bool, events_opt] = False
+<<argument and option definitions>>=
+events_opt = typer.Option(help="Print the events used to compute the "
+                               "contract.")
+@
+
 \subsection{Showing updated draft contract}
 
 When we show the current contract, we also want to show what the contract would 
@@ -972,12 +994,9 @@ updates_opt = typer.Option(help="Also show a draft contract based on the "
 
 We can reuse the [[create]] command ([[cli_amanuens_create]]) to generate the 
 draft contract.
-We start with printing an empty line to get a separation between the contracts.
-Then we use the dates from the contract as arguments to the [[create]] command.
+We use the dates from the contract as arguments to the [[create]] command.
 Finally, we must ensure to set [[draft]] to [[True]] to not store the contract.
 <<show draft contract based on [[contract]] with all current hours>>=
-print()
-
 try:
   start = datetime.datetime.fromisoformat(contract["start"]) \
             if contract["start"] else None

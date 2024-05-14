@@ -460,6 +460,9 @@ They will sometimes have things to update due to changes, even though all
 changes should be made in advance.
 The same goes for the amanuensis, we want to send them a draft of the mertid 
 that they've done.
+We want them to keep track of how many hours too many or too few they've 
+worked.
+And give them the option to report the hours to get paid.
 
 The structure of the code is similar to that of
 [[<<nytid.monthly.sh>>]].
@@ -476,31 +479,45 @@ TIMESHEETS_COURSES="datintro${year} prg[im]${year}"
 @
 
 We can send drafts as follows.
-We need to send a draft for each user.
+We need to send a draft for each user, so we must iterate through them.
 <<send draft timesheets for [[course]]>>=
 for user in $(nytid hr users ${course}); do
-  report=$(nytid hr timesheets generate ${course} --draft \
-            --user ${user} --end ${next_month})
-  if test -z "${report}"; then
-    report=$(nytid hr timesheets generate ${course} --draft \
-              --user ${user} --end ${next_month} --amanuensis)
-    test -n "${report}" || continue
-    send_draft_amanuensis "${course}" "${user}" "${report}"
-  else
-    send_draft_hourly "${course}" "${user}" "${report}"
-  fi
+  <<send the draft to [[user]]>>
 done
-<<timesheet draft variables>>=
-next_month=$(date +%Y-%m-01 -d "next month")
 @
 
+When sending the draft, there are three cases to consider:
+\begin{enumerate}
+\item The user is an hourly TA.
+\item The user is an amanuensis.
+\item The user has no hours in the draft.
+\end{enumerate}
+When we generate the draft with [[nytid hr timesheets generate]], it will only 
+include hourly TAs.
+This means that if the output is non-zero, we know it's an hourly TA.
+If the output is zero, then either the user has zero hours, or they're an 
+amanuensis.
+<<send the draft to [[user]]>>=
+report=$(nytid hr timesheets generate ${course} --draft \
+          --user ${user} --end ${next_month})
+if test -z "${report}"; then
+  <<generate draft amanuensis report, send if non-zero>>
+else
+  send_draft_hourly "${course}" "${user}" "${report}"
+fi
+<<timesheet draft variables>>=
+next_month=$(date +%Y-%m-01 -d "next month")
 <<timesheet draft functions>>=
 send_draft_hourly() {
   course="$1"
   user="$2"
   report="$3"
+
+  <<write [[report]] to tmpfile [[reportfile]]>>
+
   (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
-    | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se
+    | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se \
+      -a "${reportfile}"
 <<timesheet draft variables>>=
 TIMESHEETS_DRAFT_MSG="
 Hej!
@@ -510,11 +527,62 @@ bokningsarket att tidrapporteras automatiskt åt dig. För
 tillfället är det tiderna nedan.
 
 Om något är fel, uppdatera bokningsarket eller svara på detta
-mail senast dagen innan!
+mail snarast!
 
           Daniel
 
 "
+@
+
+For the amanuensis case, we do the same thing, but add the [[--amanuensis]] 
+flag and send using the function [[send_draft_amanuensis]].
+<<generate draft amanuensis report, send if non-zero>>=
+report=$(nytid hr timesheets generate ${course} --draft \
+          --user ${user} --end ${next_month} --amanuensis)
+test -n "${report}" || continue
+send_draft_amanuensis "${course}" "${user}" "${report}"
+@
+
+The function [[send_draft_amanuensis]] is essentially the same as
+[[send_draft_hourly]].
+Only the subject and message are different.
+<<timesheet draft functions>>=
+send_draft_amanuensis() {
+  course="$1"
+  user="$2"
+  report="$3"
+
+  <<write [[report]] to tmpfile [[reportfile]]>>
+
+  (echo "${MERTID_DRAFT_MSG}"; echo "${report}") \
+    | mutt -s "jobbade timmar ${course}" ${user}@kth.se \
+      -a "${reportfile}"
+}
+<<timesheet draft variables>>=
+MERTID_DRAFT_MSG="
+Hej!
+
+Här kommer en statusuppdatering om hur tiderna i bokningsarket skiljer
+sig från tiderna som finns i ditt amanuensavtal.
+
+Om du ligger på minus (fler avbokingar än nya bokningar) måste du
+se till att boka in dig på fler pass så att du kommer upp i de timmar
+som står i ditt avtal.
+
+Om du ligger på plus kan du rapportera in de timmarna som mertid i
+HR+. Men svara då på detta mail och meddela att du gör det.
+
+            Daniel
+
+"
+@
+
+For the TAs' convenience, we'll also add the data as a CSV file.
+It's the same contents as in the body of the email, but it's easier for them to 
+open it in a spreadsheet program to sum up the hours.
+<<write [[report]] to tmpfile [[reportfile]]>>=
+reportfile=$(mktemp)
+echo "${report}" > ${reportfile}
 @
 
 

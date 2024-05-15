@@ -514,24 +514,42 @@ send_draft_hourly() {
   report="$3"
 
   <<write [[report]] to tmpfile [[reportfile]]>>
+  <<compute [[sum_hours]] from [[reportfile]]>>
+
+  TIMESHEETS_DRAFT_MSG="
+<<timesheet draft message>>
+"
 
   (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
     | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se \
       -a "${reportfile}"
-<<timesheet draft variables>>=
-TIMESHEETS_DRAFT_MSG="
-Hej!
+<<timesheet draft message>>=
+Hej, hej!
 
+Du har ${sum_hours} timmar i bokningsarket för ${course}.
+
+$(if test ${sum_hours} -gt 0; then
+    echo "
 Den första nästa månad (${next_month}) kommer alla tider i
 bokningsarket att tidrapporteras automatiskt åt dig. För
-tillfället är det tiderna nedan.
+tillfället är det tiderna nedan (även bifogat som CSV-fil).
+" | fmt
+  elif test ${sum_hours} -lt 0; then
+    echo "
+Du har just nu fått mer betalt än du har jobbat. Du behöver
+jobba in de timmar som saknas.
+" | fmt
+  else
+    echo "
+Du har ändrat pass, men alla timmar går jämnt ut.
+" | fmt
+  fi)
 
 Om något är fel, uppdatera bokningsarket eller svara på detta
 mail snarast!
 
           Daniel
 
-"
 @
 
 For the amanuensis case, we do the same thing, but add the [[--amanuensis]] 
@@ -553,36 +571,68 @@ send_draft_amanuensis() {
   report="$3"
 
   <<write [[report]] to tmpfile [[reportfile]]>>
+  <<compute [[sum_hours]] from [[reportfile]]>>
+
+  MERTID_DRAFT_MSG="
+<<mertid draft message>>
+"
 
   (echo "${MERTID_DRAFT_MSG}"; echo "${report}") \
     | mutt -s "jobbade timmar ${course}" ${user}@kth.se \
       -a "${reportfile}"
 }
-<<timesheet draft variables>>=
-MERTID_DRAFT_MSG="
-Hej!
+<<mertid draft message>>=
+Hej, hej!
 
-Här kommer en statusuppdatering om hur tiderna i bokningsarket skiljer
-sig från tiderna som finns i ditt amanuensavtal.
+Du har ändringar i bokningsarket för ${course} som skiljer sig
+från tiderna som finns i ditt amanuensavtal. Just nu summerar det
+till ${sum_hours} timmar. (Detaljerna finns nedan och i den bifogade
+CSV-filen.)
 
-Om du ligger på minus (fler avbokingar än nya bokningar) måste du
-se till att boka in dig på fler pass så att du kommer upp i de timmar
+$(if test ${sum_hours} -gt 0; then
+    echo "
+Du ligger på plus och kan rapportera in ${sum_hours} timmar som
+mertid i HR+. Men svara då på detta mail och meddela att du gör det.
+Bra jobbat!
+" | fmt
+  elif test ${sum_hours} -lt 0; then
+    echo "
+Du ligger på minus (fler avbokingar än nya bokningar), du måste se
+till att boka in dig på fler pass så att du kommer upp i de timmar
 som står i ditt avtal.
-
-Om du ligger på plus kan du rapportera in de timmarna som mertid i
-HR+. Men svara då på detta mail och meddela att du gör det.
+" | fmt
+  else
+    echo "
+Ändringarna går jämnt ut, bra jobbat!
+" | fmt
+  fi)
 
             Daniel
 
-"
 @
 
 For the TAs' convenience, we'll also add the data as a CSV file.
 It's the same contents as in the body of the email, but it's easier for them to 
 open it in a spreadsheet program to sum up the hours.
+(This is also useful for us so that we can use the file for computations, 
+rather than having to echo the data.)
 <<write [[report]] to tmpfile [[reportfile]]>>=
-reportfile=$(mktemp)
+reportfile=$(mktemp --tmpdir ${user}.XXXX.csv)
 echo "${report}" > ${reportfile}
+@
+
+To compute the sum of the hours, we can add the correct column (7) of the CSV 
+file.
+We only want the hour data, so we only grep for lines with numbers (negative, 
+positive and floats).
+Then we sum them up using [[bc]].
+<<compute [[sum_hours]] from [[reportfile]]>>=
+sum_hours=0
+for hours in $(cat "${reportfile}" \
+                | cut -f 7 | egrep "^-?[0-9]+\.?[0-9]*$")
+do
+  sum_hours=$(echo $sum + $term | bc)
+done
 @
 
 

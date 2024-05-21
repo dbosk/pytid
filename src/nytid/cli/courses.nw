@@ -1,4 +1,5 @@
-\chapter{The \texttt{cli.courses]] module and [[courses} subcommands}%
+\chapter{The \texttt{cli.courses} module and
+         the \texttt{courses} subcommands}%
 \label{courses}\label{cli.courses}
 
 In this chapter we cover the [[nytid.cli.courses]] module and the subcommands 

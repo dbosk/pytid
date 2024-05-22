@@ -1,4 +1,5 @@
-\chapter{The [[cli.hr]] module and the [[hr]] subcommands}%
+\chapter{The \texttt{cli.hr} module and
+         the \texttt{hr} subcommands}%
 \label{cli.signupsheets}
 %\chnote{%
 %  Part of this chapter was developed in collaboration with GitHub Copilot.

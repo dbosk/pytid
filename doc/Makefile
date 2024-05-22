@@ -1,7 +1,7 @@
 .PHONY: all
 all: nytid.pdf
 
-LATEXFLAGS+=	-shell-escape
+LATEXFLAGS+=	-shell-escape -xelatex
 TEX_PYTHONTEX=	yes
 PYTHONTEXFLAGS=	--interpreter "python:poetry run python3"
 

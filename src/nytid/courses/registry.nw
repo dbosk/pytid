@@ -37,7 +37,7 @@ other commands.
 The idea is similar to that of \enquote{remotes} in Git.
 
 
-\section{Code outline of [[nytid.courses.registry]]}
+\section{Code outline of \texttt{nytid.courses.registry}}
 
 Here we provide a module to manage course registers 
 ([[<<registry.py>>]]), that will be the [[nytid.courses.registry]] 

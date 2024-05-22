@@ -1,4 +1,4 @@
-\chapter{Dealing with AFS, the [[storage.afs]] module}
+\chapter{Dealing with AFS, the \texttt{storage.afs} module}
 
 In this chapter we describe how we will use the AFS file system as storage, the 
 [[storage.afs]] module.
@@ -109,7 +109,7 @@ def test_get_set_acl():
   shutil.rmtree(root_dir)
 @
 
-\subsection{Reading the AFS ACL, running [[fs la]]}
+\subsection{Reading the AFS ACL, running \texttt{fs la}}
 
 To read the ACL, we must run the command [[fs ls path]] to get the ACL for the 
 path.
@@ -319,7 +319,7 @@ def grant_admin(path, user_or_group):
   set_acl(path, user_or_group, VALID_PERMISSIONS)
 @
 
-\subsection{Setting the AFS ACL, running [[fs sa]]}
+\subsection{Setting the AFS ACL, running \texttt{fs sa}}
 
 We can start with how to run the command-line utility.
 We simply piece together the command line.

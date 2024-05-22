@@ -1,4 +1,4 @@
-\chapter{Storage overview, the [[storage]] module}\label{storage}
+\chapter{Storage overview, the \texttt{storage} module}\label{storage}
 
 In this chapter we will describe the design of the backend storage system, the 
 module [[nytid.storage]].
@@ -239,7 +239,7 @@ def test_non_existing():
 @
 
 
-\section{The [[with]] statement}
+\section{The \texttt{with} statement}
 
 We also want to be able to use the storage in a [[with]] statement.
 This means that we need the [[__enter__]] and [[__exit__]] methods.
@@ -305,7 +305,7 @@ raise NotImplementedError
 @
 
 
-\section{Create a suitable [[StorageRoot]] object}
+\section{Create a suitable \texttt{StorageRoot} object}
 
 Now, let's return to the [[storage.open_root]] function.
 The idea is that it will take arguments and determine which submodule to use, 

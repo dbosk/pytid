@@ -1,4 +1,5 @@
-\chapter{The [[cli.signupsheets]] module and the [[signupsheets]] subcommands}%
+\chapter{The \texttt{cli.signupsheets} module and
+         the \texttt{signupsheets} subcommands}%
 \label{cli.signupsheets}
 
 In this chapter we introduce the subommands found under [[nytid signupsheets]],

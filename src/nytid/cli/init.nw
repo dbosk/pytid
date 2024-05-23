@@ -655,6 +655,7 @@ Let's have a peek into the contracts directory.
 \begin{minted}{text}
 $ ls /afs/kth.se/misc/projects/eecs/tcs/nytid/contracts
 dbosk.2024-05-23T10:37:09.928706.json
+$
 \end{minted}
 Any later contracts are also added to this directory, nothing is ever removed.
 But the show command we used, will only show the latest non-overlapping 
@@ -675,7 +676,6 @@ $ nytid hr amanuensis create prgi24 \
 $ cat amanuensis.csv
 [ peronnr ] Daniel Bosk	2024-08-01	2024-12-17	19%
 [ peronnr ] Daniel Bosk	2024-08-27	2024-12-17	23%
-$
 \end{minted}
 We use [[--set-start]] to force the start date of the contract.
 The end date will be computed automatically.
@@ -758,10 +758,73 @@ know they're correct as long as the sign-up sheet is correct.
 
 We can generate time sheets for [[prgi24]] and [[prgm24]] as follows.
 \begin{minted}{bash}
-nytid hr timesheets generate prg[im]23 --end 2023-10-01
+nytid hr timesheets generate prg[im]24 --end 2024-10-01
+nytid hr timesheets generate prg[im]24 --end 2024-10-01 --amanuensis
 \end{minted}
-That will generate time sheets for all hourly TAs and include events until end 
-of September (it's not inclusive, so \(<\) 2023-10-01).
+The first line will generate time sheets for all hourly TAs and include events 
+until end of September (it's not inclusive, so \(<\) 2023-10-01).
+The second line does the same, but for amanuensis.
+
+Let's have a look at an example.
+I've added a few more lab sessions on [[prgi24]] after I generated my contract 
+in the examples above.
+\begin{minted}{text}
+$ nytid hr timesheets generate prgi24 --end 2024-11-01 \
+  --user dbosk --amanuensis --draft
+dbosk
+2024-10-09	10:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-10-09	15:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-10-10	13:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+$ nytid hr timesheets generate prgi24 \
+  --user dbosk --amanuensis --draft
+dbosk
+2024-10-09	10:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-10-09	15:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-10-10	13:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-11-20	08:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+2024-11-21	10:00:00	DD1317	Datorlaboration, DD1317	2.0	1.8	3.75	562.5
+\end{minted}
+We see in the second example that we get all new events if we don't specify an 
+end date.
+
+Another thing to note is that we used the [[--draft]] option.
+This will generate a draft time sheet directly in the terminal.
+Without the draft option, we would get a file with the signed time sheet, you 
+can see it in \cref{FigTimesheet}.
+
+\begin{figure}
+  \centering
+  \framebox{\includegraphics[width=\textwidth]{figs/timesheet-dbosk.pdf}}
+  \caption{%
+    The generated time sheet for extra lab sessions that I added to my 
+    contract.
+  }
+  \label{FigTimesheet}
+\end{figure}
+
+This generation requires the following settings in the config.
+\begin{minted}{text}
+me.name = Daniel Bosk
+me.email = dbosk@kth.se
+me.signature = /home/dbosk/Pictures/signature.png
+hr.amanuensis.contract_dir = /afs/kth.se/misc/projects/eecs/tcs/nytid/contracts
+hr.timesheets.timesheets_dir = /afs/kth.se/misc/projects/eecs/tcs/nytid/timesheets
+hr.manager = Karl Meinke
+hr.project = 1102
+hr.organization = JH
+\end{minted}
+Those values are used to fill in the time sheet (\cref{FigTimesheet}).
+
+The time sheets are stored in the directory specified in the config.
+\begin{minted}{text}
+$ ls /afs/kth.se/misc/projects/eecs/tcs/nytid/timesheets
+dbosk.2024-05-23T13:38:06.684006.json
+$
+\end{minted}
+Note that we don't store the generated PDF or XLSX files, we store the data 
+that they were generated from.
+This way we can do calculations on the data, which we need to do (see 
+\cref{WorkingWithTimesheets} for details).
 
 With this construction, we can automate the generation of time sheets on a 
 monthly basis.
@@ -775,25 +838,58 @@ do
 done
 @
 
-We will create time sheets for [[datintro23]], [[prgi24]] and [[prgm24]].
-We'll send one email for [[datintro23]] and one for [[prgi24]] and [[prgm24]] 
-together (hence the regex for those below).
-We could also make it one regex to send time sheets for all courses in one 
-email.
+We will create time sheets for [[datintro24]], [[prgi24]] and [[prgm24]].
+How we bundle these together matter.
+The hours that a TA works is not a per-course matter, it's per TA.
+That's why the contracts and time sheets are stored in a course-independent 
+location (and config).
+Every hour that the TA has worked should be considered---on \emph{all} courses.
+
+If the intersection of the set of TAs for [[datintro24]], [[prgi24]] and 
+[[prgm24]] is empty, it doesn't matter.
+But if a TA is in more than one of the courses, they must be treated together.
+If we report [[datintro24]] separately; then when we later report [[prg[im]24]] 
+separately, Nytid will think that the hours for [[datintro24]] have been 
+removed.
+
+Mostly, the set of TAs of [[prgi24]] and [[prgm24]] intersect by quite a lot.
+Most TAs are in both.
+It's rare that any of those TAs are also in [[datintro24]], but it has 
+happened.
+
+We'll send one email for all three courses; [[datintro24]], [[prgi24]] and 
+[[prgm24]] (hence the regex).
+Another consequence of the design is that we must run this over all years as 
+well, in case a TA has worked in any of these courses previous years 
+too\footnote{%
+  The advantage of this is that we can keep track of how hours from year to 
+  year.
+  For instance, one TA worked fewer hours than they were contracted for.
+  When they start adding hours for the next year, these \enquote{negative} 
+  hours will balance out with the new \enquote{positive} hours.
+  But that is a rare case.
+
+  A way to work around this is to balance every year by summer and then archive 
+  the data somewhere else.
+  As if the TAs had never worked before (from Nytid's perspective).
+}.
 <<timesheets variables>>=
-TIMESHEETS_COURSES="datintro${year} prg[im]${year}"
+TIMESHEETS_COURSES="(datintro|prg[im])"
 @
 
-We note that, if we use regexes for several courses, then we can't check if the 
-course has any timesheet using
+We note that, if we use regexes like this, then we can't
 [[<<skip if [[course]] has no sign-up sheet>>]].
 But on the other hand, if we give such regexes, we'll only include courses for 
 which there are sign-up sheets anyway.
 
 Now, generating the time sheets will create a lot of files in the current 
-working directory.
-To keep the courses separate, we'll create a temporary directory for each 
-course and create the files there.
+working directory (two for each TA, one XLSX and one PDF).
+To keep the courses separate\footnote{%
+  Well, in our case we just have one bundle of courses,
+  so it'll just be a one-lap for loop and one directory.
+  But in the general case anyway.
+}, we'll create a temporary directory for each course and create the files 
+there.
 <<generate time sheets for [[course]]>>=
 tmpdir=$(mktemp -d)
 cd ${tmpdir}
@@ -802,11 +898,15 @@ cd ${tmpdir}
 Then we generate the time sheets there.
 That will create a [[.xlsx]] file for each TA.
 We'll then convert all of them to PDF.
-However, if now files were generated, we'll skip the rest.
-This fits well since we want to run the script the first few days of the month, 
-to ensure the system is up and running.
-It might be off, since we want to run this on our primary computer, to get the 
-emails sent with our primary email client.
+However, if no files were generated, we'll skip the rest:
+no need to do anything more if there are no results to report anyway.
+
+We include events until the end of the previous month.
+Since we expect to run this script on the first of every month, we can use the 
+start of the current month as the end time (remember, it's non-inclusive, 
+\(<\)).
+<<timesheets variables>>=
+start_of_month=$(date +%Y-%m-01)
 <<generate time sheets for [[course]]>>=
 nytid hr timesheets generate ${course} --end ${start_of_month}
 if test -z "$(ls)"; then
@@ -814,8 +914,6 @@ if test -z "$(ls)"; then
   continue
 fi
 loffice --headless --convert-to pdf *.xlsx
-<<timesheets variables>>=
-start_of_month=$(date +%Y-%m-01)
 @
 
 Next step is to send all the PDF time sheets for processing.
@@ -856,7 +954,7 @@ mail -s "time sheets for ${course}" \
 
 The key thing regarding the email client is to use one that is set up to use 
 our normal email.
-We want this to have the generated timesheets in the sent folder, for future 
+We want this to have the generated time sheets in the sent folder, for future 
 reference.
 
 

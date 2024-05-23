@@ -1,8 +1,8 @@
-\chapter{CLI design overview, the [[cli]] module}\label{CLIoverview}
+\chapter{CLI design overview, the \texttt{cli} module}\label{CLIoverview}
 
 In this chapter we outline the design of the CLI.
 <<nytid description>>=
-f"""
+"""
 A CLI for managing TAs and courses.
 """
 @
@@ -838,7 +838,7 @@ This way, we can automatically generate time reports.
 \end{description}
 
 
-\section{The structure of the [[cli]] module}\label{climodule}
+\section{The structure of the \texttt{cli} module}\label{climodule}
 
 We use the Typer package to create the CLI.
 This means that each command module will have the same structure as the main 

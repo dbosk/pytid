@@ -1,7 +1,7 @@
 .PHONY: all
 all: nytid.pdf
 
-LATEXFLAGS+=	-shell-escape -pdflatex=/usr/local/texlive/2021/bin/x86_64-linux/pdflatex
+LATEXFLAGS+=	-shell-escape -xelatex
 TEX_PYTHONTEX=	yes
 PYTHONTEXFLAGS=	--interpreter "python:poetry run python3"
 

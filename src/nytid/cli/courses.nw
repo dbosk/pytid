@@ -1,4 +1,5 @@
-\chapter{The [[cli.courses]] module and [[courses]] subcommands}%
+\chapter{The \texttt{cli.courses} module and
+         the \texttt{courses} subcommands}%
 \label{courses}\label{cli.courses}
 
 In this chapter we cover the [[nytid.cli.courses]] module and the subcommands 
@@ -103,7 +104,7 @@ other commands.
 The idea is similar to that of \enquote{remotes} in Git.
 
 
-\section{Managing registers, the [[registry]] subcommands}
+\section{Managing registers, the \texttt{registry} subcommands}
 
 We will now manage the registers, where we can find all available 
 courses.
@@ -203,7 +204,7 @@ except KeyError as err:
 @
 
 
-\section{Adding a new course, the [[courses new]] command}
+\section{Adding a new course, the \texttt{courses new} command}
 
 We will add a [[new]] command to create a new course.
 <<subcommands>>=
@@ -382,7 +383,7 @@ num_groups_opt = typer.Option(help="The number of groups that the class "
 @
 
 
-\section{Revising the config of a course, the [[courses config]] command}
+\section{Revising the config of a course, the \texttt{courses config} command}
 
 We'll add a [[courses config]] command to show and change the settings of an 
 existing course.
@@ -434,7 +435,7 @@ We will now cover [[course_arg_autocomplete]], [[register_option]] \etc in
 [[<<default values for [[config_cmd]]>>]]
 as we cover the relevant parts of the algorithm.
 
-\subsection{Testing the [[courses config]] command}
+\subsection{Testing the \texttt{courses config} command}
 
 Before we delve into the details, let's first device the testing.
 Typer makes this very easy.
@@ -804,7 +805,7 @@ except FileNotFoundError as err:
 @
 
 
-\section{My courses, the [[mine]] subcommands}\label{mine}
+\section{My courses, the \texttt{mine} subcommands}\label{mine}
 
 We will now create a kind of meta-register called [[mine]] that will include 
 all courses we consider ours.

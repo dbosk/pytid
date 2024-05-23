@@ -180,7 +180,7 @@ def google_sheet_to_csv_url(share_url):
   return url + "/export?format=csv"
 @
 
-\section{Converting between [[ics.event.Event]]s and CSV data}
+\section{Converting between \texttt{ics.event.Event}s and CSV data}
 
 Sometimes we want to convert this CSV-format back to a calendar.
 What we want to do is to be able to convert a row of this CSV (that corresponds 

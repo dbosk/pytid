@@ -614,6 +614,7 @@ Föreläsning, DD1317	2024-11-18 15:00	2024-11-18 17:00	Digital	1	dbosk
 Övning, DD1317	2024-11-19 15:00	2024-11-19 17:00	U21	2	dbosk
 Övning, DD1317	2024-11-21 13:00	2024-11-21 15:00	U21	2	dbosk
 Föreläsning, DD1317	2024-11-25 13:00	2024-11-25 15:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
+$
 \end{minted}
 
 As mentioned above, all contracts are stored on disk.
@@ -650,6 +651,7 @@ $ nytid hr amanuensis create prgi24 \
 $ cat amanuensis.csv
 [ peronnr ] Daniel Bosk	2024-08-01	2024-12-17	19%
 [ peronnr ] Daniel Bosk	2024-08-27	2024-12-17	23%
+$
 \end{minted}
 We use [[--set-start]] to force the start date of the contract.
 The end date will be computed automatically.
@@ -708,6 +710,19 @@ Föreläsning, DD1317	2024-11-18 15:00	2024-11-18 17:00	Digital	1	dbosk
 Övning, DD1317	2024-11-21 13:00	2024-11-21 15:00	U21	2	dbosk
 Föreläsning, DD1317	2024-11-25 13:00	2024-11-25 15:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
 \end{minted}
+
+As final note, the course that we gave in the examples, [[prgi24]], can 
+actually be a regular expression matching any course.
+For instance, as the courses [[prgi24]] and [[prgm24]] are given together we 
+could have generated my contract with [[prg[im]24]].
+Even further, we could simply generate contracts for all courses in the TCS 
+register, that way the TA will get one contract for all their courses in TCS.
+And even more further, we could generate the contracts for several registers, 
+to give the TA a contract for the entire EECS school for instance\footnote{%
+  This is also useful from the perspective in keeping track of the amanuensis 
+  not working more than the upper bound \SI{50}{\%} set by the Higher Education 
+  Ordinance.
+}.
 
 
 \subsection{Generating time sheets for hourly TAs}

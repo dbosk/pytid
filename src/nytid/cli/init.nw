@@ -1154,14 +1154,52 @@ nytid schedule ics prgi24
 
 The first command will show the schedule in the terminal in a readable format.
 By default it will show the schedule for today and a week ahead.
+Let's have a look at my first week of the autumn 2024 semester:
+\begin{pycode}
+import subprocess
 
-The second command does the same, except the output is in ICS format.
+output = subprocess.run(["nytid", "schedule", "show",
+                         "--start", "2024-08-26",
+                         "--end", "2024-09-01"],
+                        capture_output=True)
+print(r"\begin{minted}{text}")
+print(r"$ nytid schedule show --start 2024-08-26 --end 2024-09-01")
+print(output.stdout.decode("utf-8").strip())
+print(r"$")
+print(r"\end{minted}")
+\end{pycode}
+By default, it uses the current user (based on username) to show the schedule.
+This can be overridden using the [[--user]] flag.
+\begin{minted}{text}
+$ nytid schedule show --start 2024-08-26 --end 2024-09-01 --user joelsm
+26/08 10:00 Föreläsning, DD1317 Needed TAs: 2; Booked TAs: dbosk joelsm
+27/08 13:00 Föreläsning, DD1317 Needed TAs: 1; Booked TAs: joelsm
+29/08 15:00 Handledning, DD1317 Needed TAs: 3; Booked TAs: joelsm
+30/08 10:00 Datorlaboration, DD1317 Needed TAs: 7; Booked TAs: joelsm
+30/08 13:00 Datorlaboration, DD1317 Needed TAs: 7; Booked TAs: joelsm
+$
+\end{minted}
+We can see that during the first week of the autumn semester, Joel ([[joelsm]]) 
+has more activity on DD1317 ([[prgi24]]) than me.
+
+We could also specify a specific course.
+\begin{minted}{text}
+$ nytid schedule show prgi24 --start 2024-08-26 --end 2024-09-01
+26/08 10:00 Föreläsning, DD1317 Needed TAs: 2; Booked TAs: dbosk joelsm
+$
+\end{minted}
+We see that indeed, on [[prgi24]], I only have that introductory lecture with 
+Joel during the first week.
+
+The second command ([[ics]]) does the same, except the output is in ICS format.
 This allows us to export the schedule to our calendar.
 If we write the ICS to a file, say [[dbosk.ics]], in [[~/public_html/nytid]], 
 then we can access it from the web through
 \begin{center}
 [[https://people.kth.se/~dbosk/nytid/dbosk.ics]].
 \end{center}
+This means that we can import it to a calendar client, like Google Calendar or 
+Outlook.
 
 In [[<<nytid.hourly.sh>>]] we can automate this and do it for all TAs in our 
 courses.
@@ -1170,7 +1208,11 @@ file for each TA.
 Now, we only want to do this for courses with sign-up sheets.
 For courses without a sign-up sheet, [[nytid schedule]] adds all events in the 
 schedule for every user.
-We don't want to do that to our TAs, we can do it for ourselves.
+We don't want to do that to our TAs, but we can do it for ourselves.
+
+The idea here is to find all courses with sign-up sheets.
+Then we create one regex matching all those courses, but no other courses.
+Then we generate the schedule for all TAs in those courses.
 <<nytid.hourly.sh>>=
 ### Generate schedules for TAs ###
 
@@ -1206,7 +1248,8 @@ nytid schedule ics --user dbosk \
 
 When a course has a sign-up sheet, that one will be used.
 Otherwise, the course's schedule will be used.
-This is the ICS-schedule that we supplied to the [[new]] command above.
+This is the ICS-schedule that we supplied to the [[new]] command above (the one 
+from TimeEdit).
 If that happens, [[nytid]] will issue warnings.
 Since we want to run this script using Cron, we don't want any output unless a 
 real error occurs, so we filter out all warnings.

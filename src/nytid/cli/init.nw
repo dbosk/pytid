@@ -577,7 +577,17 @@ $ nytid hr amanuensis create prgi24 --user dbosk > amanuensis.csv
 $ cat amanuensis.csv
 [ peronnr ] Daniel Bosk	2024-08-01	2024-12-17	19%
 \end{minted}
-If I want to have a look at the detailed contract, I can do the following.
+If I want to have a look at the detailed contract\footnote{%
+  Note that the total hours and, consequently, the percentage are wrong for 
+  faculty.
+  The lectures are counted with a prep factor of 1, instead of 4.
+  That's because when TAs sign up for lectures, they assist and get no prep 
+  time.
+  Nytid treats everyone as TAs for now.
+  Fortunately, this problem is limited to lectures, for all other types of 
+  events, the prep time is the same for everyone.
+  See \cref{HRaddprep}.
+}, I can do the following.
 \begin{minted}{text}
 $ nytid hr amanuensis show dbosk
 dbosk	2024-08-01	2024-12-17	19%	115.00 h
@@ -622,6 +632,14 @@ Föreläsning, DD1317	2024-11-18 15:00	2024-11-18 17:00	Digital	1	dbosk
 Föreläsning, DD1317	2024-11-25 13:00	2024-11-25 15:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
 $
 \end{minted}
+
+We note that the sum of the hours \(24 + 38 + 8 = 70\) is not the same as the 
+total hours \(115\).
+That's because the hours given by type is the clock hours.
+The sum also includes the correct prep time:
+\(24 + 38\times 2 + 8\times 1.8\), which is rounded to 115\footnote{%
+  See \cref{HRaddprep,HRroundtime} for details.
+}.
 
 As mentioned above, all contracts are stored on disk.
 We can have a look at my config again, particularly the [[hr]] part.

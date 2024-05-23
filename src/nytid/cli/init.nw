@@ -473,7 +473,8 @@ done
 
 If we don't use [[--detailed]], we'll simply get the TA username.
 This can be useful in other circumstances.
-For instance, we might want to add the TAs to the course in UG.
+For instance, we might want to add the TAs to the course in UG, to give them 
+access to the course in Canvas.
 <<nytid.hourly.sh>>=
 ### Set up TAs in UG ###
 
@@ -495,10 +496,11 @@ nytid courses config ${course} signupsheet.url 2>/dev/null | \
 @ However, we can't do this if [[${course}]] is a regex matching several 
 courses.
 The config command must match a course exactly, not by regex.
+Fortunately, that's what we doo in the loop above.
 
 We need the UG group for the TAs in the course, in the case of [[prgi24]] it's
 \begin{center}
-[[edu.courses.DD.DD1317.20232.1.assistants]].
+[[edu.courses.DD.DD1317.20242.1.assistants]].
 \end{center}
 We store this in the config of [[prgi24]]:
 \begin{minted}{bash}
@@ -518,7 +520,7 @@ test -n "${ug_path}" || continue
 
 Note that we could've named [[ug.assistants]] anything, it's just a name we 
 chose in the config.
-It has no special meaning to [[nytid]], only to our scripts.
+It has no special meaning to Nytid, only to our scripts.
 The point is, however, that we can add our own things to the config.
 Same thing with storing files in a course's data directory.
 
@@ -548,8 +550,9 @@ fi
 
 HR also wants data to set up amanuensis contracts for the TAs that qualify.
 We can do this by running the following command.
+(This is also usually done manually.)
 \begin{minted}{bash}
-nytid hr amanuensis create prg[im]23 > amanuensis.csv
+nytid hr amanuensis create prg[im]24 > amanuensis.csv
 \end{minted}
 That command would create the contracts for all the TAs in [[prgi24]] and 
 [[prgm24]] that achieves a minimum workload of 5\% of full time.
@@ -561,17 +564,151 @@ The detailed contracts will be stored on disk\footnote{%
 }, a summary for HR will be written to [[amanuensis.csv]] (in the example 
 above).
 
-However, the start date depends on when the TA submitted the application for 
-the position.
+As an example, I've added myself to the [[prgi24]] schedule.
+My contract would look like this.
+\begin{minted}{text}
+$ nytid hr amanuensis create prgi24 --user dbosk > amanuensis.csv
+$ cat amanuensis.csv
+[ peronnr ] Daniel Bosk	2024-08-01	2024-12-17	19%
+\end{minted}
+If I want to have a look at the detailed contract, I can do the following.
+\begin{minted}{text}
+$ nytid hr amanuensis show dbosk
+dbosk	2024-08-01	2024-12-17	19%	115.00 h
+Föreläsning, DD1317	24.0	h
+Övning, DD1317	38.0	h
+Datorlaboration, DD1317	8.0	h
+
+Föreläsning, DD1317	2024-08-26 10:00	2024-08-26 12:00	Digital, E1	2	dbosk
+Föreläsning, DD1317	2024-09-17 15:00	2024-09-17 17:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
+Föreläsning, DD1317	2024-09-18 08:00	2024-09-18 10:00	Digital	1	dbosk
+Övning, DD1317	2024-09-18 15:00	2024-09-18 17:00	U21	2	dbosk
+Övning, DD1317	2024-09-19 08:00	2024-09-19 10:00	U21	2	dbosk
+Datorlaboration, DD1317	2024-09-19 15:00	2024-09-19 17:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Datorlaboration, DD1317	2024-09-20 08:00	2024-09-20 10:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Övning, DD1317	2024-09-20 13:00	2024-09-20 15:00	U21	1	dbosk
+Föreläsning, DD1317	2024-09-23 10:00	2024-09-23 12:00	Digital	1	dbosk
+Övning, DD1317	2024-09-24 15:00	2024-09-24 17:00	U21	2	dbosk
+Övning, DD1317	2024-09-25 08:00	2024-09-25 10:00	U21	2	dbosk
+Datorlaboration, DD1317	2024-09-25 13:00	2024-09-25 15:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Datorlaboration, DD1317	2024-09-26 15:00	2024-09-26 17:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Övning, DD1317	2024-09-27 10:00	2024-09-27 12:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-01 15:00	2024-10-01 17:00	Digital	1	dbosk
+Övning, DD1317	2024-10-02 10:00	2024-10-02 12:00	U21	2	dbosk
+Övning, DD1317	2024-10-03 08:00	2024-10-03 10:00	U21	2	dbosk
+Övning, DD1317	2024-10-04 13:00	2024-10-04 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-08 15:00	2024-10-08 17:00	Digital	1	dbosk
+Övning, DD1317	2024-10-09 08:00	2024-10-09 10:00	U21	2	dbosk
+Övning, DD1317	2024-10-11 13:00	2024-10-11 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-28 10:00	2024-10-28 12:00	Digital	1	dbosk
+Övning, DD1317	2024-10-29 13:00	2024-10-29 15:00	U21	2	dbosk
+Övning, DD1317	2024-11-01 15:00	2024-11-01 17:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-04 16:00	2024-11-04 18:00	Digital	1	dbosk
+Övning, DD1317	2024-11-05 15:00	2024-11-05 17:00	U21	2	dbosk
+Övning, DD1317	2024-11-08 13:00	2024-11-08 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-11 15:00	2024-11-11 17:00	Digital	1	dbosk
+Övning, DD1317	2024-11-12 08:00	2024-11-12 10:00	U21	2	dbosk
+Övning, DD1317	2024-11-14 15:00	2024-11-14 17:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-15 15:00	2024-11-15 17:00	5V3Vit (Vit), E1	2	dbosk
+Föreläsning, DD1317	2024-11-18 15:00	2024-11-18 17:00	Digital	1	dbosk
+Övning, DD1317	2024-11-19 15:00	2024-11-19 17:00	U21	2	dbosk
+Övning, DD1317	2024-11-21 13:00	2024-11-21 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-25 13:00	2024-11-25 15:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
+\end{minted}
+
+As mentioned above, all contracts are stored on disk.
+We can have a look at my config again, particularly the [[hr]] part.
+\begin{minted}{text}
+hr.amanuensis.contract_dir = /afs/kth.se/misc/projects/eecs/tcs/nytid/contracts
+hr.timesheets.timesheets_dir = /afs/kth.se/misc/projects/eecs/tcs/nytid/timesheets
+hr.manager = Karl Meinke
+hr.project = 1102
+hr.organization = JH
+\end{minted}
+The contracts and time sheets are stored in [[/afs]].
+Let's have a peek into the contracts directory.
+\begin{minted}{text}
+$ ls /afs/kth.se/misc/projects/eecs/tcs/nytid/contracts
+dbosk.2024-05-23T10:37:09.928706.json
+\end{minted}
+Any later contracts are also added to this directory, nothing is ever removed.
+But the show command we used, will only show the latest non-overlapping 
+contract.
+If two contracts overlap, the latter is assumed to replace the previous.
+None-overlapping contracts complement each other.
+
+Back to the generated contract, the start date depends on when the TA submitted 
+the application for the position.
 So usually, we must create contracts with specific dates for each TA.
+We can see that the automatically generated start date in my contract above is 
+2024-08-01.
+Let's assume that I submitted my application on 2024-08-27.
+Now we generate the contract with the correct start date.
 \begin{minted}{bash}
-nytid hr amanuensis create prg[im]23 \
-  --user dbosk --set-start 2023-08-27 >> amanuensis.csv
+$ nytid hr amanuensis create prgi24 \
+  --user dbosk --set-start 2024-08-27 >> amanuensis.csv
+$ cat amanuensis.csv
+[ peronnr ] Daniel Bosk	2024-08-01	2024-12-17	19%
+[ peronnr ] Daniel Bosk	2024-08-27	2024-12-17	23%
 \end{minted}
 We use [[--set-start]] to force the start date of the contract.
 The end date will be computed automatically.
 We also keep all events that the TA signed up for, event if those are before 
 the start date of the contract.
+If we want to ignore any events before the start date, maybe becasue the TA has 
+already been paid hourly for those, we instead use [[--start]].
+Finally, there is also [[--push-start]] that also pushes the end by equally 
+much, to keep the percentage intact.
+
+We can also see now that there are two contracts for me in the directory, but 
+that show will only show the latest.
+\begin{minted}{text}
+$ ls /afs/kth.se/misc/projects/eecs/tcs/nytid/contracts
+dbosk.2024-05-23T10:37:09.928706.json
+dbosk.2024-05-23T10:50:07.721221.json
+$ nytid hr amanuensis show dbosk
+dbosk	2024-08-27	2024-12-17	23%	115.00 h
+Föreläsning, DD1317	24.0	h
+Övning, DD1317	38.0	h
+Datorlaboration, DD1317	8.0	h
+
+Föreläsning, DD1317	2024-08-26 10:00	2024-08-26 12:00	Digital, E1	2	dbosk
+Föreläsning, DD1317	2024-09-17 15:00	2024-09-17 17:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
+Föreläsning, DD1317	2024-09-18 08:00	2024-09-18 10:00	Digital	1	dbosk
+Övning, DD1317	2024-09-18 15:00	2024-09-18 17:00	U21	2	dbosk
+Övning, DD1317	2024-09-19 08:00	2024-09-19 10:00	U21	2	dbosk
+Datorlaboration, DD1317	2024-09-19 15:00	2024-09-19 17:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Datorlaboration, DD1317	2024-09-20 08:00	2024-09-20 10:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Övning, DD1317	2024-09-20 13:00	2024-09-20 15:00	U21	1	dbosk
+Föreläsning, DD1317	2024-09-23 10:00	2024-09-23 12:00	Digital	1	dbosk
+Övning, DD1317	2024-09-24 15:00	2024-09-24 17:00	U21	2	dbosk
+Övning, DD1317	2024-09-25 08:00	2024-09-25 10:00	U21	2	dbosk
+Datorlaboration, DD1317	2024-09-25 13:00	2024-09-25 15:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Datorlaboration, DD1317	2024-09-26 15:00	2024-09-26 17:00	4V2Röd (Röd), 4V4Gul (Gul), 4V5Grö (Grön), Digital	7	dbosk
+Övning, DD1317	2024-09-27 10:00	2024-09-27 12:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-01 15:00	2024-10-01 17:00	Digital	1	dbosk
+Övning, DD1317	2024-10-02 10:00	2024-10-02 12:00	U21	2	dbosk
+Övning, DD1317	2024-10-03 08:00	2024-10-03 10:00	U21	2	dbosk
+Övning, DD1317	2024-10-04 13:00	2024-10-04 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-08 15:00	2024-10-08 17:00	Digital	1	dbosk
+Övning, DD1317	2024-10-09 08:00	2024-10-09 10:00	U21	2	dbosk
+Övning, DD1317	2024-10-11 13:00	2024-10-11 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-10-28 10:00	2024-10-28 12:00	Digital	1	dbosk
+Övning, DD1317	2024-10-29 13:00	2024-10-29 15:00	U21	2	dbosk
+Övning, DD1317	2024-11-01 15:00	2024-11-01 17:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-04 16:00	2024-11-04 18:00	Digital	1	dbosk
+Övning, DD1317	2024-11-05 15:00	2024-11-05 17:00	U21	2	dbosk
+Övning, DD1317	2024-11-08 13:00	2024-11-08 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-11 15:00	2024-11-11 17:00	Digital	1	dbosk
+Övning, DD1317	2024-11-12 08:00	2024-11-12 10:00	U21	2	dbosk
+Övning, DD1317	2024-11-14 15:00	2024-11-14 17:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-15 15:00	2024-11-15 17:00	5V3Vit (Vit), E1	2	dbosk
+Föreläsning, DD1317	2024-11-18 15:00	2024-11-18 17:00	Digital	1	dbosk
+Övning, DD1317	2024-11-19 15:00	2024-11-19 17:00	U21	2	dbosk
+Övning, DD1317	2024-11-21 13:00	2024-11-21 15:00	U21	2	dbosk
+Föreläsning, DD1317	2024-11-25 13:00	2024-11-25 15:00	5V3Vit (Vit), U21, U31, U41	4	dbosk
+\end{minted}
+
 
 \subsection{Generating time sheets for hourly TAs}
 

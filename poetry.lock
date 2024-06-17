@@ -552,13 +552,13 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 
 [[package]]
 name = "ladok3"
-version = "4.10"
+version = "4.12"
 description = "Python wrapper and CLI for the LADOK3 REST API."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "ladok3-4.10-py3-none-any.whl", hash = "sha256:e3a87fa0030fa4be0884d51ba0600d26bedcec4e7b1f1a906edfbd12a65d3a23"},
-    {file = "ladok3-4.10.tar.gz", hash = "sha256:ee09bfc5d60218552788bc77ee842005f3d94a2490a99b5465bac9dcc8accd00"},
+    {file = "ladok3-4.12-py3-none-any.whl", hash = "sha256:e2cd68070c6d156304d15086ad94f1a7b840a57d7c5bf47070fddb4e37b9d724"},
+    {file = "ladok3-4.12.tar.gz", hash = "sha256:5c2a349f98eafaedf6dc8d4586f8e23af6a440011f73a56c8265a3d31d0cedfe"},
 ]
 
 [package.dependencies]

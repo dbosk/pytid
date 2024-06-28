@@ -361,8 +361,17 @@ if first:
 elif event.begin.isocalendar()[group_by_idx] != current_epoc:
   print("\n")
   current_epoc = event.begin.isocalendar()[group_by_idx]
+@
 
-print(schedutils.format_event_short(event, week))
+As to the actual printing.
+We want to print to stdout using CSV format.
+<<printing events variables>>=
+csvout = csv.writer(sys.stdout, delimiter=delimiter)
+<<otherwise print [[event]]>>=
+csvout.writerow(schedutils.format_event_csv(event, week, location))
+<<imports>>=
+import csv
+import sys
 @
 
 We use the [[week]] argument to [[format_event_short]] to indicate whether we 
@@ -371,4 +380,17 @@ want to print the week number and day or not.
 week: Annotated[bool, week_opt] = False,
 <<argument and option definitions>>=
 week_opt = typer.Option(help="Print week number and day of week")
+@ The same for the location.
+<<printing control options>>=
+location: Annotated[bool, location_opt] = True,
+<<argument and option definitions>>=
+location_opt = typer.Option(help="Print location of event")
+@
 
+Finally, we want to output the CSV in tab-separated format by default, to be 
+able to use tools like [[cut]] on the output.
+<<printing control options>>=
+delimiter: Annotated[str, delimiter_opt] = "\t",
+<<argument and option definitions>>=
+delimiter_opt = typer.Option(help="Delimiter for CSV output")
+@

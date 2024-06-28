@@ -121,6 +121,44 @@ def format_event_short(event, week=False):
     return f"{header} {description}".strip()
 @
 
+Finally, we want to have a CSV version, that returns an event as a list (that 
+is, a row in CSV format).
+<<functions>>=
+def format_event_csv(event, week=False, location=False):
+    """
+    Takes event (ics.event.Event) object,
+    returns a list of strings, which can be used as a row in a CSV file.
+
+      [0] Week number and day (if week is True)
+      [1] Date and time
+      [2] Event name
+      [3] Location (if location is True)
+      [4] Description
+
+    The `week` parameter set to True results in the week number and day being 
+    included at index 0. Default is `False`.
+
+    The `location` parameter set to True results in the location being included 
+    at index 2. Default is `False`.
+    """
+    row = []
+
+    if week:
+      row.append(f"Week {event.begin.isocalendar()[1]} " \
+                  + calendar.day_name[event.begin.weekday()])
+
+    row.append(event.begin.to(dateutil.tz.tzlocal()).format('DD/MM HH:mm'))
+    row.append(event.name)
+
+    if location:
+      row.append(event.location)
+
+    description = filter_event_description(event.description, separator="; ")
+    row.append(description)
+
+    return row
+@
+
 
 \section{Handling calendars from URLs}
 

@@ -392,6 +392,8 @@ This is useful in scripts, as we'll see later.
 
 But this means that we can use this command to generate a list of TAs for HR on 
 a daily basis.
+To make things easier for HR, we want to send \emph{one} email for \emph{all} 
+of our courses.
 <<nytid.daily.sh>>=
 # Report new TAs as working to HR
 
@@ -399,17 +401,15 @@ a daily basis.
 <<set up [[ta_mail]] function>>
 
 for course in ${HR_REPORTING_COURSES}; do
-  <<report new TAs for [[course]]>>
-done
-<<TA reporting variables>>=
-HR_REPORTING_COURSES="prg[im]${year} datintro${year}p1"
+  <<output new TAs for [[course]]>>
+done | <<call [[ta_mail]]>>
 @
 
 Now, we must keep track of those we've already reported.
 We'll do this by storing the list of TAs in the course's data directory.
 Then we can add all TAs again and count them.
 All TAs that occur only once are the new ones.
-<<report new TAs for [[course]]>>=
+<<output new TAs for [[course]]>>=
 tmp_list=$(mktemp)
 reported_TAs=$(nytid courses config ${course} data_path \
                 | sed "s/data_path = //")/reported_TAs
@@ -421,17 +421,27 @@ new_TAs=$(sort ${tmp_list} | uniq -c | egrep "^\s*1\s" | sed "s/^\s*1\s//")
 
 <<skip if no new TAs>>
 
-ta_mail "${course}" "${new_TAs}"
-
+echo "$new_TAs"
 echo "$current_users" > ${reported_TAs}
+@
+
+Since we need to access the config of each course to get the data directory, 
+we'll need to specify them separately, we can't have a regex for several 
+courses.
+<<TA reporting variables>>=
+# must be separate names, not regexes
+HR_REPORTING_COURSES="prgi${year} prgm${year} datintro${year}"
 @
 
 We'll use the [[ta_mail]] function to send the email.
 Here we can prep the message we want to have in the email body.
+We read the list of TAs from stdin.
 <<set up [[ta_mail]] function>>=
 ta_mail() {
   course="$1"
-  list_TAs="$2"
+  list_of_TAs="$(cat)"
+
+  <<skip if there are no new TAs in any course>>
 
   echo "
 Hej, hej!
@@ -440,11 +450,16 @@ Här kommer en lista med assar som ska jobba på ${course}.
 
         Daniel
 
-${list_TAs}
-  " | mutt -s "nya assar i ${course}" ${TA_MAIL_ADDR}
+${list_of_TAs}
+  " | mutt -s "nya assar ${course}" ${TA_MAIL_ADDR}
 }
 <<TA reporting variables>>=
 TA_MAIL_ADDR=hr-support@eecs.kth.se
+@
+
+This means that we should make the call to [[ta_mail]] as follows.
+<<call [[ta_mail]]>>=
+ta_mail "${HR_REPORTING_COURSES}"
 @
 
 Now, if there are no new TAs, we don't want to send the email to HR.
@@ -453,6 +468,8 @@ The trick here is to [[grep]] for lines with any character to remove empty
 lines that [[wc]] would count.
 <<skip if no new TAs>>=
 test $(echo "${new_TAs}" | grep "." | wc -l) -gt 0 || continue
+<<skip if there are no new TAs in any course>>=
+test $(echo "${list_of_TAs}" | grep "." | wc -l) -gt 0 || return
 @
 
 Now, we only want to send TAs to HR, not colleagues who also sign up on the 
@@ -473,7 +490,8 @@ reported_TAs=$(nytid courses config $course data_path \
 for user in $users; do
   nytid hr users $course --detailed --user $user >> ${reported_TAs}
 done
-@
+@ An alternative is to immediately create an amanuensis contract for colleagues 
+(see \cref{CreateAmanuensis}).
 
 \subsection{Adding TAs to UG}
 
@@ -552,7 +570,7 @@ if test -n "${TAs}"; then
 fi
 @
 
-\subsection{Generating amanuensis contracts for HR}
+\subsection{Generating amanuensis contracts for HR}\label{CreateAmanuensis}
 
 HR also wants data to set up amanuensis contracts for the TAs that qualify.
 We can do this by running the following command.

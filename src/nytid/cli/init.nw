@@ -1047,6 +1047,7 @@ send_draft_hourly() {
   (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
     | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se \
       -a "${reportfile}"
+}
 <<timesheet draft message>>=
 Hej, hej!
 

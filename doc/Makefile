@@ -27,7 +27,10 @@ nytid.pdf: ../src/nytid
 FIGS+=		figs/nytid-storage.pdf
 FIGS+=		figs/timesheet-dbosk.pdf
 
+DEPENDS+=	didactic.sty
+
 nytid.pdf: preamble.tex abstract.tex ../LICENSE ${FIGS}
+nytid.pdf: ${DEPENDS}
 
 ${FIGS}:
 	${MAKE} -C $(dir $@) $(notdir $@)
@@ -57,3 +60,5 @@ distclean:
 
 INCLUDE_MAKEFILES=../makefiles
 include ${INCLUDE_MAKEFILES}/tex.mk
+INCLUDE_DIDACTIC=didactic
+include ${INCLUDE_DIDACTIC}/didactic.mk

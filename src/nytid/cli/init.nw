@@ -421,7 +421,15 @@ new_TAs=$(sort ${tmp_list} | uniq -c | egrep "^\s*1\s" | sed "s/^\s*1\s//")
 
 <<skip if no new TAs>>
 
-echo "$new_TAs"
+echo -n "Nya assar på ${course}"
+if [[ "$course" == *"datintro"* ]]; then
+  echo ", dessa är undantagna kravet på assistentkurs" \
+    "(om de inte assar i någon annan kurs också):"
+else
+  echo ":"
+fi
+echo
+echo "$new_TAs" | egrep "^[[:digit:]]{12}"
 echo "$current_users" > ${reported_TAs}
 @
 
@@ -446,7 +454,7 @@ ta_mail() {
   echo "
 Hej, hej!
 
-Här kommer en lista med assar som ska jobba på ${course}.
+Här kommer en lista med nya assar.
 
         Daniel
 

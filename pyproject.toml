@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nytid"
-version = "7.1"
+version = "7.2"
 description = "Library to manage teaching schedules"
 authors = ["Daniel Bosk <daniel@bosk.se>"]
 exclude = ["*.csv"]
@@ -13,7 +13,7 @@ nytid = "nytid.cli:cli"
 python = "^3.8"
 requests = "^2.31.0"
 canvaslms = "^4.0"
-ladok3 = "^4.9"
+ladok3 = "^4.13"
 ics = "^0.7.2"
 openpyxl = "^3.0.10"
 Pillow = ">=9.3,<11.0"

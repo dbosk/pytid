@@ -313,7 +313,13 @@ if detailed:
 else:
   user_obj = user
 
-print(user_obj)
+try:
+  if detailed:
+    print(f"{user_obj} <{user_obj.email}>")
+  else:
+    print(user_obj)
+except AttributeError:
+  print(user_obj)
 <<set [[user_obj]] to most detailed version possible of [[user]]>>=
 user_obj = user
 try:
@@ -322,7 +328,9 @@ except Exception as err:
   logging.warning(f"Can't look up {user} in Canvas: {err}")
 else:
   try:
+    email = user_obj.email
     user_obj = get_ladok_user(user_obj)
+    user_obj.email = email
   except Exception as err:
     logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
     pass

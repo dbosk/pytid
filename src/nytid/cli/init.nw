@@ -362,10 +362,10 @@ We can list the TAs using the [[nytid hr users]] command.
 Let's consider the output from [[prgi23]].
 \begin{minted}{text}
 $ nytid hr users prgi23 --detailed
+[ personnr ] Daniel Bosk <dbosk@kth.se>
+[ personnr ] Teaching Assistantsson <teachinga@kth.se>
 nytid: WARNING: Can't look up assarsd (TA Assarsdotter <assarsd@kth.se>) in 
 LADOK: expected string or bytes-like object
-[ personnr ] Daniel Bosk
-[ personnr ] Teaching Assistantsson
 TA Assarsdotter <assarsd@kth.se>
 [...]
 $

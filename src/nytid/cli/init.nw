@@ -1341,9 +1341,91 @@ make_regex() {
 }
 @
 
-% courses          Manage courses                                              
-% mine      Manage my courses                                                  
-% registry  Manage course registers                                            
+\subsection{Detecting double bookings}
+
+Sometimes the TAs book themselves for two events at the same time but in 
+different courses.
+This is easily done, but really bad.
+We'll now add a small script to detect this and notify the concerned TA.
+We can run this check daily.
+
+The idea is this:
+We check the TA's schedule and look for the same start time occurring more than 
+once.
+Then we notify the TA about these times.
+<<nytid.daily.sh>>=
+### Detect double booking ###
+
+<<helper functions for doublebooking>>
+
+for user in $(nytid hr users ""); do
+  <<let [[schedule]] be the schedule for [[user]]>>
+  <<let [[doublebooked]] be the times that are double booked>>
+  if <<[[schedule]] has double bookings>>; then
+    <<extract double booked events from [[schedule]]>> \
+      | notify_doublebooking ${user}
+  fi
+done
+@
+
+We need the schedule for [[user]].
+We want to look ahead, so we change the end date to one year ahead instead of 
+one week ahead (the default).
+Since we don't give any course, we get [[user]]'s schedule for all courses that 
+we manage (in the [[mine]] register).
+<<let [[schedule]] be the schedule for [[user]]>>=
+schedule=$(nytid schedule show --user ${user} \
+            --end $(date +%Y-%m-%d -d "next year"))
+@
+
+To test if a schedule has double bookings, we can check for the same start time 
+(first column) occurring in more than once line.
+We must also remove the empty lines that will be part of the output.
+<<let [[doublebooked]] be the times that are double booked>>=
+doublebooked=$(echo "${schedule}" | cut -f 1 | sort | uniq -d | grep -v "^$")
+@
+
+To check if we got a match, we check that the [[doublebooked]] contains more 
+than one character.
+The reason for this test is that, if we don't have any match, we'll still get a 
+newline character.
+<<[[schedule]] has double bookings>>=
+[[ $(echo "${doublebooked}" | wc -c) -gt 1 ]]
+@
+
+To extract the double booked events, not just the times, we can grep for those 
+times.
+<<extract double booked events from [[schedule]]>>=
+echo "${schedule}" | grep -f <(echo "${doublebooked}")
+@
+
+The function~[[notify_doublebooking]] simply sends an email to [[user]] with 
+the times that are double booked.
+The username (from which the mail is constructed) is the only argument and the 
+double booked events are read from standard input.
+<<helper functions for doublebooking>>=
+notify_doublebooking() {
+  user="$1"
+  events=$(cat)
+  echo "
+<<construct the message for the double bookings>>
+" | mutt -s "dubbelbokningar i arbetsschemat" ${user}@kth.se
+}
+@
+
+The message is simply a short message and then ending with the double booked 
+events.
+<<construct the message for the double bookings>>=
+Hej, hej!
+
+Det ser ut som att du har dubbelbokat dig i ditt schema. Se listan nedan och 
+åtgärda så snart som möjligt: boka av dig från det pass ligger bäst till med 
+antal assar.
+
+          Daniel
+
+${events}
+@
 
 
 \section{Future usage: design plans}

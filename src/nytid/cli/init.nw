@@ -430,6 +430,8 @@ else
 fi
 echo
 echo "$new_TAs" | egrep "^[[:digit:]]{12}"
+echo
+echo
 echo "$current_users" > ${reported_TAs}
 @
 

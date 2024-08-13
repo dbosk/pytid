@@ -1,10 +1,16 @@
-\chapter{Recruiting TAs:
+\chapter[Recruiting TAs]
+        {Recruiting TAs:
          the \texttt{recruit} commands and
          the \texttt{cli.recruit} module}%
 \label{recruit}\label{cli.recruit}%
 
 We want to recruit new TAs to help out on a course.
-This is something that we must do regularly.
+To do this we need to have a list of potential TAs, recommended by some means.
+Once we have the recommendations we can invite them as TAs.
+To do this we send them an email with information on how to sign up.
+This is something that we must do regularly, so it helps being systematic about 
+it.
+
 The ways we can do this are the following (in order of priority):
 \begin{enumerate}
   \item\label{RecruitLastYear} We try to recruit the TAs from last year to do 

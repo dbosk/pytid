@@ -84,8 +84,8 @@ year.
 Then we can add TAs that are more important than previous TAs with a positive 
 priority and less important TAs with a negative priority.
 For instance, we can add the TAs that are recommended by the experienced TAs at 
-the priority level -1 and the TAs that apply by themselves at the priority 
-level -2.
+the priority level \(-1\) and the TAs that apply by themselves at the priority 
+level \(-2\).
 If we value TAs that have teacher training, then we can add those at the 
 priority level 1, to make sure we try to recruit them first.
 

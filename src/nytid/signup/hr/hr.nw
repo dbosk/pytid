@@ -70,7 +70,8 @@ We provide two functions, one to give the factor and one to compute the time
 including prep time.
 <<functions>>=
 def add_prep_time(time, event_type,
-  date=datetime.date.today(), amanuensis=False):
+                  date=datetime.date.today(),
+                  amanuensis=False):
   """
   Input:
   - a datetime.timedelta object time,
@@ -378,13 +379,28 @@ def compute_amanuensis_data(csv_rows, low_percentage=0.05, min_days=25,
   event_index = SIGNUP_SHEET_HEADER.index("Event")
   needed_TAs_index = SIGNUP_SHEET_HEADER.index("#Needed TAs")
 
-  ta_hours = hours_per_TA(csv_rows, add_prep_time, round_time)
+  <<let [[amanuensis_prep_time]] be [[add_prep_time]] for amanuensis>>
+
+  ta_hours = hours_per_TA(csv_rows, amanuensis_prep_time, round_time)
   ta_data = {}
 
   <<compute the earliest and latest dates for each TA>>
 
   return ta_data
 @
+
+\subsection{Fix prep time function for amanuensis}
+
+We need to adjust the default argument for [[add_prep_time]].
+By default [[amanuensis]] is set to false,
+but in this case we want it to true.
+<<let [[amanuensis_prep_time]] be [[add_prep_time]] for amanuensis>>=
+amanuensis_prep_time = lambda time, event_type, date: \
+                          add_prep_time(time, event_type,
+                                        date, amanuensis=True)
+@
+
+\subsection{Compute the earliest and latest dates}
 
 We start by finding all start and end dates for every TA.
 <<compute the earliest and latest dates for each TA>>=

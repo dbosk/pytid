@@ -353,13 +353,108 @@ me.email = dbosk@kth.se
 me.signature = /home/dbosk/Pictures/signature.png
 \end{minted}
 
+\subsection{Adding TAs to UG}
+
+When we have the TAs, we want them to have access to the course in Canvas.
+It adds all users added to a course in UG to the course in Canvas.
+
+We can list the TAs using the [[nytid hr users]] command.
+Let's consider the output from [[prgi23]].
+\begin{minted}{text}
+$ nytid hr users prgi23
+dbosk
+teachinga
+assarsd
+[...]
+$
+\end{minted}
+We can use this in to add them to UG.
+
+To do this we want to do the following for all of our courses.
+<<nytid.hourly.sh>>=
+### Set up TAs in UG ###
+
+for course in $(nytid courses mine ls)
+do
+  <<skip if [[course]] has no sign-up sheet>>
+  <<look up [[ug_path]], or skip if none exists>>
+  <<look up [[TAs]]>>
+  <<add TAs in [[TAs]] to UG at [[ug_path]]>>
+done
+@
+
+This only makes sense for courses with sign-up sheets.
+If a course doesn't have any sign-up sheet, we skip it since there will not be 
+any TAs who could sign up.
+One way to check if a course has a sign-up sheet is the following.
+<<skip if [[course]] has no sign-up sheet>>=
+nytid courses config ${course} signupsheet.url 2>/dev/null | \
+  grep -q "signupsheet.url = " \
+    || continue
+@ However, we can't do this if [[${course}]] is a regex matching several 
+courses.
+The config command must match a course exactly, not by regex.
+Fortunately, that's what we doo in the loop above.
+
+We need the UG group for the TAs in the course, in the case of [[prgi24]] it's
+\begin{center}
+[[edu.courses.DD.DD1317.20242.1.assistants]].
+\end{center}
+We store this in the config of [[prgi24]]:
+\begin{minted}{bash}
+nytid courses config prgi24 ug.assistants \
+  -s edu.courses.DD.DD1317.20232.1.assistants
+\end{minted}
+That way, we can read it from the config.
+If there is no UG group specified in the cours config, we skip the course.
+The same if the UG group is empty (since that would regex match any course in 
+UG).
+<<look up [[ug_path]], or skip if none exists>>=
+ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
+            | sed "s/.*= //")
+test "$?" -eq 0 || continue
+test -n "${ug_path}" || continue
+@
+
+Note that we could've named [[ug.assistants]] anything, it's just a name we 
+chose in the config.
+It has no special meaning to Nytid, only to our scripts.
+The point is, however, that we can add our own things to the config.
+Same thing with storing files in a course's data directory.
+
+Let's continue.
+We can look up the TAs in the same way as we did above.
+<<look up [[TAs]]>>=
+TAs=$(nytid hr users ${course})
+if test "$?" -ne 0; then
+  echo "error: can\'t read users for ${course} in nytid"
+  continue
+fi
+@
+
+Finally, we can add the TAs to the UG group.
+We add one by one, in case of errors.
+If we set all at once, any error will cause no TA to be added.
+One at a time, then only the TA causing the error will not be added.
+<<add TAs in [[TAs]] to UG at [[ug_path]]>>=
+if test -n "${TAs}"; then
+  for ta in ${TAs}; do
+    kthutils ug members add "${ug_path}" "${ta}"
+  done
+fi
+@
+
 \subsection{Generating data interesting for HR}
 
 % hr               Manage sign-up sheets for teaching                          
 
 HR wants to know who is working on the course.
-We can list the TAs using the [[nytid hr users]] command.
-Let's consider the output from [[prgi23]].
+They need to do this to create an employment contract, either for hourly 
+employment or for amanuensis contracts.
+
+As mentioned above, we can list the TAs using the [[nytid hr users]] command.
+There is an option [[--detailed]] that is useful for this.
+Let's consider the output from [[prgi23]] again.
 \begin{minted}{text}
 $ nytid hr users prgi23 --detailed
 [ personnr ] Daniel Bosk <dbosk@kth.se>
@@ -379,22 +474,14 @@ from KTH.
 This means that we can't look up her personnummer, but use her email instead so 
 that HR can ask her themselves.
 
-Without the [[--detailed]] option, we only get the usernames.
-\begin{minted}{text}
-$ nytid hr users prgi23
-dbosk
-teachinga
-assarsd
-[...]
-$
-\end{minted}
-This is useful in scripts, as we'll see later.
-
 But this means that we can use this command to generate a list of TAs for HR on 
-a daily basis.
+a weekly basis.
+We want to do it on a weekly basis so that we have the time to add amanuensis 
+contracts for TAs who qualify and prefer that type of employment.
+
 To make things easier for HR, we want to send \emph{one} email for \emph{all} 
 of our courses.
-<<nytid.daily.sh>>=
+<<nytid.weekly.sh>>=
 # Report new TAs as working to HR
 
 <<TA reporting variables>>
@@ -502,83 +589,6 @@ for user in $users; do
 done
 @ An alternative is to immediately create an amanuensis contract for colleagues 
 (see \cref{CreateAmanuensis}).
-
-\subsection{Adding TAs to UG}
-
-If we don't use [[--detailed]], we'll simply get the TA username.
-This can be useful in other circumstances.
-For instance, we might want to add the TAs to the course in UG, to give them 
-access to the course in Canvas.
-<<nytid.hourly.sh>>=
-### Set up TAs in UG ###
-
-for course in $(nytid courses mine ls)
-do
-  <<skip if [[course]] has no sign-up sheet>>
-  <<look up [[ug_path]], or skip if none exists>>
-  <<look up [[TAs]]>>
-  <<add TAs in [[TAs]] to UG at [[ug_path]]>>
-done
-@
-
-This only makes sense for courses with sign-up sheets.
-One way to check if a course has a sign-up sheet is the following.
-<<skip if [[course]] has no sign-up sheet>>=
-nytid courses config ${course} signupsheet.url 2>/dev/null | \
-  grep -q "signupsheet.url = " \
-    || continue
-@ However, we can't do this if [[${course}]] is a regex matching several 
-courses.
-The config command must match a course exactly, not by regex.
-Fortunately, that's what we doo in the loop above.
-
-We need the UG group for the TAs in the course, in the case of [[prgi24]] it's
-\begin{center}
-[[edu.courses.DD.DD1317.20242.1.assistants]].
-\end{center}
-We store this in the config of [[prgi24]]:
-\begin{minted}{bash}
-nytid courses config prgi24 ug.assistants \
-  -s edu.courses.DD.DD1317.20232.1.assistants
-\end{minted}
-That way, we can read it from the config.
-If there is no UG group specified in the cours config, we skip the course.
-The same if the UG group is empty (since that would regex match any course in 
-UG).
-<<look up [[ug_path]], or skip if none exists>>=
-ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
-            | sed "s/.*= //")
-test "$?" -eq 0 || continue
-test -n "${ug_path}" || continue
-@
-
-Note that we could've named [[ug.assistants]] anything, it's just a name we 
-chose in the config.
-It has no special meaning to Nytid, only to our scripts.
-The point is, however, that we can add our own things to the config.
-Same thing with storing files in a course's data directory.
-
-Let's continue.
-We can look up the TAs in the same way as we did above.
-<<look up [[TAs]]>>=
-TAs=$(nytid hr users ${course})
-if test "$?" -ne 0; then
-  echo "error: can\'t read users for ${course} in nytid"
-  continue
-fi
-@
-
-Finally, we can add the TAs to the UG group.
-We add one by one, in case of errors.
-If we set all at once, any error will cause no TA to be added.
-One at a time, then only the TA causing the error will not be added.
-<<add TAs in [[TAs]] to UG at [[ug_path]]>>=
-if test -n "${TAs}"; then
-  for ta in ${TAs}; do
-    kthutils ug members add "${ug_path}" "${ta}"
-  done
-fi
-@
 
 \subsection{Generating amanuensis contracts for HR}\label{CreateAmanuensis}
 

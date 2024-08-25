@@ -585,7 +585,7 @@ reported_TAs=$(nytid courses config $course data_path \
                 | sed "s/data_path = //")/reported_TAs
 
 for user in $users; do
-  nytid hr users $course --detailed --user $user >> ${reported_TAs}
+  nytid hr users $course --detailed | grep "$user" >> ${reported_TAs}
 done
 @ An alternative is to immediately create an amanuensis contract for colleagues 
 (see \cref{CreateAmanuensis}).

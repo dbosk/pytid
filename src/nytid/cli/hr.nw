@@ -239,18 +239,35 @@ def get_canvas_user(username, course_regex):
   """
   users = get_canvas_users(".*", course_regex)
   <<filter out [[user]] among [[users]] by looking for [[username]], return it>>
-  raise ValueError(f"Can't find {username} in Canvas")
+  <<raise an error if the user wasn't found>>
 @
 
 Now that we have a list of all users, we simply have to iterate to find the
 username.
 Sometimes the TAs accidentally add a space here and there, so we strip the
 username just to be sure.
+
+In case a user doesn't have a login ID, we simply skip that user.
+However, if we can't find the user, we want to include those users without any 
+login ID in the error message.
+Because the desired user might be one of them.
 <<filter out [[user]] among [[users]] by looking for [[username]], return it>>=
 username = username.strip()
+users_without_login_id = []
+
 for user in users:
-  if user.login_id.split("@")[0] == username or user.login_id == username:
-    return user
+  try:
+    if user.login_id.split("@")[0] == username or user.login_id == username:
+      return user
+  except AttributeError:
+    users_without_login_id.append(user)
+@
+
+Now we can include the users without a login ID in the error message if we 
+don't find any user.
+<<raise an error if the user wasn't found>>=
+raise ValueError(f"Can't find {username} in Canvas, but the following users "
+                 f"don't have a login ID: {users_without_login_id}")
 @
 
 It's very straightforward to get a LADOK student object once we have the Canvas

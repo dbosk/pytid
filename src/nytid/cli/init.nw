@@ -856,7 +856,7 @@ nytid hr timesheets generate prg[im]24 --end 2024-10-01
 nytid hr timesheets generate prg[im]24 --end 2024-10-01 --amanuensis
 \end{minted}
 The first line will generate time sheets for all hourly TAs and include events 
-until end of September (it's not inclusive, so \(<\) 2023-10-01).
+until end of September (it's not inclusive, so \(<\) 2024-10-01).
 The second line does the same, but for amanuensis.
 
 Let's have a look at an example.

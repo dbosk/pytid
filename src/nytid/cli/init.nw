@@ -524,11 +524,12 @@ HR_REPORTING_COURSES="prg[im]${year} datintro${year}"
 <<output new TAs for [[course]]>>=
 tmp_list=$(mktemp)
 reported_TAs=$(nytid config hr.reported_TAs \
-                | sed "s/^.* = //")/${course}
-test -e ${reported_TAs} && cp ${reported_TAs} ${tmp_list}
+                | sed "s/^.* = //")/${course}.txt
+mkdir -p $(dirname ${reported_TAs})
+test -e "${reported_TAs}" && cp ${reported_TAs} ${tmp_list}
 
 current_users=$(nytid hr users ${course} --detailed)
-echo "$current_users" >> ${tmp_list}
+echo "${current_users}" >> ${tmp_list}
 new_TAs=$(sort ${tmp_list} | uniq -c | egrep "^\s*1\s" | sed "s/^\s*1\s//")
 
 <<skip if no new TAs>>
@@ -544,7 +545,7 @@ echo
 <<format list [[new_TAs]] for mail to HR>>
 echo
 echo
-echo "$current_users" > ${reported_TAs}
+echo "${current_users}" > "${reported_TAs}"
 @
 
 Each line contains personnummer, name and email.
@@ -830,12 +831,25 @@ They have their external email as their username.
 We want to use their full email, but for KTH TAs we don't want to include their 
 [[@kth.se]] part.
 <<format list [[new_TAs]] for mail to HR>>=
-| (read line; \
-   email=$(echo "$line" | sed -E "s/^.*<(.*)>.*$/\1/"); \
-   user=$(echo "$email" | sed "s/@kth.se//"); \
-   contract=$(nytid hr amanuensis create --draft --user "${user}"); \
-   if [[ -z "${contract}" ]]; then echo "${line}"; \
-   else echo "${contract}$'\t'${email}"; fi)
+| (while read line; do\
+     email=$(echo "$line" | sed -E "s/^.*<(.*)>.*$/\1/"); \
+     user=$(echo "$email" | sed "s/@kth.se//"); \
+     contract=$(<<generate amanuensis contract draft for [[user]]>>); \
+     if [[ -z "${contract}" ]]; then echo "${line}"; \
+     else echo "${contract}"; fi; \
+   done)
+@
+
+Now, let's see how we can generate the amanuensis contract draft.
+We can do this by running [[nytid hr amanuensis create]], but there are some 
+things we need to consider.
+We want it detailed (not default for drafts), because that makes it easer to 
+see who it is.
+We want to look up by name in the recruitment system.
+We also get the email (which also includes the username) anyways, which can be 
+used to generate a non-draft contract if we need it.
+<<generate amanuensis contract draft for [[user]]>>=
+nytid hr amanuensis create --draft --user "${user}" --detailed
 @
 
 An improvement would be to check if the TA has submitted an application in 

@@ -103,13 +103,13 @@ requests = "*"
 
 [[package]]
 name = "canvaslms"
-version = "4.1"
+version = "4.2"
 description = "Command-line interface to Canvas LMS"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "canvaslms-4.1-py3-none-any.whl", hash = "sha256:35f44cba090db5d8f1450021b6e36601f1d1bb29a3135437f86c80c763e51fa4"},
-    {file = "canvaslms-4.1.tar.gz", hash = "sha256:e4719efec13507051c21647a41fd657930040b5ea73493647d93dda63048ed65"},
+    {file = "canvaslms-4.2-py3-none-any.whl", hash = "sha256:b5b921f70fbfa6e948a55953fd35cf651737f19d8c796b16b6a049257569cd41"},
+    {file = "canvaslms-4.2.tar.gz", hash = "sha256:255deaa2c349ed5654249e6e242a059cde314bf75b9812f7a64e3d1468ae1e36"},
 ]
 
 [package.dependencies]
@@ -1163,4 +1163,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "766aeb81ddc03e18e355e57bf0f20ac7c7b27c696101574a14b1341e4016cb04"
+content-hash = "ad4ccbe11d63717737aaafd32eaf6ddd213e0c326b3aa522ba97d95c419cc381"

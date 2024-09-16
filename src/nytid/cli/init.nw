@@ -439,8 +439,25 @@ One at a time, then only the TA causing the error will not be added.
 <<add TAs in [[TAs]] to UG at [[ug_path]]>>=
 if test -n "${TAs}"; then
   for ta in ${TAs}; do
+    <<continue to next if [[ta]] is not a KTH user>>
     kthutils ug members add "${ug_path}" "${ta}"
   done
+fi
+@
+
+Sometimes we get external TAs in the course.
+They have no KTH account, so we can't add them to UG.
+But IT adds them to Canvas manually, we don't have to do that.
+These external users should be skipped.
+IT uses their external email as username for Canvas, so we can check for 
+[[@]]-signs in the username.
+(And if someone has added [[@kth.se]] or [[@ug.kth.se]], we'll rewrite them.)
+<<continue to next if [[ta]] is not a KTH user>>=
+if echo "${ta}" | grep -q "@"; then
+  ta=$(echo "${ta}" | sed -E "s/@(ug\.)?kth\.se//")
+fi
+if echo "${ta}" | grep -q "@"; then
+  continue
 fi
 @
 

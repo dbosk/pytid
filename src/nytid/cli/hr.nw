@@ -487,7 +487,8 @@ if hourly_summary:
       <<set [[user_obj]] to most detailed version possible of [[user]]>>
     else:
       user_obj = user
-    csvout.writerow([user_obj, to_hours(hours), "h"])
+    csvout.writerow([f"{user_obj} <{user_obj.email}>",
+                     to_hours(hours), "h"])
 @
 
 \section{Creating amanuensis contracts}
@@ -650,7 +651,7 @@ if detailed:
 else:
   user_obj = user
 
-row = [user_obj,
+row = [f"{user_obj} <{user_obj.email}>",
        start.date(),
        end.date(),
        f"{round(100*hr.compute_percentage(*data))}%"]
@@ -1273,7 +1274,7 @@ except AttributeError as err:
 
 timesheet.make_xlsx(personnummer,
                     name,
-                    f"{user}@kth.se",
+                    f"{user}@kth.se" if not "@" in user else user,
                     added_events,
                     removed_events=removed_events,
                     course_leader=(course_responsible,

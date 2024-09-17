@@ -439,8 +439,25 @@ One at a time, then only the TA causing the error will not be added.
 <<add TAs in [[TAs]] to UG at [[ug_path]]>>=
 if test -n "${TAs}"; then
   for ta in ${TAs}; do
+    <<continue to next if [[ta]] is not a KTH user>>
     kthutils ug members add "${ug_path}" "${ta}"
   done
+fi
+@
+
+Sometimes we get external TAs in the course.
+They have no KTH account, so we can't add them to UG.
+But IT adds them to Canvas manually, we don't have to do that.
+These external users should be skipped.
+IT uses their external email as username for Canvas, so we can check for 
+[[@]]-signs in the username.
+(And if someone has added [[@kth.se]] or [[@ug.kth.se]], we'll rewrite them.)
+<<continue to next if [[ta]] is not a KTH user>>=
+if echo "${ta}" | grep -q "@"; then
+  ta=$(echo "${ta}" | sed -E "s/@(ug\.)?kth\.se//")
+fi
+if echo "${ta}" | grep -q "@"; then
+  continue
 fi
 @
 
@@ -451,6 +468,12 @@ fi
 HR wants to know who is working on the course.
 They need to do this to create an employment contract, either for hourly 
 employment or for amanuensis contracts.
+However, it takes time to get that info out of the TAs,
+so it's hard to automate it fully.
+And HR doesn't want to know about it until we know what contract they should 
+have.
+Also, HR doesn't care about which courses the TAs are working on.
+But we can automate part of the process.
 
 As mentioned above, we can list the TAs using the [[nytid hr users]] command.
 There is an option [[--detailed]] that is useful for this.
@@ -478,9 +501,11 @@ But this means that we can use this command to generate a list of TAs for HR on
 a weekly basis.
 We want to do it on a weekly basis so that we have the time to add amanuensis 
 contracts for TAs who qualify and prefer that type of employment.
+Also, so that the TAs have time to add themselves to more sessions.
 
-To make things easier for HR, we want to send \emph{one} email for \emph{all} 
-of our courses.
+But we'll do this by indirection.
+We'll send the email to ourselves.
+Then, we can process it and forward the result to HR.
 <<nytid.weekly.sh>>=
 # Report new TAs as working to HR
 
@@ -493,17 +518,35 @@ done | <<call [[ta_mail]]>>
 @
 
 Now, we must keep track of those we've already reported.
-We'll do this by storing the list of TAs in the course's data directory.
-Then we can add all TAs again and count them.
+We'll do this by storing the list of TAs that we've reported to HR.
+Since this is a personal list, HR only wants to know which teacher the TA is 
+working for, we'll create a configuration variable for it:
+\begin{minted}{bash}
+nytid config hr.reported_TAs -s ~/afs/.nytid/reported_TAs
+\end{minted}
+(HR keep track if the TA is working for several teachers.)
+
+If we add all reported TAs to that file, when we want to report new ones,
+we can add all TAs again and count them.
 All TAs that occur only once are the new ones.
+
+We note that we must keep such a file for every [[course]] in 
+[[HR_REPORTING_COURSES]].
+Technically, the [[course]] is a regex for several courses.
+In most cases, we'll cover all our courses at once.
+But in the case of [[datintro]], the TAs are exempted from taking the mandatory 
+TA course, so we want to keep them separate.
+<<TA reporting variables>>=
+HR_REPORTING_COURSES="prg[im]${year} datintro${year}"
 <<output new TAs for [[course]]>>=
 tmp_list=$(mktemp)
-reported_TAs=$(nytid courses config ${course} data_path \
-                | sed "s/data_path = //")/reported_TAs
-test -e ${reported_TAs} && cp ${reported_TAs} ${tmp_list}
+reported_TAs=$(nytid config hr.reported_TAs \
+                | sed "s/^.* = //")/${course}.txt
+mkdir -p $(dirname ${reported_TAs})
+test -e "${reported_TAs}" && cp ${reported_TAs} ${tmp_list}
 
 current_users=$(nytid hr users ${course} --detailed)
-echo "$current_users" >> ${tmp_list}
+echo "${current_users}" >> ${tmp_list}
 new_TAs=$(sort ${tmp_list} | uniq -c | egrep "^\s*1\s" | sed "s/^\s*1\s//")
 
 <<skip if no new TAs>>
@@ -516,19 +559,22 @@ else
   echo ":"
 fi
 echo
-echo "$new_TAs" | egrep "^[[:digit:]]{12}"
+<<format list [[new_TAs]] for mail to HR>>
 echo
 echo
-echo "$current_users" > ${reported_TAs}
+echo "${current_users}" > "${reported_TAs}"
 @
 
-Since we need to access the config of each course to get the data directory, 
-we'll need to specify them separately, we can't have a regex for several 
-courses.
-<<TA reporting variables>>=
-# must be separate names, not regexes
-HR_REPORTING_COURSES="prgi${year} prgm${year} datintro${year}"
-@
+Each line contains personnummer, name and email.
+Except for users for whom we couldn't look up more detailed information.
+For them, we only have their username (or possibly an email address).
+This is usually due to them not being added to UG and Canvas yet, so we filter 
+out those lines.
+<<format list [[new_TAs]] for mail to HR>>=
+echo "$new_TAs" \
+| egrep -v "^\w+((\.\w+)?@(\w+\.)+\w+)?$" \
+@ (We add the [[\]] because we'll return to this later,
+in \cref{AutomaticallyCreateAmanuensis}.)
 
 We'll use the [[ta_mail]] function to send the email.
 Here we can prep the message we want to have in the email body.
@@ -551,7 +597,7 @@ ${list_of_TAs}
   " | mutt -s "nya assar ${course}" ${TA_MAIL_ADDR}
 }
 <<TA reporting variables>>=
-TA_MAIL_ADDR=hr-support@eecs.kth.se
+TA_MAIL_ADDR=dbosk@kth.se
 @
 
 This means that we should make the call to [[ta_mail]] as follows.
@@ -787,6 +833,47 @@ to give the TA a contract for the entire EECS school for instance\footnote{%
 }.
 
 
+\subsection{Automatically creating amanuensis 
+contracts}\label{AutomaticallyCreateAmanuensis}
+
+Now we can return to
+[[<<format list [[new_TAs]] for mail to HR>>]].
+When we format the list of new TAs, we can actually try to create amanuensis 
+contracts for them.
+If we get a contract, we use it.
+Otherwise we just include the line as it is and indicate hourly employment.
+
+When we extract the username, we must remember that some TAs are external.
+They have their external email as their username.
+We want to use their full email, but for KTH TAs we don't want to include their 
+[[@kth.se]] part.
+<<format list [[new_TAs]] for mail to HR>>=
+| (while read line; do\
+     email=$(echo "$line" | sed -E "s/^.*<(.*)>.*$/\1/"); \
+     user=$(echo "$email" | sed "s/@kth.se//"); \
+     contract=$(<<generate amanuensis contract draft for [[user]]>>); \
+     if [[ -z "${contract}" ]]; then echo "${line}"; \
+     else echo "${contract}"; fi; \
+   done)
+@
+
+Now, let's see how we can generate the amanuensis contract draft.
+We can do this by running [[nytid hr amanuensis create]], but there are some 
+things we need to consider.
+We want it detailed (not default for drafts), because that makes it easer to 
+see who it is.
+We want to look up by name in the recruitment system.
+We also get the email (which also includes the username) anyways, which can be 
+used to generate a non-draft contract if we need it.
+<<generate amanuensis contract draft for [[user]]>>=
+nytid hr amanuensis create --draft --user "${user}" --detailed
+@
+
+An improvement would be to check if the TA has submitted an application in 
+Varbi.
+And if so, we can create the contract with the correct start date.
+(And create a real contract, not a draft as above.)
+
 \subsection{Generating time sheets for hourly TAs}
 
 The TAs that are paid by the hour must submit time sheets according to HR.
@@ -800,7 +887,7 @@ nytid hr timesheets generate prg[im]24 --end 2024-10-01
 nytid hr timesheets generate prg[im]24 --end 2024-10-01 --amanuensis
 \end{minted}
 The first line will generate time sheets for all hourly TAs and include events 
-until end of September (it's not inclusive, so \(<\) 2023-10-01).
+until end of September (it's not inclusive, so \(<\) 2024-10-01).
 The second line does the same, but for amanuensis.
 
 Let's have a look at an example.

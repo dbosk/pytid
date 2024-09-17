@@ -12,7 +12,7 @@ nytid = "nytid.cli:cli"
 [tool.poetry.dependencies]
 python = "^3.8"
 requests = "^2.31.0"
-canvaslms = "^4.0"
+canvaslms = "^4.2"
 ladok3 = "^4.13"
 ics = "^0.7.2"
 openpyxl = "^3.0.10"

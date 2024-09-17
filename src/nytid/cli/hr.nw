@@ -329,14 +329,6 @@ if detailed:
   <<set [[user_obj]] to most detailed version possible of [[user]]>>
 else:
   user_obj = user
-
-try:
-  if detailed:
-    print(f"{user_obj} <{user_obj.email}>")
-  else:
-    print(user_obj)
-except AttributeError:
-  print(user_obj)
 <<set [[user_obj]] to most detailed version possible of [[user]]>>=
 user_obj = user
 try:
@@ -351,6 +343,19 @@ else:
   except Exception as err:
     logging.warning(f"Can't look up {user} ({user_obj}) in LADOK: {err}")
     pass
+@
+
+We note that some versions of the [[user_obj]] might already have an email 
+included (the Canvas version).
+In that case, we don't want to include the email address again.
+<<print detailed or non-detailed data about [[user]]>>=
+try:
+  if detailed and "@" not in str(user_obj):
+    print(f"{user_obj} <{user_obj.email}>")
+  else:
+    print(user_obj)
+except AttributeError:
+  print(user_obj)
 @
 
 
@@ -487,7 +492,9 @@ if hourly_summary:
       <<set [[user_obj]] to most detailed version possible of [[user]]>>
     else:
       user_obj = user
-    csvout.writerow([user_obj, to_hours(hours), "h"])
+    csvout.writerow([f"{user_obj} <{user_obj.email}>" \
+                        if "@" not in str(user_obj) else str(user_obj),
+                     to_hours(hours), "h"])
 @
 
 \section{Creating amanuensis contracts}
@@ -650,7 +657,8 @@ if detailed:
 else:
   user_obj = user
 
-row = [user_obj,
+row = [f"{user_obj} <{user_obj.email}>" \
+          if "@" not in str(user_obj) else str(user_obj),
        start.date(),
        end.date(),
        f"{round(100*hr.compute_percentage(*data))}%"]
@@ -1273,7 +1281,7 @@ except AttributeError as err:
 
 timesheet.make_xlsx(personnummer,
                     name,
-                    f"{user}@kth.se",
+                    f"{user}@kth.se" if not "@" in user else user,
                     added_events,
                     removed_events=removed_events,
                     course_leader=(course_responsible,

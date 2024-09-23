@@ -492,8 +492,14 @@ if hourly_summary:
       <<set [[user_obj]] to most detailed version possible of [[user]]>>
     else:
       user_obj = user
-    csvout.writerow([f"{user_obj} <{user_obj.email}>" \
-                        if "@" not in str(user_obj) else str(user_obj),
+
+    try:
+      user_text = f"{user_obj} <{user_obj.email}>" \
+                    if "@" not in str(user_obj) else str(user_obj)
+    except AttributeError:
+      user_text = str(user_obj)
+
+    csvout.writerow([user_text,
                      to_hours(hours), "h"])
 @
 
@@ -657,8 +663,13 @@ if detailed:
 else:
   user_obj = user
 
-row = [f"{user_obj} <{user_obj.email}>" \
-          if "@" not in str(user_obj) else str(user_obj),
+try:
+  user_text = f"{user_obj} <{user_obj.email}>" \
+                if "@" not in str(user_obj) else str(user_obj)
+except AttributeError:
+  user_text = str(user_obj)
+
+row = [user_text,
        start.date(),
        end.date(),
        f"{round(100*hr.compute_percentage(*data))}%"]

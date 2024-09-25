@@ -750,6 +750,8 @@ if push_start:
   push_start = push_start.astimezone()
 if set_start:
   set_start = set_start.astimezone()
+if end:
+  end = end.astimezone()
 if set_end:
   set_end = set_end.astimezone()
 @
@@ -973,20 +975,20 @@ def event_overlap(event1, event2):
 To print the data, we can do the same as when we generated the contract.
 We just need to set up the same variables and then do
 [[<<print [[amanuesis]] data for [[user]]>>]].
-However, we only need to set [[set_start]] and [[set_end]], since we want to 
-fix the start and end to those times as we computed before.
-So the other variables we can ignore, so we set them all to [[None]].
 <<print [[contract]]>>=
 user = contract["user"]
 booked = contract["events"]
 
-start = None
-push_start = None
-set_start = datetime.datetime.fromisoformat(contract["start"]) \
-              if contract["start"] else None
-end = None
-set_end = datetime.datetime.fromisoformat(contract["end"]) \
-            if contract["end"] else None
+start = datetime.datetime.fromisoformat(contract["start"]) \
+          if "start" in contract and contract["start"] else None
+push_start = datetime.datetime.fromisoformat(contract["push_start"]) \
+          if "push_start" in contract and contract["push_start"] else None
+set_start = datetime.datetime.fromisoformat(contract["set_start"]) \
+          if "set_start" in contract and contract["set_start"] else None
+end = datetime.datetime.fromisoformat(contract["end"]) \
+          if "end" in contract and contract["end"] else None
+set_end = datetime.datetime.fromisoformat(contract["set_end"]) \
+          if "set_end" in contract and contract["set_end"] else None
 
 amanuensis = hr.compute_amanuensis_data(booked,
                                         begin_date=start,

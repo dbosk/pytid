@@ -594,7 +594,8 @@ Här kommer en lista med nya assar.
         Daniel
 
 ${list_of_TAs}
-  " | mutt -s "nya assar ${course}" ${TA_MAIL_ADDR}
+  " | mutt -s "nya assar ${course}" ${TA_MAIL_ADDR} \
+    || echo "error: can't send nya assar email to ${TA_MAIL_ADDR}"
 }
 <<TA reporting variables>>=
 TA_MAIL_ADDR=dbosk@kth.se
@@ -1067,7 +1068,9 @@ timesheets_mail() {
   files="$*"
 
   mutt -s "time sheets for ${course}" \
-       -a ${files} -- ${addr}
+       -a ${files} -- ${addr} \
+    || echo "error: failed to send time sheets" \
+            "to ${addr} for ${course}: ${files}"
 }
 @
 
@@ -1162,7 +1165,8 @@ send_draft_hourly() {
 
   (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
     | mutt -s "preliminär tidrapport ${course}" ${email} \
-      -a "${reportfile}"
+      -a "${reportfile}" \
+    || echo "error: failed to send draft time sheet to ${email} for ${course}"
 }
 <<timesheet draft message>>=
 Hej, hej!
@@ -1221,7 +1225,8 @@ send_draft_amanuensis() {
 
   (echo "${MERTID_DRAFT_MSG}"; echo "${report}") \
     | mutt -s "jobbade timmar ${course}" ${email} \
-      -a "${reportfile}"
+      -a "${reportfile}" \
+    || echo "error: failed to send draft time sheet to ${email} for ${course}"
 }
 <<mertid draft message>>=
 Hej, hej!
@@ -1391,7 +1396,8 @@ eye on changes.
 <<nytid.monthly.sh>>=
 nytid hr amanuensis show --updates --no-event-summary --no-events \
   | <<filter blank lines between updates>> \
-  | mutt -s "status amanuensanställningar" dbosk@kth.se
+  | mutt -s "status amanuensanställningar" dbosk@kth.se \
+  || echo "error: failed to send amanuensis status"
 @
 
 We see in the example above that there is a space between the current contract 
@@ -1648,7 +1654,8 @@ notify_doublebooking() {
   events=$(cat)
   echo "
 <<construct the message for the double bookings>>
-" | mutt -s "dubbelbokningar i arbetsschemat" ${email}
+" | mutt -s "dubbelbokningar i arbetsschemat" ${email} \
+  || echo "error: failed to send double booking notification to ${email}"
 }
 @
 

@@ -548,7 +548,7 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
     <<skip if [[user_regex]] doesn't match [[user]]>>
     <<print [[amanuensis]] data for [[user]]>>
     if not draft:
-      <<store [[events]] in CSV format>>
+      <<store [[user_events]] in CSV format>>
 <<option [[draft]] to not store contract>>=
 draft: Annotated[bool, draft_opt] = False
 <<argument and option definitions>>=
@@ -794,7 +794,7 @@ We'll store the data in a file named after the TA and the current time.
 <<amanuensis iteration variables>>=
 path = pathlib.Path("./")
 <<set [[path]] to configured path for storing contracts>>
-<<store [[events]] in CSV format>>=
+<<store [[user_events]] in CSV format>>=
 filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
 
 path.mkdir(parents=True, exist_ok=True)
@@ -807,7 +807,7 @@ with open(path / filename, "w") as outfile:
              "end": end.isoformat() if end else None,
              "set_end": set_end.isoformat() if set_end else None,
              "course_regex": course_regex,
-             "events": events},
+             "events": user_events},
             outfile,
             indent=2)
 @

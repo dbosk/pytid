@@ -1150,6 +1150,7 @@ next_month=$(date +%Y-%m-01 -d "next month")
 send_draft_hourly() {
   course="$1"
   user="$2"
+  email=<<construct email from [[user]]>>
   report="$3"
 
   <<write [[report]] to tmpfile [[reportfile]]>>
@@ -1160,7 +1161,7 @@ send_draft_hourly() {
 "
 
   (echo "${TIMESHEETS_DRAFT_MSG}"; echo "${report}") \
-    | mutt -s "preliminär tidrapport ${course}" ${user}@kth.se \
+    | mutt -s "preliminär tidrapport ${course}" ${email} \
       -a "${reportfile}"
 }
 <<timesheet draft message>>=
@@ -1208,6 +1209,7 @@ Only the subject and message are different.
 send_draft_amanuensis() {
   course="$1"
   user="$2"
+  email=<<construct email from [[user]]>>
   report="$3"
 
   <<write [[report]] to tmpfile [[reportfile]]>>
@@ -1218,7 +1220,7 @@ send_draft_amanuensis() {
 "
 
   (echo "${MERTID_DRAFT_MSG}"; echo "${report}") \
-    | mutt -s "jobbade timmar ${course}" ${user}@kth.se \
+    | mutt -s "jobbade timmar ${course}" ${email} \
       -a "${reportfile}"
 }
 <<mertid draft message>>=
@@ -1348,6 +1350,22 @@ done
 <<filter lines with dates>>=
 grep -E "^[0-9]{4}-[0-9]{2}-[0-9]{2}"
 @
+
+Finally, we need to construct the email address.
+The email is constructed from the username.
+We have two cases, either the username already contains an [[@]], in which case 
+it is an email already.
+This happens when we have external TAs.
+Otherwise, we add the KTH domain, for who we use only the KTH username.
+<<construct email from [[user]]>>=
+$(if echo "${user}" | grep -q "@"; then
+    echo "${user}"
+  else
+    echo "${user}@kth.se"
+  fi)
+@
+
+
 
 
 \subsection{Tracking possible updates to contracts}
@@ -1626,10 +1644,11 @@ double booked events are read from standard input.
 <<helper functions for doublebooking>>=
 notify_doublebooking() {
   user="$1"
+  email=<<construct email from [[user]]>>
   events=$(cat)
   echo "
 <<construct the message for the double bookings>>
-" | mutt -s "dubbelbokningar i arbetsschemat" ${user}@kth.se
+" | mutt -s "dubbelbokningar i arbetsschemat" ${email}
 }
 @
 

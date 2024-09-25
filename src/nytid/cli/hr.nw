@@ -625,9 +625,9 @@ data = amanuensis[user]
 
 <<print a summary of the hours for [[user]] in [[data]]>>
 
-<<filter out [[events]] for [[user]]>>
+<<filter out [[user_events]] for [[user]]>>
 if event_summary:
-  <<print summary for each event type for [[user]]>>
+  <<print summary for each event type in [[user_events]]>>
 @
 
 Now, we want to have an option to control [[event_summary]].
@@ -759,27 +759,34 @@ if set_end:
 We also want the events that the TA booked to keep a record of how the hours
 were computed, so that we can keep track of changes and how that should affect
 the contract.
-<<filter out [[events]] for [[user]]>>=
-events = sheets.filter_events_by_TA(user, booked)
-events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0], booked)
-events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user], 
-                  events))
+<<filter out [[user_events]] for [[user]]>>=
+user_events = sheets.filter_events_by_TA(user, booked)
+user_events = filter(lambda x: user in sheets.get_booked_TAs_from_csv(x)[0],
+                     booked)
+user_events = list(map(lambda x: x[0:len(sheets.SIGNUP_SHEET_HEADER)] + [user],
+                       user_events))
 @
 
 Now we want to summarize the hours per event type.
 This helps us to get an overview of the changes.
 This also helps us to be compatible with the amanuensis spreadsheet used at the 
 department.
-<<print summary for each event type for [[user]]>>=
-for event, hours in hr.hours_per_event(events).items():
+<<print summary for each event type in [[user_events]]>>=
+for event, hours in hr.hours_per_event(user_events).items():
   csvout.writerow([event, to_hours(hours), "h"])
 @
 
 Finally, we also store them in CSV format so that we can easily extract them to 
 make computations later, if needed.
-However, we only need the [[start]] and [[end]] values of the contract, not the 
-[[set_start]] nor [[push_start]].
-This is because [[start]] and [[end]] are the final conclusion.
+We also need any [[start]], [[set_start]] or [[end]], [[set_end]] parameters.
+This is so that we can recompute the contract when we use the [[show]] command.
+For instance, we need to give both [[end]] and [[set_end]] to not include 
+anything beyond this date.
+Just [[end]] tells us to not include any events later than this, but we can 
+still have a contract that goes beyond this date.
+Setting both ends both contract and events to the same date.
+So to include the same intention in the updated contract, we need the intention 
+from the original contract.
 
 We'll store the data in a file named after the TA and the current time.
 <<amanuensis iteration variables>>=
@@ -793,7 +800,10 @@ path.mkdir(parents=True, exist_ok=True)
 with open(path / filename, "w") as outfile:
   json.dump({"user": user,
              "start": start.isoformat() if start else None,
+             "set_start": set_start.isoformat() if set_start else None,
+             "push_start": push_start.isoformat() if push_start else None,
              "end": end.isoformat() if end else None,
+             "set_end": set_end.isoformat() if set_end else None,
              "course_regex": course_regex,
              "events": events},
             outfile,

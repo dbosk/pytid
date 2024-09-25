@@ -778,9 +778,15 @@ for event, hours in hr.hours_per_event(user_events).items():
 
 Finally, we also store them in CSV format so that we can easily extract them to 
 make computations later, if needed.
-However, we only need the [[start]] and [[end]] values of the contract, not the 
-[[set_start]] nor [[push_start]].
-This is because [[start]] and [[end]] are the final conclusion.
+We also need any [[start]], [[set_start]] or [[end]], [[set_end]] parameters.
+This is so that we can recompute the contract when we use the [[show]] command.
+For instance, we need to give both [[end]] and [[set_end]] to not include 
+anything beyond this date.
+Just [[end]] tells us to not include any events later than this, but we can 
+still have a contract that goes beyond this date.
+Setting both ends both contract and events to the same date.
+So to include the same intention in the updated contract, we need the intention 
+from the original contract.
 
 We'll store the data in a file named after the TA and the current time.
 <<amanuensis iteration variables>>=
@@ -794,7 +800,10 @@ path.mkdir(parents=True, exist_ok=True)
 with open(path / filename, "w") as outfile:
   json.dump({"user": user,
              "start": start.isoformat() if start else None,
+             "set_start": set_start.isoformat() if set_start else None,
+             "push_start": push_start.isoformat() if push_start else None,
              "end": end.isoformat() if end else None,
+             "set_end": set_end.isoformat() if set_end else None,
              "course_regex": course_regex,
              "events": events},
             outfile,

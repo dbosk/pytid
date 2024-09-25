@@ -1280,11 +1280,12 @@ Let's first look at an example report.
 In this report I've added some events, but I have also removed some 
 events\footnote{%
   I haven't actually removed them.
-  Nytid thinks they're removed since I haven't included the datintro24 course 
-  in the regex that matches the courses.
+  Nytid thinks they're removed since I haven't included the [[datintro24]] 
+  course in the regex that matches the courses.
   I just used [[prg[im]24]], but should have used [[(datintro|prg[im])24]].
   Or simply used the default regex [[.*]], which includes all courses in 
   [[mine]].
+}.
 \begin{minted}{text}
 dbosk
 Added events

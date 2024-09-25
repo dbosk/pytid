@@ -1105,8 +1105,15 @@ for course in ${TIMESHEETS_COURSES}
 do
   <<send draft timesheets for [[course]]>>
 done
+@
+
+We note that we have to do all courses at the same time.
+Any TA who is in more than one course need all the courses to be included at 
+once.
+Otherwise the report in one course will say they have removed hours from the 
+other course.
 <<timesheet draft variables>>=
-TIMESHEETS_COURSES="datintro${year} prg[im]${year}"
+TIMESHEETS_COURSES="(datintro|prgi|prgm)${year}"
 @
 
 We can send drafts as follows.
@@ -1160,13 +1167,13 @@ Hej, hej!
 
 Du har ${sum_hours} timmar i bokningsarket för ${course}.
 
-$(if test ${sum_hours} -gt 0; then
+$(if <<[[sum_hours]] > 0>>; then
     echo "
 Den första nästa månad (${next_month}) kommer alla tider i
 bokningsarket att tidrapporteras automatiskt åt dig. För
 tillfället är det tiderna nedan (även bifogat som CSV-fil).
 " | fmt
-  elif test ${sum_hours} -lt 0; then
+  elif <<[[sum_hours]] < 0>>; then
     echo "
 Du har just nu fått mer betalt än du har jobbat. Du behöver
 jobba in de timmar som saknas.
@@ -1220,14 +1227,13 @@ Du har ändringar i bokningsarket för ${course} som skiljer sig
 från tiderna som finns i ditt amanuensavtal. Just nu summerar det
 till ${sum_hours} timmar. (Detaljerna finns nedan och i den bifogade
 CSV-filen.)
-
-$(if test ${sum_hours} -gt 0; then
+$(if <<[[sum_hours]] > 0>>; then
     echo "
 Du ligger på plus och kan rapportera in ${sum_hours} timmar som
 mertid i HR+. Men svara då på detta mail och meddela att du gör det.
 Bra jobbat!
 " | fmt
-  elif test ${sum_hours} -lt 0; then
+  elif <<[[sum_hours]] < 0>>; then
     echo "
 Du ligger på minus (fler avbokingar än nya bokningar), du måste se
 till att boka in dig på fler pass så att du kommer upp i de timmar
@@ -1243,6 +1249,22 @@ som står i ditt avtal.
 
 @
 
+Those comparisons can't be done with [[test ${sum_hours} -gt 0]],
+because the variable [[sum_hours]] is is a float.
+We must thus resort to using [[bc]]\footnote{%
+  The origin of this trick is an answer from a discussion on Stack Overflow, 
+  titled \enquote{How can I compare two floating point numbers in Bash?} and 
+  it's top answer at the time of writing:
+  \url{https://stackoverflow.com/a/31087503/1305099}.
+  We've adapted it slightly though, we don't seem to need the [[-l]] option.
+}.
+<<[[sum_hours]] > 0>>=
+(( $(echo "${sum_hours} > 0" | bc) ))
+<<[[sum_hours]] < 0>>=
+(( $(echo "${sum_hours} < 0" | bc) ))
+@ [[bc]] will output 0 or 1 as in false and true, respectively, while 
+[[((..))]] will convert it to correct error codes for the shell.
+
 For the TAs' convenience, we'll also add the data as a CSV file.
 It's the same contents as in the body of the email, but it's easier for them to 
 open it in a spreadsheet program to sum up the hours.
@@ -1253,18 +1275,76 @@ reportfile=$(mktemp --tmpdir ${user}.XXXX.csv)
 echo "${report}" > ${reportfile}
 @
 
+Now we'll try to sum the hours.
+Let's first look at an example report.
+In this report I've added some events, but I have also removed some 
+events\footnote{%
+  I haven't actually removed them.
+  Nytid thinks they're removed since I haven't included the datintro24 course 
+  in the regex that matches the courses.
+  I just used [[prg[im]24]], but should have used [[(datintro|prg[im])24]].
+  Or simply used the default regex [[.*]], which includes all courses in 
+  [[mine]].
+\begin{minted}{text}
+dbosk
+Added events
+2024-08-26	10:00:00	DD1317	Föreläsning, DD1317	2.0	1	2.0	300.0
+2024-08-26	13:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-08-26	15:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-08-27	08:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-08-28	10:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-08-29	13:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-02	08:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-09-03	13:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-03	15:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-05	15:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-09	08:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-09-11	10:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-16	15:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-09-17	12:15:00		Möte, online	0.75	1	0.75	112.5
+2024-09-17	15:00:00	DD1317	Föreläsning, DD1317	2.5	1	2.5	375.0
+2024-09-18	08:00:00	DD1317	Föreläsning, DD1317	2.0	1	2.0	300.0
+2024-09-18	10:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-18	15:00:00	DD1317	Övning, DD1317	2.0	2	4.0	600.0
+2024-09-19	08:00:00	DD1317	Övning, DD1317	2.0	2	4.0	600.0
+2024-09-20	13:00:00	DD1310	Datorlaboration, DD1310 redovisning online	2.0	1.5	3.0	450.0
+2024-09-20	13:00:00	DD1317	Övning, DD1317	2.0	2	4.0	600.0
+2024-09-20	15:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-23	10:00:00	DD1317	Föreläsning, DD1317	2.0	1	2.0	300.0
+2024-09-24	12:15:00		Möte, online	0.75	1	0.75	112.5
+2024-09-25	10:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+2024-09-26	08:00:00	DD1310	Övning, DD1310	2.0	2	4.0	600.0
+2024-09-27	10:00:00	DD1317	Övning, DD1317	2.0	2	4.0	600.0
+2024-09-30	08:00:00	DD1310	Föreläsning, DD1310	2.0	1	2.0	300.0
+
+Removed events
+2024-08-26	08:00:00	DD1301, DD1301, DD1301, DD1301, DD1337	Föreläsning, DD1301, DD1301, DD1301, DD1301, DD1337	-2.0	1	-2.0	-300.0
+2024-08-27	10:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+2024-08-27	13:00:00	DD1301, DD1337	Övning, DD1301, DD1337	-2.0	2	-4.0	-600.0
+2024-08-27	15:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+2024-08-28	13:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+2024-08-28	15:00:00	DD1337	Föreläsning, DD1337	-2.0	1	-2.0	-300.0
+2024-08-29	15:00:00	DD1301, DD1337	Övning, DD1301, DD1337	-2.0	2	-4.0	-600.0
+2024-08-30	08:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+2024-09-02	10:00:00	DD1301, DD1337	Övning, DD1301, DD1337	-2.0	2	-4.0	-600.0
+2024-09-02	13:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+2024-09-03	08:00:00	DD1301	Övning, DD1301	-2.0	2	-4.0	-600.0
+\end{minted}
 To compute the sum of the hours, we can add the correct column (7) of the CSV 
 file.
-We only want the hour data, so we only grep for lines with numbers (negative, 
-positive and floats).
+We only want the hour data, which are lines with dates.
+On other lines, column 7 might not even exist.
 Then we sum them up using [[bc]].
 <<compute [[sum_hours]] from [[reportfile]]>>=
 sum_hours=0
 for hours in $(cat "${reportfile}" \
-                | cut -f 7 | egrep "^-?[0-9]+\.?[0-9]*$")
+                | <<filter lines with dates>> \
+                | cut -f 7)
 do
-  sum_hours=$(echo $sum_hours + $term | bc)
+  sum_hours=$(echo $sum_hours + $hours | bc)
 done
+<<filter lines with dates>>=
+grep -E "^[0-9]{4}-[0-9]{2}-[0-9]{2}"
 @
 
 

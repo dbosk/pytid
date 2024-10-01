@@ -1655,7 +1655,8 @@ We let this command just print a summary of each time sheet.
 def cli_show_timesheets(<<argument [[user_regex]] to match TAs>> = ".*",
                         <<option [[reverse]] to adjust sort order>>,
                         <<option [[all]] to show all timesheets>>,
-                        <<option for CSV delimiter>>):
+                        <<option for CSV delimiter>>,
+                        <<option for [[date_regex]] to filter by date>>,):
   """
   Shows stored time sheets for TAs.
   """
@@ -1665,6 +1666,7 @@ def cli_show_timesheets(<<argument [[user_regex]] to match TAs>> = ".*",
   <<set [[timesheets]] depending on [[all]]>>
   for timesheet in timesheets:
     <<skip if [[user_regex]] doesn't match [[timesheet]]>>
+    <<skip if [[date_regex]] doesn't match [[timesheet]]>>
     <<skip if we've already printed a timesheet for [[user]]>>
     <<print [[timesheet]]>>
 <<option [[reverse]] to adjust sort order>>=
@@ -1691,6 +1693,8 @@ timesheets = sorted(timesheets_dir.glob(f"*.json"),
 @
 
 We can check if the time sheet file matches the user's username.
+For example, the file name might be
+[[dbosk.2024-09-26T14:28:39.434834.json]].
 <<skip if [[user_regex]] doesn't match [[timesheet]]>>=
 username = timesheet.name.split(".")[0]
 if not user_pattern.match(username):
@@ -1699,14 +1703,32 @@ if not user_pattern.match(username):
 user_pattern = re.compile(user_regex)
 @
 
+In the same fashion, we want to filter on dates.
+<<skip if [[date_regex]] doesn't match [[timesheet]]>>=
+if date_regex and not date_pattern.match(timesheet.name.split(".")[1]):
+  continue
+<<timesheets iteration variables>>=
+if date_regex:
+  date_pattern = re.compile(date_regex)
+<<option for [[date_regex]] to filter by date>>=
+date_regex: Annotated[str, date_regex_opt] = None
+<<argument and option definitions>>=
+date_regex_opt = typer.Option(help="Filter time sheets by date. This is a "
+                                   "regex matching the date of the time "
+                                   "sheet.")
+@
+
+
 In the same fashion, we can check if we've already printed a time sheet for the 
 user.
 If we haven't printed one, we add the user to the set of printed users and 
 proceed to the printing step.
 We need to do like this since we might want to print the newest time sheet of 
 several matching users.
+Consequently, we don't want to skip when we want to print all time sheets for 
+the TAs.
 <<skip if we've already printed a timesheet for [[user]]>>=
-if username in printed_users:
+if username in printed_users and not all:
   continue
 else:
   printed_users.add(username)

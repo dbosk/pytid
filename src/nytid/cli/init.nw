@@ -1385,19 +1385,6 @@ $(if echo "${user}" | grep -q "@"; then
 
 
 
-\subsection{Sending the final timesheet to hourly TAs}
-
-Emelie pointed out that it would be nice to have the final version of the time 
-sheet that was sent for payment processing.
-We'll add this to the monthly script, after we've sent the time sheets.
-This way, we can use the [[nytid hr timesheets show]] command.
-
-We'll go through the list of all TAs.
-For each TA we check if there is a current time sheet, if so, we send them a 
-copy.
-<<nytid.monthly.sh>>=
-@
-
 
 \subsection{Tracking possible updates to contracts}
 

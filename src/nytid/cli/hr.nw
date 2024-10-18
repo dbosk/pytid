@@ -265,9 +265,12 @@ for user in users:
 
 Now we can include the users without a login ID in the error message if we 
 don't find any user.
+We want the users to be printed in a nice format, one line each and indented by 
+two spaces.
 <<raise an error if the user wasn't found>>=
+users_without_login_id_str = "\n  ".join(map(str, users_without_login_id))
 raise ValueError(f"Can't find {username} in Canvas, but the following users "
-                 f"don't have a login ID: {users_without_login_id}")
+                 f"don't have a login ID: {users_without_login_id_str}")
 @
 
 It's very straightforward to get a LADOK student object once we have the Canvas

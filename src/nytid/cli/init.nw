@@ -411,7 +411,7 @@ The same if the UG group is empty (since that would regex match any course in
 UG).
 <<look up [[ug_path]], or skip if none exists>>=
 ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
-            | sed "s/.*= //")
+          | sed "s/.*= //")
 test "$?" -eq 0 || continue
 test -n "${ug_path}" || continue
 @
@@ -878,7 +878,16 @@ And if so, we can create the contract with the correct start date.
 
 \subsection{Generating time sheets for hourly TAs}
 
-The TAs that are paid by the hour must submit time sheets according to HR.
+Now with the new HR system, HR+ 8, the TAs should report their hours directly 
+in that system.
+Then the course responsible should approve them.
+This means that we no longer need the [[nytid hr timesheets generate]] 
+functionality as it was originally intended.
+But we can describe how it works, in case we can use it for something else.
+
+The idea of the previous system was as follows.
+The TAs that are paid by the hour previously had to submit time sheets 
+according to HR.
 However, then we must check them.
 It's better that we generate them automatically from the sign-up sheet, then we 
 know they're correct as long as the sign-up sheet is correct.
@@ -917,7 +926,7 @@ end date.
 Another thing to note is that we used the [[--draft]] option.
 This will generate a draft time sheet directly in the terminal.
 Without the draft option, we would get a file with the signed time sheet, you 
-can see it in \cref{FigTimesheet}.
+can see the signed time sheet in \cref{FigTimesheet}.
 
 \begin{figure}
   \centering
@@ -955,7 +964,8 @@ This way we can do calculations on the data, which we need to do (see
 
 With this construction, we can automate the generation of time sheets on a 
 monthly basis.
-<<nytid.monthly.sh>>=
+However, we no longer need this, this is just for reference.
+<<sending signed time sheets>>=
 <<timesheets variables>>
 
 for course in ${TIMESHEETS_COURSES}
@@ -1089,10 +1099,13 @@ reference.
 
 \subsection{Send time-sheet drafts to the TAs}
 
-We shouldn't send the time sheets to HR before the TAs have had a chance to 
-check them.
-They will sometimes have things to update due to changes, even though all 
+One thing we can continue doing, despite the new HR+ 8 system, is to send 
+drafts of the time sheets to the TAs.
+Then the TAs can use them as a base to report their hours in HR+ 8.
+
+The TAs will sometimes have things to update due to changes, even though all 
 changes should be made in advance.
+So we want them to update the sheet before they submit to HR+.
 The same goes for the amanuensis, we want to send them a draft of the mertid 
 that they've done.
 We want them to keep track of how many hours too many or too few they've 
@@ -1100,7 +1113,7 @@ worked.
 And give them the option to report the hours to get paid.
 
 The structure of the code is similar to that of
-[[<<nytid.monthly.sh>>]].
+[[<<sending signed time sheets>>]].
 <<nytid.premonthly.sh>>=
 <<timesheet draft variables>>
 <<timesheet draft functions>>
@@ -1175,14 +1188,14 @@ Du har ${sum_hours} timmar i bokningsarket för ${course}.
 
 $(if <<[[sum_hours]] > 0>>; then
     echo "
-Den första nästa månad (${next_month}) kommer alla tider i
-bokningsarket att tidrapporteras automatiskt åt dig. För
-tillfället är det tiderna nedan (även bifogat som CSV-fil).
+Du kan rapportera in timmarna nedan i KTH HR. Gör det kring
+månadsskiftet för att få betalt i slutet av ${next_month}.
+Tiderna finns även bifogat som CSV-fil.
 " | fmt
   elif <<[[sum_hours]] < 0>>; then
     echo "
 Du har just nu fått mer betalt än du har jobbat. Du behöver
-jobba in de timmar som saknas.
+jobba in de timmar som saknas. Se nedan.
 " | fmt
   else
     echo "
@@ -1190,8 +1203,8 @@ Du har ändrat pass, men alla timmar går jämnt ut.
 " | fmt
   fi)
 
-Om något är fel, uppdatera bokningsarket eller svara på detta
-mail snarast!
+Om något är fel, uppdatera bokningsarket och svara på detta
+mail!
 
           Daniel
 
@@ -1238,7 +1251,7 @@ CSV-filen.)
 $(if <<[[sum_hours]] > 0>>; then
     echo "
 Du ligger på plus och kan rapportera in ${sum_hours} timmar som
-mertid i HR+. Men svara då på detta mail och meddela att du gör det.
+mertid i KTH HR. Men svara då på detta mail och meddela att du gör det.
 Bra jobbat!
 " | fmt
   elif <<[[sum_hours]] < 0>>; then

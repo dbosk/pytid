@@ -13,7 +13,7 @@ nytid = "nytid.cli:cli"
 python = "^3.8"
 requests = "^2.31.0"
 canvaslms = "^4.2"
-ladok3 = "^4.13"
+ladok3 = "^4.14"
 ics = "^0.7.2"
 openpyxl = "^3.0.10"
 Pillow = ">=9.3,<11.0"
@@ -24,6 +24,7 @@ cachetools = "^5.3.1"
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4,<9.0"
 snoop = ">=0.4.3,<0.7.0"
+pysnooper = "^1.2.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

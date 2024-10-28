@@ -85,6 +85,8 @@ open files inside that directory or subdirectories.
 import os
 import pathlib
 
+<<StorageRoot helper functions>>
+
 class StorageRoot:
   """
   Abstracts the storage system. This allows us to use paths relative to a root. 
@@ -156,11 +158,16 @@ open the file.
 This opener will ensure that the filename is relative to the root.
 Now, this requires the directory to be opened.
 We will ensure it's opened.
+We also want to ensure that the parent directories of the file to be opened 
+exist.
+But only when the file is opened for writing.
 <<StorageRoot methods>>=
 def __opener(self, path, flags):
   """The opener, used internally"""
   if not self.__dir_fd:
     self.open_dir()
+  if (os.O_WRONLY | os.O_CREAT) & flags:
+    <<create parent directories along [[path]] if they don't exist>>
   return os.open(path, flags, dir_fd=self.__dir_fd)
 @
 <<StorageRoot constructor body>>=
@@ -236,6 +243,71 @@ def test_non_existing():
 
     with open(f"{new_root_dir}/test.txt") as f:
       assert f.read() == test_string
+@
+
+Now, it's not as easy to create the parents of the file to be opened.
+The [[os.makedirs]] function doesn't have a file descriptor argument, to root 
+at the correct directory.
+But the function [[os.mkdir]] does.
+<<StorageRoot helper functions>>=
+def makedirs(path, dir_fd=None):
+  """
+  Create parent directories along `path` if they don't exist.
+  """
+  if not isinstance(path, pathlib.Path):
+    path = pathlib.Path(path)
+
+  for i in range(len(path.parts)):
+    try:
+      # we need i+1 since it's a slice
+      os.mkdir(pathlib.Path(*path.parts[:i+1]), dir_fd=dir_fd)
+    except FileExistsError:
+      pass
+<<create parent directories along [[path]] if they don't exist>>=
+# path is the file, we only want to create its parent directories
+makedirs(pathlib.Path(path).parent, dir_fd=self.__dir_fd)
+@
+
+Let's test it.
+We'll need to do this with the [[os]] file system functions.
+<<test functions>>=
+def test_makedirs():
+  test_file = "non-existing/more-non-existing/final-non-existing/test.txt"
+  test_path = pathlib.Path(test_file).parent
+
+  # open the root
+  dir_fd = os.open(root_dir.name, os.O_RDONLY)
+
+  # open the file for writing, shouldn't work
+  try:
+    file_fd = os.open(test_file, os.O_WRONLY|os.O_CREAT, dir_fd=dir_fd)
+    os.write(file_fd, b"test")
+  except FileNotFoundError:
+    assert True
+  else:
+    os.close(file_fd)
+
+  makedirs(test_path, dir_fd=dir_fd)
+
+  # open the file for writing, again, should work now
+  try:
+    file_fd = os.open(test_file, os.O_WRONLY|os.O_CREAT, dir_fd=dir_fd)
+    os.write(file_fd, b"test")
+  except FileNotFoundError:
+    assert False
+  else:
+    os.close(file_fd)
+
+  # open the file for reading, should work
+  try:
+    file_fd = os.open(test_file, os.O_RDONLY, dir_fd=dir_fd)
+    assert os.read(file_fd, 4) == b"test"
+  except FileNotFoundError:
+    assert False
+  else:
+    os.close(file_fd)
+
+  os.close(dir_fd)
 @
 
 

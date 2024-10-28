@@ -29,12 +29,15 @@ course schedule.
 It outputs a CSV that can be imported to Google Sheets that the TAs can fill.
 <<functions>>=
 def generate_signup_sheet(outfile, url,
+                          root=None,
                           needed_TAs=nytid.signup.utils.needed_TAs, 
                           event_filter=nytid.schedules.event_filter):
   """
   Input:
   - outfile is a string containing the file name used for output.
   - url is the URL to the ICS-formatted calendar.
+  - root is a storage root, the result of nytid.storage.open_root(...),
+    if provided opens relative to it.
   - needed_TAs is a function computing the number of needed TAs based on the 
     event. The default is the needed_TAs function in this module,
   - event_filter is a function that filters events, takes a list of events as 
@@ -43,7 +46,12 @@ def generate_signup_sheet(outfile, url,
   Output:
   Returns nothing. Writes output to {outfile}.csv.
   """
-  with open(outfile, "w") as out:
+  if root:
+    file_object = root.open(outfile, "w")
+  else:
+    file_object = open(outfile, "w")
+
+  with file_object as out:
     csvout = csv.writer(out, delimiter="\t")
     calendar = nytid.schedules.read_calendar(url)
 
@@ -131,14 +139,22 @@ In both cases we want to return the rows of the CSV.
 
 We simply read the rows from the file.
 <<functions>>=
-def read_signup_sheet_from_file(filename):
+def read_signup_sheet_from_file(filename, root=None):
   """
-  Input: filename is a string containing the file name of the CSV file of the 
-  sign-up sheet.
+  Input:
+  - filename is a string containing the file name of the CSV file of the 
+    sign-up sheet.
+  - root is a storage root, the result of nytid.storage.open_root(...), if 
+    provided opens relative to it.
 
   Output: All the rows of the CSV as a Python list.
   """
-  with open(filename, "r") as f:
+  if root:
+    file_object = root.open(filename, "r")
+  else:
+    file_object = open(filename, "r")
+
+  with file_object as f:
     csvfile = csv.reader(f)
     return list(filter(any, list(csvfile)[1:]))
 @

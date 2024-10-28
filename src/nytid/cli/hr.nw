@@ -35,6 +35,7 @@ from nytid import courses as courseutils
 from nytid import schedules as schedutils
 from nytid.signup import hr
 from nytid.signup import sheets
+from nytid import storage
 
 <<imports>>
 <<constants>>
@@ -546,12 +547,13 @@ def cli_amanuens_create(<<option for TAs to filter for>>,
                                           begin_date=start,
                                           end_date=end)
 
-  <<amanuensis iteration variables>>
-  for user in amanuensis:
-    <<skip if [[user_regex]] doesn't match [[user]]>>
-    <<print [[amanuensis]] data for [[user]]>>
-    if not draft:
-      <<store [[user_events]] in CSV format>>
+  <<with [[root]] as the configured path for storing contracts>>:
+    <<amanuensis iteration variables>>
+    for user in amanuensis:
+      <<skip if [[user_regex]] doesn't match [[user]]>>
+      <<print [[amanuensis]] data for [[user]]>>
+      if not draft:
+        <<store [[user_events]] in CSV format>>
 <<option [[draft]] to not store contract>>=
 draft: Annotated[bool, draft_opt] = False
 <<argument and option definitions>>=
@@ -794,15 +796,12 @@ So to include the same intention in the updated contract, we need the intention
 from the original contract.
 
 We'll store the data in a file named after the TA and the current time.
-<<amanuensis iteration variables>>=
-path = pathlib.Path("./")
-<<set [[path]] to configured path for storing contracts>>
 <<store [[user_events]] in CSV format>>=
 filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
 
 path.mkdir(parents=True, exist_ok=True)
 
-with open(path / filename, "w") as outfile:
+with root.open(filename, "w") as outfile:
   json.dump({"user": user,
              "start": start.isoformat() if start else None,
              "set_start": set_start.isoformat() if set_start else None,
@@ -823,13 +822,16 @@ We'll let the user configure this location in the config.
 import typerconf
 <<constants>>=
 AMANUENSIS_CONTRACT_PATH = "hr.amanuensis.contract_dir"
-<<set [[path]] to configured path for storing contracts>>=
+<<with [[root]] as the configured path for storing contracts>>=
+path = pathlib.Path("./")
 try:
   path = pathlib.Path(typerconf.get(AMANUENSIS_CONTRACT_PATH))
 except KeyError as err:
   logging.warning(f"Can't find {AMANUENSIS_CONTRACT_PATH} in config, "
                   f"storing contract data in `{path}`. Set by running "
                   f"`nytid config {AMANUENSIS_CONTRACT_PATH} -s <path>`.")
+
+with storage.open_root(path) as root
 @
 
 
@@ -891,9 +893,10 @@ def get_valid_contracts(user_regex):
   contracts = []
 
   <<let [[contracts_path]] be the configured path for storing contracts>>
-  <<let [[users]] be the set of users with contracts matching [[user_regex]]>>
-  for user in users:
-    <<add the valid contracts for [[user]] to [[contracts]]>>
+  with storage.open_root(contracts_path) as root:
+    <<let [[users]] be the set of users with contracts matching [[user_regex]]>>
+    for user in users:
+      <<add the valid contracts for [[user]] to [[contracts]]>>
 
   return contracts
 @
@@ -905,7 +908,7 @@ filenames.
 <<let [[users]] be the set of users with contracts matching [[user_regex]]>>=
 users = set()
 user_pattern = re.compile(user_regex)
-for contract in contracts_path.glob("*.json"):
+for contract in root.path.glob("*.json"):
   username = contract.name.split(".")[0]
   if user_pattern.match(username):
     users.add(username)
@@ -922,12 +925,12 @@ for the spring semester, both of those contracts are considered valid.
 <<add the valid contracts for [[user]] to [[contracts]]>>=
 user_contracts = []
 
-contract_files = sorted(contracts_path.glob(f"{user}.*.json"),
+contract_files = sorted(root.path.glob(f"{user}.*.json"),
                         key=lambda x: x.name)
 prev_contract = None
 for contract_file in contract_files:
   try:
-    with open(contract_file) as infile:
+    with root.open(contract_file) as infile:
       contract = json.load(infile)
   except Exception as err:
     logging.warning(f"Can't read {contract_file}, skipping: {err}")
@@ -1616,13 +1619,14 @@ JSON file.
 This is similar to how we store the amanuensis contracts.
 <<store [[added_events]], [[removed_events]] for [[user]] as reported>>=
 timesheets_dir = pathlib.Path(typerconf.get(TIMESHEETS_DIR_PATH))
-filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
-with open(timesheets_dir / filename, "w") as outfile:
-  json.dump({"user": user,
-             "added_events": added_events,
-             "removed_events": removed_events},
-            outfile,
-            indent=2)
+with storage.open_root(timesheets_dir) as root:
+  filename = f"{user}.{datetime.datetime.now().isoformat()}.json"
+  with root.open(filename, "w") as outfile:
+    json.dump({"user": user,
+               "added_events": added_events,
+               "removed_events": removed_events},
+               outfile,
+               indent=2)
 <<constants>>=
 TIMESHEETS_DIR_PATH = "hr.timesheets.timesheets_dir"
 @
@@ -1634,17 +1638,18 @@ We simply read each time sheet file and add [[added_events]] to
 This way [[all_prev_events]] represents the correctly reported history.
 <<add [[user]]'s previously reported events to [[all_prev_events]]>>=
 timesheets_dir = pathlib.Path(typerconf.get(TIMESHEETS_DIR_PATH))
-for timesheet_file in timesheets_dir.glob(f"{user}.*.json"):
-  try:
-    with open(timesheet_file) as infile:
-      timesheet_data = json.load(infile)
-  except Exception as err:
-    logging.warning(f"Can't read {timesheet_file}, skipping: {err}")
-    continue
+with storage.open_root(timesheets_dir) as root:
+  for timesheet_file in root.path.glob(f"{user}.*.json"):
+    try:
+      with root.open(timesheet_file) as infile:
+        timesheet_data = json.load(infile)
+    except Exception as err:
+      logging.warning(f"Can't read {timesheet_file}, skipping: {err}")
+      continue
 
-  all_prev_events += timesheet_data["added_events"]
-  all_prev_events = remove_events(all_prev_events,
-                                  timesheet_data["removed_events"])
+    all_prev_events += timesheet_data["added_events"]
+    all_prev_events = remove_events(all_prev_events,
+                                    timesheet_data["removed_events"])
 @
 
 
@@ -1664,14 +1669,14 @@ def cli_show_timesheets(<<argument [[user_regex]] to match TAs>> = ".*",
   Shows stored time sheets for TAs.
   """
   timesheets_dir = pathlib.Path(typerconf.get(TIMESHEETS_DIR_PATH))
-
-  <<timesheets iteration variables>>
-  <<set [[timesheets]] depending on [[all]]>>
-  for timesheet in timesheets:
-    <<skip if [[user_regex]] doesn't match [[timesheet]]>>
-    <<skip if [[date_regex]] doesn't match [[timesheet]]>>
-    <<skip if we've already printed a timesheet for [[user]]>>
-    <<print [[timesheet]]>>
+  with storage.open_root(timesheets_dir) as timesheets_storage:
+    <<timesheets iteration variables>>
+    <<set [[timesheets]] depending on [[all]]>>
+    for timesheet in timesheets:
+      <<skip if [[user_regex]] doesn't match [[timesheet]]>>
+      <<skip if [[date_regex]] doesn't match [[timesheet]]>>
+      <<skip if we've already printed a timesheet for [[user]]>>
+      <<print [[timesheet]]>>
 <<option [[reverse]] to adjust sort order>>=
 reverse: Annotated[bool, reverse_opt] = False
 <<argument and option definitions>>=
@@ -1690,7 +1695,7 @@ the first one.
 if not all:
   reverse = True
 
-timesheets = sorted(timesheets_dir.glob(f"*.json"),
+timesheets = sorted(timesheets_storage.path.glob("*.json"),
                     key=lambda x: x.name,
                     reverse=reverse)
 @
@@ -1754,7 +1759,7 @@ else:
 
 csvout.writerow([timesheet.name])
 
-with open(timesheet) as infile:
+with timesheets_storage.open(timesheet) as infile:
   timesheet_data = json.load(infile)
 
 added_events = timesheet_data["added_events"]

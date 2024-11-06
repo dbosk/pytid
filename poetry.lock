@@ -604,13 +604,13 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-ena
 
 [[package]]
 name = "ladok3"
-version = "4.14"
+version = "4.15"
 description = "Python wrapper and CLI for the LADOK3 REST API."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "ladok3-4.14-py3-none-any.whl", hash = "sha256:b5c66423ad2298af983f0766248fd8226a59aa70fff0cc5c87f4e1733700c4ab"},
-    {file = "ladok3-4.14.tar.gz", hash = "sha256:00305947f39dda8215fc998febfee1984b37e2d41a1cb3d5d3652b523cb6dee6"},
+    {file = "ladok3-4.15-py3-none-any.whl", hash = "sha256:00e3535d62e8f29696fc422e70188aa9af6a88113b2f2f4d067116123e863c23"},
+    {file = "ladok3-4.15.tar.gz", hash = "sha256:e6629ef702e50641a5cd53dffa2c2251c9b716610dae9c5e911cab3055c49dfb"},
 ]
 
 [package.dependencies]
@@ -621,7 +621,7 @@ cryptography = ">=41.0.3,<42.0.0"
 keyring = ">=24.2.0,<25.0.0"
 requests = ">=2.31.0,<3.0.0"
 urllib3 = ">=1.26.9,<2.0.0"
-weblogin = ">=1.9,<2.0"
+weblogin = ">=1.10,<2.0"
 
 [[package]]
 name = "lxml"
@@ -1209,13 +1209,13 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "weblogin"
-version = "1.9"
+version = "1.10"
 description = "Automates logging into web UIs to access unofficial APIs"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weblogin-1.9-py3-none-any.whl", hash = "sha256:81829fca16c5a7e079eb757e54afa18b21d1f88ac3f3e03536020664f3ebbdad"},
-    {file = "weblogin-1.9.tar.gz", hash = "sha256:85fb49c066adc0de011aa7dadb56588aa68ccc330b636efdc5ea86934fc3012f"},
+    {file = "weblogin-1.10-py3-none-any.whl", hash = "sha256:a2f05e44153b4c233cdb9a096be5a672967ac1da0497458d3e416d73e11b69cd"},
+    {file = "weblogin-1.10.tar.gz", hash = "sha256:3de0b7f765164d7a89050299ed0a7d39bcf2293bbf4a5afaa67cdab1d2d1dc97"},
 ]
 
 [package.dependencies]
@@ -1244,4 +1244,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "929e48d4d8e16c6afad105483d3c4268d1685d598abc81984a2f09f761616eb3"
+content-hash = "5c47c8e07cf512b2c376b2f1eb92b065c59a9f897e76cae8de7e56bd5da73aee"

@@ -1710,8 +1710,15 @@ nytid schedule show --user "" --end $(date +%Y-%m-%d -d "next year") \
 | <<[[sed]] out the TAs from each line>> \
 | tr " " "\n" | tr -d "\r" \
 | sort -u
+@
+
+To extract the TAs, we simply remove the extra text.
+We want to remove the \enquote{Needed TAs:} and \enquote{Booked TAs:} parts.
+We also want to remove everything before \enquote{Booked TAs:}.
+And if there are no TAs booked, it will output \enquote{None}---which we also 
+want to remove.
 <<[[sed]] out the TAs from each line>>=
-sed -E "s/.*Booked TAs: //g" \
+sed -E "s/.*Booked TAs: (None)?//g" \
 | sed -E "s/; Reserve TAs://g"
 @
 

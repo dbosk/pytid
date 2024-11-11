@@ -1712,7 +1712,7 @@ nytid schedule show --user "" --end $(date +%Y-%m-%d -d "next year") \
 | sort -u
 <<[[sed]] out the TAs from each line>>=
 sed -E "s/.*Booked TAs: //g" \
-| sed -E "s/; Reserve TAs://g" \
+| sed -E "s/; Reserve TAs://g"
 @
 
 Finally, we can add the TAs to the UG group.

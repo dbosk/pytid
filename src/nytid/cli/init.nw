@@ -353,114 +353,6 @@ me.email = dbosk@kth.se
 me.signature = /home/dbosk/Pictures/signature.png
 \end{minted}
 
-\subsection{Adding TAs to UG}
-
-When we have the TAs, we want them to have access to the course in Canvas.
-It adds all users added to a course in UG to the course in Canvas.
-
-We can list the TAs using the [[nytid hr users]] command.
-Let's consider the output from [[prgi23]].
-\begin{minted}{text}
-$ nytid hr users prgi23
-dbosk
-teachinga
-assarsd
-[...]
-$
-\end{minted}
-We can use this in to add them to UG.
-
-To do this we want to do the following for all of our courses.
-<<nytid.hourly.sh>>=
-### Set up TAs in UG ###
-
-for course in $(nytid courses mine ls)
-do
-  <<skip if [[course]] has no sign-up sheet>>
-  <<look up [[ug_path]], or skip if none exists>>
-  <<look up [[TAs]]>>
-  <<add TAs in [[TAs]] to UG at [[ug_path]]>>
-done
-@
-
-This only makes sense for courses with sign-up sheets.
-If a course doesn't have any sign-up sheet, we skip it since there will not be 
-any TAs who could sign up.
-One way to check if a course has a sign-up sheet is the following.
-<<skip if [[course]] has no sign-up sheet>>=
-nytid courses config ${course} signupsheet.url 2>/dev/null | \
-  grep -q "signupsheet.url = " \
-    || continue
-@ However, we can't do this if [[${course}]] is a regex matching several 
-courses.
-The config command must match a course exactly, not by regex.
-Fortunately, that's what we doo in the loop above.
-
-We need the UG group for the TAs in the course, in the case of [[prgi24]] it's
-\begin{center}
-[[edu.courses.DD.DD1317.20242.1.assistants]].
-\end{center}
-We store this in the config of [[prgi24]]:
-\begin{minted}{bash}
-nytid courses config prgi24 ug.assistants \
-  -s edu.courses.DD.DD1317.20232.1.assistants
-\end{minted}
-That way, we can read it from the config.
-If there is no UG group specified in the cours config, we skip the course.
-The same if the UG group is empty (since that would regex match any course in 
-UG).
-<<look up [[ug_path]], or skip if none exists>>=
-ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
-          | sed "s/.*= //")
-test "$?" -eq 0 || continue
-test -n "${ug_path}" || continue
-@
-
-Note that we could've named [[ug.assistants]] anything, it's just a name we 
-chose in the config.
-It has no special meaning to Nytid, only to our scripts.
-The point is, however, that we can add our own things to the config.
-Same thing with storing files in a course's data directory.
-
-Let's continue.
-We can look up the TAs in the same way as we did above.
-<<look up [[TAs]]>>=
-TAs=$(nytid hr users ${course})
-if test "$?" -ne 0; then
-  echo "error: can\'t read users for ${course} in nytid"
-  continue
-fi
-@
-
-Finally, we can add the TAs to the UG group.
-We add one by one, in case of errors.
-If we set all at once, any error will cause no TA to be added.
-One at a time, then only the TA causing the error will not be added.
-<<add TAs in [[TAs]] to UG at [[ug_path]]>>=
-if test -n "${TAs}"; then
-  for ta in ${TAs}; do
-    <<continue to next if [[ta]] is not a KTH user>>
-    kthutils ug members add "${ug_path}" "${ta}"
-  done
-fi
-@
-
-Sometimes we get external TAs in the course.
-They have no KTH account, so we can't add them to UG.
-But IT adds them to Canvas manually, we don't have to do that.
-These external users should be skipped.
-IT uses their external email as username for Canvas, so we can check for 
-[[@]]-signs in the username.
-(And if someone has added [[@kth.se]] or [[@ug.kth.se]], we'll rewrite them.)
-<<continue to next if [[ta]] is not a KTH user>>=
-if echo "${ta}" | grep -q "@"; then
-  ta=$(echo "${ta}" | sed -E "s/@(ug\.)?kth\.se//")
-fi
-if echo "${ta}" | grep -q "@"; then
-  continue
-fi
-@
-
 \subsection{Generating data interesting for HR}
 
 % hr               Manage sign-up sheets for teaching                          
@@ -475,8 +367,18 @@ have.
 Also, HR doesn't care about which courses the TAs are working on.
 But we can automate part of the process.
 
-As mentioned above, we can list the TAs using the [[nytid hr users]] command.
-There is an option [[--detailed]] that is useful for this.
+We can list the TAs using the [[nytid hr users]] command.
+Let's consider the output from [[prgi23]].
+\begin{minted}{text}
+$ nytid hr users prgi23
+dbosk
+teachinga
+assarsd
+[...]
+$
+\end{minted}
+There is an option [[--detailed]] that is more useful for what we want to do 
+here.
 Let's consider the output from [[prgi23]] again.
 \begin{minted}{text}
 $ nytid hr users prgi23 --detailed
@@ -883,14 +785,18 @@ in that system.
 Then the course responsible should approve them.
 This means that we no longer need the [[nytid hr timesheets generate]] 
 functionality as it was originally intended.
-But we can describe how it works, in case we can use it for something else.
+But we can describe how it works, and it we can use it to send time sheets to 
+ourselves instead of the head of department---because then we can use those 
+emails when approving times in the new HR+.
 
-The idea of the previous system was as follows.
+The idea is as follows.
 The TAs that are paid by the hour previously had to submit time sheets 
 according to HR.
 However, then we must check them.
 It's better that we generate them automatically from the sign-up sheet, then we 
 know they're correct as long as the sign-up sheet is correct.
+Now we can use them to check the data that the TA has entered in HR+.
+Or rather, we know that there is something to check in HR+.
 
 We can generate time sheets for [[prgi24]] and [[prgm24]] as follows.
 \begin{minted}{bash}
@@ -1044,8 +950,13 @@ start of the current month as the end time (remember, it's non-inclusive,
 \(<\)).
 <<timesheets variables>>=
 start_of_month=$(date +%Y-%m-01)
+@
+
+Since we do this for ourselves now, we can also include the amanuensis 
+\enquote{mertid}.
 <<generate time sheets for [[course]]>>=
 nytid hr timesheets generate ${course} --end ${start_of_month}
+nytid hr timesheets generate ${course} --end ${start_of_month} --amanuensis
 if test -z "$(ls)"; then
   echo "No time sheets generated for ${course}"
   continue
@@ -1054,11 +965,12 @@ loffice --headless --convert-to pdf *.xlsx
 @
 
 Next step is to send all the PDF time sheets for processing.
+However, we send it to ourselves rather than the head of department.
 <<send time sheets for [[course]]>>=
 echo "${TIMESHEETS_MSG}" | \
   timesheets_mail "${TIMESHEETS_ADDR}" "${course}" *.pdf
 <<timesheets variables>>=
-TIMESHEETS_ADDR=karlm@kth.se
+TIMESHEETS_ADDR=dbosk@kth.se
 TIMESHEETS_MSG="
 Hej, hej!
 
@@ -1684,6 +1596,159 @@ antal assar.
           Daniel
 
 ${events}
+@
+
+\subsection{Adding TAs to UG}
+
+We also want the TAs to have access to the course in Canvas.
+That is, we want to add all users added to a course in Nytid to be added to UG 
+to get access to the course in Canvas.
+
+To do this we want to do the following for all of our courses.
+<<nytid.hourly.sh>>=
+### Set up TAs in UG ###
+
+for course in $(nytid courses mine ls)
+do
+  <<skip if [[course]] has no sign-up sheet>>
+  <<look up [[ug_path]], or skip if none exists>>
+  <<look up [[TAs]]>>
+  <<add TAs in [[TAs]] to UG at [[ug_path]]>>
+done
+@
+
+This only makes sense for courses with sign-up sheets.
+If a course doesn't have any sign-up sheet, we skip it since there will not be 
+any TAs who could sign up.
+One way to check if a course has a sign-up sheet is the following.
+<<skip if [[course]] has no sign-up sheet>>=
+nytid courses config ${course} signupsheet.url 2>/dev/null | \
+  grep -q "signupsheet.url = " \
+    || continue
+@ However, we can't do this if [[${course}]] is a regex matching several 
+courses.
+The config command must match a course exactly, not by regex.
+Fortunately, that's what we doo in the loop above.
+
+We need the UG group for the TAs in the course, in the case of [[prgi24]] it's
+\begin{center}
+[[edu.courses.DD.DD1317.20242.1.assistants]].
+\end{center}
+We store this in the config of [[prgi24]]:
+\begin{minted}{bash}
+nytid courses config prgi24 ug.assistants \
+  -s edu.courses.DD.DD1317.20232.1.assistants
+\end{minted}
+That way, we can read it from the config.
+If there is no UG group specified in the cours config, we skip the course.
+The same if the UG group is empty (since that would regex match any course in 
+UG).
+<<look up [[ug_path]], or skip if none exists>>=
+ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
+          | sed "s/.*= //")
+test "$?" -eq 0 || continue
+test -n "${ug_path}" || continue
+@
+
+Note that we could've named [[ug.assistants]] anything, it's just a name we 
+chose in the config.
+It has no special meaning to Nytid, only to our scripts.
+The point is, however, that we can add our own things to the config.
+Same thing with storing files in a course's data directory.
+
+Let's continue.
+We can look up the TAs in the same way as we did above.
+However, we want to only add TAs who need it.
+TAs who don't have any future events in the schedule don't need to be added.
+Most likely they're already added, but in some cases we want them 
+removed---without having to remove them from the sign-up sheet entirely, they 
+should remain on the times they had booked.
+<<look up [[TAs]]>>=
+TAs=$(<<read out TAs from future schedule>>)
+if test "$?" -ne 0; then
+  echo "error: can\'t read users for ${course} in nytid"
+  continue
+fi
+@
+
+Remember the output from the [[nytid schedule show]] command.
+We can extract the TAs from that output.
+Fortunately, it's structured as columns, mostly:
+\begin{minted}{text}
+$ nytid schedule show --start 2024-08-26 --end 2024-09-01 | cut -f 4-
+Needed TAs: 5; Booked TAs: dbosk carlhans glassey
+Needed TAs: 2; Booked TAs: dbosk joelsm
+Needed TAs: 2; Booked TAs: dbosk yasmines
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 2; Booked TAs: dbosk kiaa
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 2; Booked TAs: dbosk kiaa
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 2; Booked TAs: dbosk glassey
+Needed TAs: 2; Booked TAs: dbosk kiaa
+Needed TAs: 1; Booked TAs: dbosk
+Needed TAs: 1; Booked TAs: dbosk
+\end{minted}
+There can also be reserves, in which case it says \enquote{Reserve TAs:} also, 
+on the same line.
+\begin{minted}{text}
+$ nytid schedule show --user "" --end 2025-01-15 | grep Reserv | cut -f 4-
+Needed TAs: 5; Booked TAs: balter yasmines elliotst oejderby guanlong; Reserve TAs: alexape
+Needed TAs: 6; Booked TAs: balter yasmines elliotst oejderby jinghuay kiaa; Reserve TAs: guanlong
+Needed TAs: 6; Booked TAs: kiaa yasmines oejderby fkam jinghuay sritter; Reserve TAs: nadjaw
+Needed TAs: 0; Booked TAs: None; Reserve TAs: edvintr elliotst fkam fmaras kiaa loveno malike mweng oejderby yasmines dbosk
+Needed TAs: 3; Booked TAs: yasmines oejderby kiaa; Reserve TAs: edvintr
+\end{minted}
+So we want to extract the TAs from these lines.
+We want one TA per line in the output.
+<<read out TAs from future schedule>>=
+nytid schedule show --user "" --end $(date +%Y-%m-%d -d "next year") \
+| cut -f 4- \
+| grep "^Needed TAs:" \
+| <<[[sed]] out the TAs from each line>> \
+| tr " " "\n" | tr -d "\r" \
+| sort -u
+@
+
+To extract the TAs, we simply remove the extra text.
+We want to remove the \enquote{Needed TAs:} and \enquote{Booked TAs:} parts.
+We also want to remove everything before \enquote{Booked TAs:}.
+And if there are no TAs booked, it will output \enquote{None}---which we also 
+want to remove.
+<<[[sed]] out the TAs from each line>>=
+sed -E "s/.*Booked TAs: (None)?//g" \
+| sed -E "s/; Reserve TAs://g"
+@
+
+Finally, we can add the TAs to the UG group.
+We add one by one, in case of errors.
+If we set all at once, any error will cause no TA to be added.
+One at a time, then only the TA causing the error will not be added.
+<<add TAs in [[TAs]] to UG at [[ug_path]]>>=
+if test -n "${TAs}"; then
+  for ta in ${TAs}; do
+    <<continue to next if [[ta]] is not a KTH user>>
+    kthutils ug members add "${ug_path}" "${ta}"
+  done
+fi
+@
+
+Sometimes we get external TAs in the course.
+They have no KTH account, so we can't add them to UG.
+But IT adds them to Canvas manually, we don't have to do that.
+These external users should be skipped.
+IT uses their external email as username for Canvas, so we can check for 
+[[@]]-signs in the username.
+(And if someone has added [[@kth.se]] or [[@ug.kth.se]], we'll rewrite them.)
+<<continue to next if [[ta]] is not a KTH user>>=
+if echo "${ta}" | grep -q "@"; then
+  ta=$(echo "${ta}" | sed -E "s/@(ug\.)?kth\.se//")
+fi
+if echo "${ta}" | grep -q "@"; then
+  continue
+fi
 @
 
 

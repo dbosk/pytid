@@ -785,14 +785,18 @@ in that system.
 Then the course responsible should approve them.
 This means that we no longer need the [[nytid hr timesheets generate]] 
 functionality as it was originally intended.
-But we can describe how it works, in case we can use it for something else.
+But we can describe how it works, and it we can use it to send time sheets to 
+ourselves instead of the head of department---because then we can use those 
+emails when approving times in the new HR+.
 
-The idea of the previous system was as follows.
+The idea is as follows.
 The TAs that are paid by the hour previously had to submit time sheets 
 according to HR.
 However, then we must check them.
 It's better that we generate them automatically from the sign-up sheet, then we 
 know they're correct as long as the sign-up sheet is correct.
+Now we can use them to check the data that the TA has entered in HR+.
+Or rather, we know that there is something to check in HR+.
 
 We can generate time sheets for [[prgi24]] and [[prgm24]] as follows.
 \begin{minted}{bash}
@@ -946,8 +950,13 @@ start of the current month as the end time (remember, it's non-inclusive,
 \(<\)).
 <<timesheets variables>>=
 start_of_month=$(date +%Y-%m-01)
+@
+
+Since we do this for ourselves now, we can also include the amanuensis 
+\enquote{mertid}.
 <<generate time sheets for [[course]]>>=
 nytid hr timesheets generate ${course} --end ${start_of_month}
+nytid hr timesheets generate ${course} --end ${start_of_month} --amanuensis
 if test -z "$(ls)"; then
   echo "No time sheets generated for ${course}"
   continue
@@ -956,11 +965,12 @@ loffice --headless --convert-to pdf *.xlsx
 @
 
 Next step is to send all the PDF time sheets for processing.
+However, we send it to ourselves rather than the head of department.
 <<send time sheets for [[course]]>>=
 echo "${TIMESHEETS_MSG}" | \
   timesheets_mail "${TIMESHEETS_ADDR}" "${course}" *.pdf
 <<timesheets variables>>=
-TIMESHEETS_ADDR=karlm@kth.se
+TIMESHEETS_ADDR=dbosk@kth.se
 TIMESHEETS_MSG="
 Hej, hej!
 

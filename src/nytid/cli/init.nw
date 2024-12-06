@@ -1611,8 +1611,8 @@ To do this we want to do the following for all of our courses.
 for course in $(nytid courses mine ls)
 do
   <<skip if [[course]] has no sign-up sheet>>
-  <<look up [[ug_path]], or skip if none exists>>
-  <<look up [[TAs]]>>
+  <<look up [[ug_path]] for [[course]], or skip if none exists>>
+  <<look up [[TAs]] for [[course]]>>
   <<add TAs in [[TAs]] to UG at [[ug_path]]>>
 done
 @
@@ -1643,7 +1643,7 @@ That way, we can read it from the config.
 If there is no UG group specified in the cours config, we skip the course.
 The same if the UG group is empty (since that would regex match any course in 
 UG).
-<<look up [[ug_path]], or skip if none exists>>=
+<<look up [[ug_path]] for [[course]], or skip if none exists>>=
 ug_path=$(nytid courses config ${course} ug.assistants 2>/dev/null \
           | sed "s/.*= //")
 test "$?" -eq 0 || continue
@@ -1663,8 +1663,8 @@ TAs who don't have any future events in the schedule don't need to be added.
 Most likely they're already added, but in some cases we want them 
 removed---without having to remove them from the sign-up sheet entirely, they 
 should remain on the times they had booked.
-<<look up [[TAs]]>>=
-TAs=$(<<read out TAs from future schedule>>)
+<<look up [[TAs]] for [[course]]>>=
+TAs=$(<<read out TAs from future schedule of [[course]]>>)
 if test "$?" -ne 0; then
   echo "error: can\'t read users for ${course} in nytid"
   continue
@@ -1703,8 +1703,9 @@ Needed TAs: 3; Booked TAs: yasmines oejderby kiaa; Reserve TAs: edvintr
 \end{minted}
 So we want to extract the TAs from these lines.
 We want one TA per line in the output.
-<<read out TAs from future schedule>>=
-nytid schedule show --user "" --end $(date +%Y-%m-%d -d "next year") \
+<<read out TAs from future schedule of [[course]]>>=
+nytid schedule show "${course}" --user "" \
+  --end $(date +%Y-%m-%d -d "next year") \
 | cut -f 4- \
 | grep "^Needed TAs:" \
 | <<[[sed]] out the TAs from each line>> \

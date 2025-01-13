@@ -1041,8 +1041,19 @@ Any TA who is in more than one course need all the courses to be included at
 once.
 Otherwise the report in one course will say they have removed hours from the 
 other course.
+This means that we must have one regex for all courses.
+
+We also note that we don't want to do this on all courses.
+On some courses we don't have TAs, but rather colleagues.
+We don't care about their hours, they deal with those themselves.
+
+Finally, we use this regex to match the courses in the default register, the 
+[[mine]] register.
+These are the active courses.
+So we don't need to provide the year---which helps to deal with the shift in 
+year around new year, when the autumn courses' year is off by one.
 <<timesheet draft variables>>=
-TIMESHEETS_COURSES="(datintro|prgi|prgm)${year}"
+TIMESHEETS_COURSES="(datintro|prgi|prgm)"
 @
 
 We can send drafts as follows.
@@ -1100,14 +1111,16 @@ Du har ${sum_hours} timmar i bokningsarket för ${course}.
 
 $(if <<[[sum_hours]] > 0>>; then
     echo "
-Du kan rapportera in timmarna nedan i KTH HR. Gör det kring
-månadsskiftet för att få betalt i slutet av ${next_month}.
-Tiderna finns även bifogat som CSV-fil.
+Du kan rapportera in timmarna nedan i KTH HR. Gör det innan
+${next_month} för att få betalt ${next_pay}. Tiderna finns
+även bifogat som CSV-fil. Svara på detta mail när du gjort
+har rapporterat in timmarna i KTH HR (Medvind).
 " | fmt
   elif <<[[sum_hours]] < 0>>; then
     echo "
 Du har just nu fått mer betalt än du har jobbat. Du behöver
-jobba in de timmar som saknas. Se nedan.
+jobba in de timmar som saknas för att inte behöva betala
+tillbaka lön. Se nedan.
 " | fmt
   else
     echo "
@@ -1115,11 +1128,13 @@ Du har ändrat pass, men alla timmar går jämnt ut.
 " | fmt
   fi)
 
-Om något är fel, uppdatera bokningsarket och svara på detta
+Om något är fel, korrigera i bokningsarket och svara på detta
 mail!
 
           Daniel
 
+<<timesheet draft variables>>=
+next_pay=$(date +%Y-%m-25 -d "next month")
 @
 
 For the amanuensis case, we do the same thing, but add the [[--amanuensis]] 
@@ -1177,6 +1192,8 @@ som står i ditt avtal.
 Ändringarna går jämnt ut, bra jobbat!
 " | fmt
   fi)
+
+Om något är fel, korrigera i bokningsarket och svara på detta mail!
 
             Daniel
 

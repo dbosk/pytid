@@ -1111,14 +1111,16 @@ Du har ${sum_hours} timmar i bokningsarket för ${course}.
 
 $(if <<[[sum_hours]] > 0>>; then
     echo "
-Du kan rapportera in timmarna nedan i KTH HR. Gör det kring
-månadsskiftet för att få betalt i slutet av ${next_month}.
-Tiderna finns även bifogat som CSV-fil.
+Du kan rapportera in timmarna nedan i KTH HR. Gör det innan
+${next_month} för att få betalt ${next_pay}. Tiderna finns
+även bifogat som CSV-fil. Svara på detta mail när du gjort
+har rapporterat in timmarna i KTH HR (Medvind).
 " | fmt
   elif <<[[sum_hours]] < 0>>; then
     echo "
 Du har just nu fått mer betalt än du har jobbat. Du behöver
-jobba in de timmar som saknas. Se nedan.
+jobba in de timmar som saknas för att inte behöva betala
+tillbaka lön. Se nedan.
 " | fmt
   else
     echo "
@@ -1126,11 +1128,13 @@ Du har ändrat pass, men alla timmar går jämnt ut.
 " | fmt
   fi)
 
-Om något är fel, uppdatera bokningsarket och svara på detta
+Om något är fel, korrigera i bokningsarket och svara på detta
 mail!
 
           Daniel
 
+<<timesheet draft variables>>=
+next_pay=$(date +%Y-%m-25 -d "next month")
 @
 
 For the amanuensis case, we do the same thing, but add the [[--amanuensis]] 
@@ -1188,6 +1192,8 @@ som står i ditt avtal.
 Ändringarna går jämnt ut, bra jobbat!
 " | fmt
   fi)
+
+Om något är fel, korrigera i bokningsarket och svara på detta mail!
 
             Daniel
 

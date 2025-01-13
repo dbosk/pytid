@@ -1041,8 +1041,19 @@ Any TA who is in more than one course need all the courses to be included at
 once.
 Otherwise the report in one course will say they have removed hours from the 
 other course.
+This means that we must have one regex for all courses.
+
+We also note that we don't want to do this on all courses.
+On some courses we don't have TAs, but rather colleagues.
+We don't care about their hours, they deal with those themselves.
+
+Finally, we use this regex to match the courses in the default register, the 
+[[mine]] register.
+These are the active courses.
+So we don't need to provide the year---which helps to deal with the shift in 
+year around new year, when the autumn courses' year is off by one.
 <<timesheet draft variables>>=
-TIMESHEETS_COURSES="(datintro|prgi|prgm)${year}"
+TIMESHEETS_COURSES="(datintro|prgi|prgm)"
 @
 
 We can send drafts as follows.
